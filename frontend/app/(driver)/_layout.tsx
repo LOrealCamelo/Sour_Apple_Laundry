@@ -8,7 +8,7 @@ export default function DriverLayout() {
       headerShown: false,
       tabBarActiveTintColor: colors.apple,
       tabBarInactiveTintColor: colors.textDim,
-      tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 62, paddingBottom: 8, paddingTop: 8 },
+      tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 78, paddingBottom: 20, paddingTop: 8 },
     }}>
       <Tabs.Screen name="index" options={{ title: "Available", tabBarIcon: ({ color, size }) => <Ionicons name="briefcase" size={size} color={color} /> }} />
       <Tabs.Screen name="mine" options={{ title: "My Jobs", tabBarIcon: ({ color, size }) => <Ionicons name="car" size={size} color={color} /> }} />

@@ -8,7 +8,7 @@ export default function AdminLayout() {
       headerShown: false,
       tabBarActiveTintColor: colors.gold,
       tabBarInactiveTintColor: colors.textDim,
-      tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 62, paddingBottom: 8, paddingTop: 8 },
+      tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, height: 78, paddingBottom: 20, paddingTop: 8 },
     }}>
       <Tabs.Screen name="index" options={{ title: "Requests", tabBarIcon: ({ color, size }) => <Ionicons name="notifications" size={size} color={color} /> }} />
       <Tabs.Screen name="orders" options={{ title: "Orders", tabBarIcon: ({ color, size }) => <Ionicons name="cube" size={size} color={color} /> }} />
