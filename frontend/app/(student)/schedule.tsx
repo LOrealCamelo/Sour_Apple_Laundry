@@ -116,22 +116,24 @@ export default function Schedule() {
             <Toggle label="Bedding add-on (+$8)" value={bedding} onToggle={() => setBedding(!bedding)} testID="bedding-toggle" />
           </Card>
 
-          <Text style={styles.label}>Buy branded reusable bags (optional)</Text>
-          <Card>
+          <View style={styles.bagsHeader}>
+            <Text style={styles.label}>Buy branded reusable bags</Text>
+            <View style={styles.comingSoonPill}><Text style={styles.comingSoonText}>COMING SOON</Text></View>
+          </View>
+          <Card style={{ opacity: 0.45 }}>
             {BAG_SIZES.map((b) => (
-              <View key={b.key} style={styles.bagRow}>
+              <View key={b.key} style={styles.bagRow} pointerEvents="none">
                 <View>
                   <Text style={styles.rowLabel}>{b.label} bag</Text>
                   <Text style={styles.bagPrice}>${b.price} each</Text>
                 </View>
                 <View style={styles.stepper}>
-                  <Pressable testID={`bag-${b.key}-minus`} onPress={() => setBag(b.key, -1)} style={styles.stepBtn}><Ionicons name="remove" size={18} color={colors.text} /></Pressable>
-                  <Text style={styles.stepVal}>{brandedBags[b.key] || 0}</Text>
-                  <Pressable testID={`bag-${b.key}-plus`} onPress={() => setBag(b.key, 1)} style={styles.stepBtn}><Ionicons name="add" size={18} color={colors.text} /></Pressable>
+                  <View style={styles.stepBtn}><Ionicons name="remove" size={18} color={colors.textDim} /></View>
+                  <Text style={styles.stepVal}>0</Text>
+                  <View style={styles.stepBtn}><Ionicons name="add" size={18} color={colors.textDim} /></View>
                 </View>
               </View>
             ))}
-            {brandedTotal > 0 && <Text style={styles.bagTotal} testID="branded-bag-total">Branded bags: +${brandedTotal.toFixed(2)}</Text>}
           </Card>
 
           <Text style={styles.label}>Laundry preferences</Text>
@@ -191,6 +193,9 @@ const styles = StyleSheet.create({
   content: { padding: spacing.lg, paddingBottom: 60 },
   title: { fontSize: 26, fontWeight: "800", color: colors.text, marginBottom: spacing.lg },
   label: { color: colors.textDim, fontSize: 13, marginBottom: 8, fontWeight: "600" },
+  bagsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  comingSoonPill: { backgroundColor: colors.pink, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
+  comingSoonText: { color: "#0A0A0F", fontWeight: "900", fontSize: 11, letterSpacing: 0.5 },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: spacing.md },
   chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.apple, borderColor: colors.apple },
