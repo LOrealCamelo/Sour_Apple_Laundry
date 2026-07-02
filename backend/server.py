@@ -505,7 +505,10 @@ async def assign_driver(job_id: str, body: StatusUpdate, user: dict = Depends(re
 
 @api.get("/admin/analytics")
 async def analytics(user: dict = Depends(require_role("ADMIN"))):
-    orders = await db.orders.find({}, {"_id": 0}).to_list(2000)
+    orders = await db.orders.find(
+        {},
+        {"_id": 0, "price": 1, "payment_status": 1, "campus": 1, "service_type": 1, "status": 1, "history": 1},
+    ).to_list(2000)
     revenue = sum(o.get("price", 0) for o in orders if o.get("payment_status") == "Paid")
     by_campus = {}
     by_service = {}
