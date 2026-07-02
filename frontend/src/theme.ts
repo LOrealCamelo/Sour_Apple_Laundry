@@ -1,17 +1,19 @@
-// Sour Apple VIP — premium dark + sour-green + gold VIP accents
+// Sour Apple VIP — EYE-POPPING neon sour-green + hot-pink slime on black
 export const colors = {
-  bg: "#0E1512",
-  surface: "#16211C",
-  surfaceAlt: "#1E2C25",
-  border: "#2A3B32",
-  apple: "#7CFC5A", // sour apple green
-  appleDim: "#5BC63E",
-  gold: "#E7C463", // VIP gold
-  text: "#F2F7F3",
-  textDim: "#9DB0A5",
-  danger: "#FF6B6B",
-  warn: "#FFB454",
-  info: "#5AB8FF",
+  bg: "#0A0A0F",
+  surface: "#17131F",
+  surfaceAlt: "#221A2E",
+  border: "#3A2A50",
+  apple: "#A8FF1A",     // neon sour-apple green (primary)
+  appleDim: "#7BD400",
+  gold: "#FF2AA0",      // hot pink VIP accent (key kept for compat)
+  pink: "#FF2AA0",
+  pinkDim: "#D41F84",
+  text: "#FFFFFF",
+  textDim: "#A99FBC",
+  danger: "#FF5C7A",
+  warn: "#FFC24B",
+  info: "#3FC6FF",
   white: "#FFFFFF",
 };
 
@@ -24,6 +26,11 @@ export const statusColor = (s: string): string => {
   if (s.includes("Pending")) return colors.warn;
   return colors.info;
 };
+
+// neon glow shadow for hero elements
+export const glow = (c: string) => ({
+  shadowColor: c, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 16, elevation: 10,
+});
 
 export const font = {
   h1: { fontSize: 28, fontWeight: "800" as const, color: colors.text },

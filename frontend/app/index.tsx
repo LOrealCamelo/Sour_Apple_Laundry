@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, Pressable } from "react-native";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/src/context/AuthContext";
-import { colors, spacing, radius } from "@/src/theme";
+import { colors, spacing, radius, glow } from "@/src/theme";
 
 export default function Index() {
   const { user, loading, isGuest, continueAsGuest } = useAuth();
@@ -30,27 +31,39 @@ export default function Index() {
 
   return (
     <View style={styles.container} testID="welcome-screen">
+      <LinearGradient
+        colors={["#141018", "#0A0A0F", "#160A14"]}
+        style={StyleSheet.absoluteFill}
+      />
       <View style={styles.hero}>
-        <View style={styles.logoCircle}>
-          <Ionicons name="shirt" size={44} color={colors.bg} />
+        <View style={styles.logoGlow}>
+          <Image
+            source={require("../assets/images/logo-hero.jpg")}
+            style={styles.logo}
+            contentFit="contain"
+            testID="hero-logo"
+          />
         </View>
-        <Text style={styles.brand}>Sour Apple</Text>
-        <View style={styles.vipRow}>
-          <View style={styles.vipPill}><Text style={styles.vipText}>VIP</Text></View>
-          <Text style={styles.sub}>Laundry Services</Text>
+        <View style={styles.taglinePill}>
+          <Text style={styles.tagline}>WE TAKE THE <Text style={{ color: colors.apple }}>STINK</Text> OUT OF LAUNDRY</Text>
         </View>
-        <Text style={styles.tag}>Campus laundry, picked up & delivered.</Text>
+        <View style={styles.badges}>
+          <Text style={styles.badge}>✓ WE PICK UP</Text>
+          <Text style={styles.badge}>✓ WE WASH</Text>
+          <Text style={styles.badge}>✓ WE FOLD</Text>
+          <Text style={styles.badge}>✓ WE DELIVER</Text>
+        </View>
       </View>
 
       <View style={styles.actions}>
-        <Pressable testID="get-started-button" style={styles.primary} onPress={() => router.push("/register")}>
-          <Text style={styles.primaryText}>Get Started</Text>
+        <Pressable testID="get-started-button" style={[styles.primary, glow(colors.apple)]} onPress={() => router.push("/register")}>
+          <Text style={styles.primaryText}>SCHEDULE IN THE APP →</Text>
         </Pressable>
-        <Pressable testID="login-link-button" style={styles.ghost} onPress={() => router.push("/login")}>
-          <Text style={styles.ghostText}>I already have an account</Text>
+        <Pressable testID="login-link-button" style={styles.pinkBtn} onPress={() => router.push("/login")}>
+          <Text style={styles.pinkText}>I already have an account</Text>
         </Pressable>
         <Pressable testID="guest-button" style={styles.guest} onPress={() => { continueAsGuest(); router.replace("/(student)"); }}>
-          <Text style={styles.guestText}>Continue as guest</Text>
+          <Text style={styles.guestText}>Continue as guest →</Text>
         </Pressable>
       </View>
     </View>
@@ -59,20 +72,19 @@ export default function Index() {
 
 const styles = StyleSheet.create({
   center: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
-  container: { flex: 1, backgroundColor: colors.bg, justifyContent: "space-between", padding: spacing.lg, paddingBottom: 48, paddingTop: 120 },
+  container: { flex: 1, backgroundColor: colors.bg, justifyContent: "space-between", padding: spacing.lg, paddingBottom: 44, paddingTop: 60 },
   hero: { alignItems: "center", flex: 1, justifyContent: "center" },
-  logoCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: colors.apple, alignItems: "center", justifyContent: "center", marginBottom: spacing.lg },
-  brand: { fontSize: 40, fontWeight: "900", color: colors.text, letterSpacing: -1 },
-  vipRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
-  vipPill: { backgroundColor: colors.gold, paddingHorizontal: 10, paddingVertical: 2, borderRadius: radius.sm },
-  vipText: { color: colors.bg, fontWeight: "900", fontSize: 14 },
-  sub: { color: colors.textDim, fontSize: 18, fontWeight: "600" },
-  tag: { color: colors.textDim, marginTop: spacing.md, fontSize: 15 },
+  logoGlow: { borderRadius: 200, ...glow(colors.apple) },
+  logo: { width: 300, height: 300 },
+  taglinePill: { backgroundColor: "#000", borderColor: colors.apple, borderWidth: 1.5, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 8, marginTop: spacing.sm },
+  tagline: { color: colors.white, fontWeight: "800", fontSize: 13, letterSpacing: 0.5 },
+  badges: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: spacing.lg },
+  badge: { color: colors.apple, fontWeight: "800", fontSize: 12, backgroundColor: colors.surfaceAlt, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm, overflow: "hidden" },
   actions: { gap: spacing.sm },
-  primary: { backgroundColor: colors.apple, height: 54, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  primaryText: { color: colors.bg, fontWeight: "800", fontSize: 17 },
-  ghost: { height: 46, alignItems: "center", justifyContent: "center" },
-  ghostText: { color: colors.apple, fontWeight: "600", fontSize: 15 },
-  guest: { height: 40, alignItems: "center", justifyContent: "center" },
-  guestText: { color: colors.textDim, fontWeight: "600", fontSize: 14, textDecorationLine: "underline" },
+  primary: { backgroundColor: colors.apple, height: 56, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
+  primaryText: { color: "#0A0A0F", fontWeight: "900", fontSize: 17, letterSpacing: 0.5 },
+  pinkBtn: { height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.pink },
+  pinkText: { color: colors.pink, fontWeight: "800", fontSize: 15 },
+  guest: { height: 42, alignItems: "center", justifyContent: "center" },
+  guestText: { color: colors.textDim, fontWeight: "700", fontSize: 14, textDecorationLine: "underline" },
 });

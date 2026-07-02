@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pre
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useAuth } from "@/src/context/AuthContext";
 import { Btn, Field } from "@/src/components/UI";
 import { colors, spacing } from "@/src/theme";
@@ -36,6 +37,7 @@ export default function Register() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" size={26} color={colors.text} /></Pressable>
+          <Image source={require("../assets/images/logo-hero.jpg")} style={{ width: 100, height: 100, alignSelf: "center" }} contentFit="contain" />
           <Text style={styles.title}>Create account</Text>
           <View style={styles.roleRow}>
             {ROLES.map((r) => (

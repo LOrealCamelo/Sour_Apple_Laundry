@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from "r
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useAuth } from "@/src/context/AuthContext";
 import { api } from "@/src/api/client";
 import { colors, spacing, radius, statusColor } from "@/src/theme";
@@ -25,6 +26,10 @@ export default function StudentHome() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="student-home">
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.apple} />}>
+        <View style={styles.brandBar}>
+          <Image source={require("../../assets/images/logo-hero.jpg")} style={{ width: 52, height: 52 }} contentFit="contain" />
+          <Text style={styles.brandText}>SOUR APPLE <Text style={{ color: colors.pink }}>VIP</Text></Text>
+        </View>
         <Text style={styles.hi}>Hi, {user?.name?.split(" ")[0] || "there"} 👋</Text>
         <Text style={styles.sub}>{user?.campus || "Your campus"} · {user?.building}</Text>
 
@@ -59,6 +64,8 @@ export default function StudentHome() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   content: { padding: spacing.lg, paddingBottom: 40 },
+  brandBar: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: spacing.md },
+  brandText: { color: colors.text, fontWeight: "900", fontSize: 18, letterSpacing: 0.5 },
   hi: { fontSize: 26, fontWeight: "800", color: colors.text },
   sub: { color: colors.textDim, marginTop: 2, marginBottom: spacing.lg },
   cta: { backgroundColor: colors.apple, borderRadius: radius.lg, padding: spacing.lg, flexDirection: "row", alignItems: "center", marginBottom: spacing.xl },

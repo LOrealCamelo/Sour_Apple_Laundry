@@ -3,12 +3,13 @@ import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pre
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { useAuth } from "@/src/context/AuthContext";
 import { Btn, Field } from "@/src/components/UI";
 import { colors, spacing } from "@/src/theme";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, continueAsGuest } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,6 +31,7 @@ export default function Login() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" size={26} color={colors.text} /></Pressable>
+          <Image source={require("../assets/images/logo-hero.jpg")} style={{ width: 130, height: 130, alignSelf: "center" }} contentFit="contain" />
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.sub}>Log in to your Sour Apple VIP account</Text>
           <View style={{ height: spacing.lg }} />
@@ -39,6 +41,9 @@ export default function Login() {
           <Btn title="Log In" onPress={submit} loading={loading} testID="login-submit-button" />
           <Pressable onPress={() => router.replace("/register")} style={styles.linkRow}>
             <Text style={styles.link}>New here? <Text style={{ color: colors.apple }}>Create account</Text></Text>
+          </Pressable>
+          <Pressable testID="login-guest-button" onPress={() => { continueAsGuest(); router.replace("/(student)"); }} style={styles.linkRow}>
+            <Text style={[styles.link, { color: colors.pink, textDecorationLine: "underline", fontWeight: "700" }]}>Continue as guest →</Text>
           </Pressable>
           <Text style={styles.demo}>Demo — Admin: admin@sourapple.com / Admin123!{"\n"}Student: student@sourapple.com / Student123!{"\n"}Driver: driver@sourapple.com / Driver123!</Text>
         </ScrollView>
