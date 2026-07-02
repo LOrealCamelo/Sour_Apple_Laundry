@@ -24,6 +24,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, EmailStr, BeforeValidator
 from passlib.context import CryptContext
 from jose import jwt, JWTError
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -39,6 +40,10 @@ JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = os.environ['JWT_ALGORITHM']
 JWT_EXPIRE_MINUTES = int(os.environ['JWT_EXPIRE_MINUTES'])
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
+stripe.api_key = os.environ.get('STRIPE_API_KEY', '')
+FRONTEND_URL = os.environ.get('FRONTEND_URL', '')
+CASHAPP_HANDLE = os.environ.get('CASHAPP_HANDLE', '')
+VENMO_HANDLE = os.environ.get('VENMO_HANDLE', '')
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -62,16 +67,16 @@ ORDER_STATUSES = [
     "Request Submitted", "Pending Admin Approval", "Approved", "Rejected",
     "Needs Customer Follow-Up", "Pickup Job Released", "Driver Assigned",
     "Pickup Scheduled", "Picked Up", "Checked In", "Washing", "Drying",
-    "Folding", "Quality Check", "Delivery Job Released", "Out for Delivery",
-    "Delivered",
+    "Folding", "Quality Check", "Ready for Pickup", "Delivery Job Released",
+    "Out for Delivery", "Delivered", "Pickup Confirmed", "Cancelled",
 ]
 
-SERVICE_TYPES = ["Wash & Fold", "Dry Cleaning", "Bedding", "Towels",
+SERVICE_TYPES = ["Wash & Fold", "Bedding", "Towels",
                  "Rush Laundry", "Subscription Laundry Plan"]
 
 # base price per service (USD) — TODO: manage via PricingRule collection in admin
 SERVICE_PRICES = {
-    "Wash & Fold": 20, "Dry Cleaning": 35, "Bedding": 25, "Towels": 15,
+    "Wash & Fold": 20, "Bedding": 25, "Towels": 15,
     "Rush Laundry": 40, "Subscription Laundry Plan": 60,
 }
 RUSH_FEE = 10
@@ -120,12 +125,16 @@ class ProfileUpdate(BaseModel):
 class OrderCreate(BaseModel):
     service_type: Optional[str] = None       # legacy single value (kept for compat)
     services: List[str] = []                 # multiple services allowed
-    order_type: str = "Pickup & Delivery"    # or "Neighborhood Drop-off"
-    branded_bags: dict = {}                   # {"small": n, "medium": n, "large": n}
-    pickup_date: str
-    pickup_window: str
-    delivery_date: str
-    delivery_window: str
+    customer_type: str = "College Student"   # "College Student" | "Non College Student"
+    college: str = ""                        # "MVCC" | "Utica University"
+    dorm: str = ""                           # dorm / building
+    directions: str = ""                     # directions to dorm & parking lot
+    order_type: str = "Pickup & Delivery"
+    branded_bags: dict = {}
+    pickup_date: str = ""                    # preferred date (mm/dd/yyyy)
+    pickup_window: str = ""                  # preferred time (customer picks)
+    delivery_date: str = ""                  # admin-controlled
+    delivery_window: str = ""                # admin-controlled
     bags: int = 1
     rush: bool = False
     bedding_addon: bool = False
@@ -306,17 +315,32 @@ async def price_estimate(body: PriceEstimate):
     return {"estimate": estimate_price(services, body.bags, body.rush, body.bedding_addon, body.branded_bags)}
 
 
+def tracking_number(customer_type: str, college: str, dorm: str, last_name: str, date_str: str) -> str:
+    """MV-/UC-DORM-LASTNAME-MMDDYYYY for college; LASTNAME-MMDDYYYY for non-college."""
+    ln = "".join(c for c in (last_name or "CUSTOMER") if c.isalnum()).upper() or "CUSTOMER"
+    d = "".join(c for c in (date_str or "") if c.isdigit()) or datetime.now(timezone.utc).strftime("%m%d%Y")
+    if customer_type == "College Student":
+        prefix = "MV" if college == "MVCC" else "UC"
+        dm = "".join(c for c in (dorm or "DORM") if c.isalnum()).upper() or "DORM"
+        return f"{prefix}-{dm}-{ln}-{d}"
+    return f"{ln}-{d}"
+
+
 @api.post("/orders")
 async def create_order(body: OrderCreate, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
     services = body.services or ([body.service_type] if body.service_type else ["Wash & Fold"])
     price = estimate_price(services, body.bags, body.rush, body.bedding_addon, body.branded_bags)
     oid = new_id()
-    code = "SA-" + oid[:8].upper()
+    last_name = (user["name"].split() or ["Customer"])[-1]
+    code = tracking_number(body.customer_type, body.college, body.dorm, last_name, body.pickup_date)
     order = {
         "id": oid, "code": code, "qr_code": code,
         "student_id": user["id"], "student_name": user["name"],
-        "campus": user.get("campus", ""), "building": user.get("building", ""),
-        "room": user.get("room", ""), "phone": user.get("phone", ""),
+        "customer_type": body.customer_type, "college": body.college,
+        "campus": body.college or user.get("campus", ""),
+        "building": body.dorm or user.get("building", ""), "dorm": body.dorm,
+        "directions": body.directions, "room": user.get("room", ""),
+        "phone": user.get("phone", ""),
         "service_type": ", ".join(services), "services": services,
         "order_type": body.order_type, "branded_bags": body.branded_bags,
         "bags": body.bags,
@@ -324,10 +348,10 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_role("STU
         "preferences": body.preferences, "stain_notes": body.stain_notes,
         "photos": body.photos, "referral_code": body.referral_code,
         "price": price, "status": "Pending Admin Approval",
-        "payment_status": "Unpaid", "admin_note": "",
+        "payment_status": "Unpaid", "payment_method": "", "admin_note": "",
         "pickup_date": body.pickup_date, "pickup_window": body.pickup_window,
         "delivery_date": body.delivery_date, "delivery_window": body.delivery_window,
-        "rating": None, "feedback": "",
+        "rating": None, "feedback": "", "pickup_confirmed": False,
         "history": [
             {"status": "Request Submitted", "at": now_iso()},
             {"status": "Pending Admin Approval", "at": now_iso()},
@@ -375,6 +399,9 @@ async def reorder(order_id: str, user: dict = Depends(require_role("STUDENT", "N
         raise HTTPException(404, "Order not found")
     body = OrderCreate(
         services=prev.get("services") or [prev["service_type"]],
+        customer_type=prev.get("customer_type", "College Student"),
+        college=prev.get("college", ""), dorm=prev.get("dorm", ""),
+        directions=prev.get("directions", ""),
         order_type=prev.get("order_type", "Pickup & Delivery"),
         branded_bags=prev.get("branded_bags", {}),
         pickup_date=prev["pickup_date"],
@@ -640,6 +667,166 @@ async def ai_support(body: AISupportBody, user: dict = Depends(require_role("ADM
         "called Sour Apple VIP. Draft a warm, helpful reply in 2-3 sentences.",
         body.message)
     return {"suggestion": suggestion}
+
+
+# ============================== PAYMENTS v2 ==============================
+class MethodBody(BaseModel):
+    method: str
+
+class MessageBody(BaseModel):
+    text: str
+
+class ChangeBody(BaseModel):
+    note: str = ""
+
+class ScheduleBody(BaseModel):
+    pickup_window: Optional[str] = None
+    delivery_date: Optional[str] = None
+    delivery_window: Optional[str] = None
+
+
+@api.get("/payments/methods")
+async def payment_methods():
+    return {"cashapp": CASHAPP_HANDLE, "venmo": VENMO_HANDLE, "stripe_enabled": bool(stripe.api_key)}
+
+
+@api.post("/payments/stripe/checkout/{order_id}")
+async def stripe_checkout(order_id: str, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(404, "Order not found")
+    if not stripe.api_key:
+        raise HTTPException(400, "Stripe not configured")
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        success_url=f"{FRONTEND_URL}/order/{order_id}?paid=1",
+        cancel_url=f"{FRONTEND_URL}/order/{order_id}",
+        line_items=[{
+            "price_data": {"currency": "usd",
+                           "product_data": {"name": f"Sour Apple Laundry {order['code']}"},
+                           "unit_amount": int(round(order["price"] * 100))},
+            "quantity": 1,
+        }],
+        metadata={"order_id": order_id},
+    )
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "stripe_session_id": session["id"], "payment_method": "Stripe", "payment_status": "Processing"}})
+    return {"url": session.url}
+
+
+@api.post("/payments/stripe/verify/{order_id}")
+async def stripe_verify(order_id: str, user: dict = Depends(get_current_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or not order.get("stripe_session_id"):
+        raise HTTPException(400, "No Stripe session")
+    session = stripe.checkout.Session.retrieve(order["stripe_session_id"])
+    if session.payment_status == "paid":
+        await db.orders.update_one({"id": order_id}, {"$set": {"payment_status": "Paid"}})
+        return {"payment_status": "Paid"}
+    return {"payment_status": order.get("payment_status", "Processing")}
+
+
+@api.post("/payments/manual/{order_id}")
+async def manual_pay(order_id: str, body: MethodBody, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    order = await db.orders.find_one({"id": order_id})
+    if not order:
+        raise HTTPException(404, "Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {
+        "payment_method": body.method, "payment_status": "Pending Confirmation"}})
+    await notify("ADMIN", "push", f"{user['name']} says they paid via {body.method} for {order['code']}", order_id)
+    return await db.orders.find_one({"id": order_id}, {"_id": 0})
+
+
+# ============================== IN-APP MESSAGING ==============================
+def _can_access(order, user):
+    return not (user["role"] in ("STUDENT", "NEIGHBOR") and order["student_id"] != user["id"])
+
+
+@api.get("/orders/{order_id}/messages")
+async def get_messages(order_id: str, user: dict = Depends(get_current_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or not _can_access(order, user):
+        raise HTTPException(404, "Order not found")
+    return await db.messages.find({"order_id": order_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+
+
+@api.post("/orders/{order_id}/messages")
+async def post_message(order_id: str, body: MessageBody, user: dict = Depends(get_current_user)):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or not _can_access(order, user):
+        raise HTTPException(404, "Order not found")
+    msg = {"id": new_id(), "order_id": order_id, "sender_role": user["role"],
+           "sender_name": user["name"], "text": body.text, "created_at": now_iso()}
+    await db.messages.insert_one(msg)
+    to = "ADMIN" if user["role"] in ("STUDENT", "NEIGHBOR") else "STUDENT"
+    await notify(to, "push", f"New message on {order['code']}", order_id)
+    msg.pop("_id", None)
+    return msg
+
+
+@api.post("/orders/{order_id}/confirm-pickup")
+async def confirm_pickup(order_id: str, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or order["student_id"] != user["id"]:
+        raise HTTPException(404, "Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"pickup_confirmed": True}})
+    await db.messages.insert_one({"id": new_id(), "order_id": order_id, "sender_role": user["role"],
+                                  "sender_name": user["name"], "text": "✅ Confirmed pickup time.",
+                                  "created_at": now_iso()})
+    await notify("ADMIN", "push", f"{user['name']} confirmed pickup for {order['code']}", order_id)
+    return {"ok": True}
+
+
+# ============================== CHANGE / CANCEL ==============================
+CANCELABLE = {"Request Submitted", "Pending Admin Approval", "Approved", "Needs Customer Follow-Up"}
+
+
+@api.post("/orders/{order_id}/request-change")
+async def request_change(order_id: str, body: ChangeBody, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or order["student_id"] != user["id"]:
+        raise HTTPException(404, "Order not found")
+    await db.orders.update_one({"id": order_id}, {"$set": {"change_request": {"note": body.note, "at": now_iso()}}})
+    await notify("ADMIN", "push", f"Change requested on {order['code']}: {body.note}", order_id)
+    return {"ok": True}
+
+
+@api.post("/orders/{order_id}/cancel")
+async def cancel_order(order_id: str, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    order = await db.orders.find_one({"id": order_id})
+    if not order or order["student_id"] != user["id"]:
+        raise HTTPException(404, "Order not found")
+    if order["status"] not in CANCELABLE:
+        raise HTTPException(400, "This job has already started and can't be cancelled — please message us.")
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "Cancelled"}})
+    await push_history(order_id, "Cancelled")
+    await notify("ADMIN", "push", f"Order {order['code']} was cancelled by customer", order_id)
+    return {"ok": True}
+
+
+# ============================== ADMIN CALENDAR / SCHEDULE / ALERTS ==========
+@api.post("/admin/orders/{order_id}/schedule")
+async def set_schedule(order_id: str, body: ScheduleBody, user: dict = Depends(require_role("ADMIN"))):
+    updates = {k: v for k, v in body.dict().items() if v}
+    if updates:
+        updates["change_request"] = None
+        await db.orders.update_one({"id": order_id}, {"$set": updates})
+    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    await notify("STUDENT", "push", f"Your pickup/delivery time was set for {order['code']}", order_id)
+    return order
+
+
+@api.get("/admin/calendar")
+async def admin_calendar(user: dict = Depends(require_role("ADMIN"))):
+    exclude = ["Pending Admin Approval", "Rejected", "Cancelled"]
+    return await db.orders.find({"status": {"$nin": exclude}}, {"_id": 0}).sort("pickup_date", 1).to_list(500)
+
+
+@api.get("/admin/alerts")
+async def admin_alerts(user: dict = Depends(require_role("ADMIN"))):
+    pending = await db.orders.count_documents({"status": "Pending Admin Approval"})
+    changes = await db.orders.count_documents({"change_request": {"$ne": None}})
+    return {"pending": pending, "changes": changes, "total": pending + changes}
 
 
 @api.get("/")

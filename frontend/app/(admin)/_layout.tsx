@@ -12,6 +12,7 @@ export default function AdminLayout() {
     }}>
       <Tabs.Screen name="index" options={{ title: "Requests", tabBarIcon: ({ color, size }) => <Ionicons name="notifications" size={size} color={color} /> }} />
       <Tabs.Screen name="orders" options={{ title: "Orders", tabBarIcon: ({ color, size }) => <Ionicons name="cube" size={size} color={color} /> }} />
+      <Tabs.Screen name="calendar" options={{ title: "Calendar", tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} /> }} />
       <Tabs.Screen name="analytics" options={{ title: "Analytics", tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} /> }} />
       <Tabs.Screen name="settings" options={{ title: "Admin", tabBarIcon: ({ color, size }) => <Ionicons name="settings" size={size} color={color} /> }} />
     </Tabs>

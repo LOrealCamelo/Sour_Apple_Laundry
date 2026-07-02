@@ -6,8 +6,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { api } from "@/src/api/client";
 import { colors, spacing, radius, statusColor } from "@/src/theme";
 import { Card, Btn, Badge } from "@/src/components/UI";
+import OrderChat from "@/src/components/OrderChat";
 
-const NEXT_STATUS = ["Picked Up", "Checked In", "Washing", "Drying", "Folding", "Quality Check", "Out for Delivery", "Delivered"];
+const NEXT_STATUS = ["Picked Up", "Checked In", "Washing", "Drying", "Folding", "Quality Check", "Ready for Pickup", "Out for Delivery", "Delivered", "Cancelled"];
 const JOB_TYPES = ["Pickup", "Delivery", "Pickup + Delivery"];
 
 export default function AdminOrderDetail() {
@@ -22,6 +23,9 @@ export default function AdminOrderDetail() {
   const [payout, setPayout] = useState("12");
   const [autoAssign, setAutoAssign] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [schedPickup, setSchedPickup] = useState("");
+  const [schedDelDate, setSchedDelDate] = useState("");
+  const [schedDelTime, setSchedDelTime] = useState("");
 
   const load = async () => {
     try {
@@ -41,6 +45,7 @@ export default function AdminOrderDetail() {
   const setStatus = (s: string) => act(() => api(`/admin/orders/${id}/status`, { method: "POST", body: { status: s } }));
   const markPaid = () => act(() => api(`/admin/orders/${id}/payment`, { method: "POST", body: { status: order.payment_status === "Paid" ? "Unpaid" : "Paid" } }));
   const assign = (jobId: string, driverId: string) => act(() => api(`/admin/jobs/${jobId}/assign`, { method: "POST", body: { status: driverId } }));
+  const saveSchedule = () => act(() => api(`/admin/orders/${id}/schedule`, { method: "POST", body: { pickup_window: schedPickup || undefined, delivery_date: schedDelDate || undefined, delivery_window: schedDelTime || undefined } }));
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="admin-order-detail">
@@ -51,21 +56,46 @@ export default function AdminOrderDetail() {
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Card>
-          <Text style={styles.h}>Student</Text>
+          <Text style={styles.h}>Customer</Text>
           <Text style={styles.txt}>{order.student_name} · {order.phone}</Text>
-          <Text style={styles.dim}>{order.campus} · {order.building} {order.room}</Text>
+          <Text style={styles.dim}>{order.customer_type}{order.college ? ` · ${order.college}` : ""}</Text>
+          {!!order.dorm && <Text style={styles.dim}>Dorm/Building: {order.dorm}</Text>}
+          {!!order.directions && <Text style={styles.dim}>Directions: {order.directions}</Text>}
         </Card>
+        {order.change_request && (
+          <Card style={{ borderColor: colors.warn, backgroundColor: colors.warn + "18" }}>
+            <Text style={styles.txt}>⚠️ Customer requested a change</Text>
+            <Text style={styles.dim}>{order.change_request.note}</Text>
+          </Card>
+        )}
+        {order.pickup_confirmed && (
+          <Card style={{ borderColor: colors.apple }}><Text style={styles.txt}>✅ Customer confirmed pickup</Text></Card>
+        )}
         <Card>
           <Text style={styles.h}>Order</Text>
           <Text style={styles.txt}>{order.service_type} · {order.bags} bag(s){order.rush ? " · RUSH" : ""}{order.bedding_addon ? " · Bedding" : ""}</Text>
-          <Text style={styles.dim}>Pickup {order.pickup_date} {order.pickup_window}</Text>
-          <Text style={styles.dim}>Delivery {order.delivery_date} {order.delivery_window}</Text>
+          <Text style={styles.dim}>Preferred: {order.pickup_date} {order.pickup_window}</Text>
+          {!!order.delivery_window && <Text style={styles.dim}>Delivery set: {order.delivery_date} {order.delivery_window}</Text>}
           {order.preferences?.length > 0 && <Text style={styles.dim}>Prefs: {order.preferences.join(", ")}</Text>}
           {!!order.stain_notes && <Text style={styles.dim}>Notes: {order.stain_notes}</Text>}
           <View style={styles.payRow}>
-            <Badge text={order.payment_status} color={order.payment_status === "Paid" ? colors.apple : colors.warn} />
+            <Badge text={order.payment_status + (order.payment_method ? ` · ${order.payment_method}` : "")} color={order.payment_status === "Paid" ? colors.apple : colors.warn} />
             <Pressable testID="toggle-payment" onPress={markPaid}><Text style={styles.link}>Mark {order.payment_status === "Paid" ? "Unpaid" : "Paid"}</Text></Pressable>
           </View>
+        </Card>
+        <Card>
+          <Text style={styles.h}>Set Times (you control scheduling)</Text>
+          <Text style={styles.label}>Confirmed pickup time</Text>
+          <TextInput testID="sched-pickup" value={schedPickup} onChangeText={setSchedPickup} style={styles.input} placeholder="e.g. Wed 06/25 10:00 AM EST" placeholderTextColor={colors.textDim} />
+          <Text style={styles.label}>Delivery date (mm/dd/yyyy)</Text>
+          <TextInput testID="sched-deldate" value={schedDelDate} onChangeText={setSchedDelDate} style={styles.input} placeholder="06/27/2026" placeholderTextColor={colors.textDim} />
+          <Text style={styles.label}>Delivery time</Text>
+          <TextInput testID="sched-deltime" value={schedDelTime} onChangeText={setSchedDelTime} style={styles.input} placeholder="e.g. 4:00 PM EST" placeholderTextColor={colors.textDim} />
+          <Btn title="Save Schedule" onPress={saveSchedule} loading={busy} testID="save-schedule-button" />
+        </Card>
+        <Card>
+          <Text style={styles.h}>Messages</Text>
+          <OrderChat orderId={id!} myRole="ADMIN" />
         </Card>
 
         {order.status === "Pending Admin Approval" && (
