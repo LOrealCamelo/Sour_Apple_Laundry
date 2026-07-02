@@ -6,7 +6,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { colors, spacing, radius } from "@/src/theme";
 
 export default function Index() {
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest, continueAsGuest } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,10 +15,12 @@ export default function Index() {
       if (user.role === "ADMIN") router.replace("/(admin)");
       else if (user.role === "DRIVER") router.replace("/(driver)");
       else router.replace("/(student)");
+    } else if (isGuest) {
+      router.replace("/(student)");
     }
-  }, [user, loading]);
+  }, [user, loading, isGuest]);
 
-  if (loading || user) {
+  if (loading || user || isGuest) {
     return (
       <View style={styles.center} testID="splash-loading">
         <ActivityIndicator color={colors.apple} size="large" />
@@ -47,6 +49,9 @@ export default function Index() {
         <Pressable testID="login-link-button" style={styles.ghost} onPress={() => router.push("/login")}>
           <Text style={styles.ghostText}>I already have an account</Text>
         </Pressable>
+        <Pressable testID="guest-button" style={styles.guest} onPress={() => { continueAsGuest(); router.replace("/(student)"); }}>
+          <Text style={styles.guestText}>Continue as guest</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -66,6 +71,8 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   primary: { backgroundColor: colors.apple, height: 54, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
   primaryText: { color: colors.bg, fontWeight: "800", fontSize: 17 },
-  ghost: { height: 50, alignItems: "center", justifyContent: "center" },
+  ghost: { height: 46, alignItems: "center", justifyContent: "center" },
   ghostText: { color: colors.apple, fontWeight: "600", fontSize: 15 },
+  guest: { height: 40, alignItems: "center", justifyContent: "center" },
+  guestText: { color: colors.textDim, fontWeight: "600", fontSize: 14, textDecorationLine: "underline" },
 });

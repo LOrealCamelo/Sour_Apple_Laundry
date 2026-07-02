@@ -9,6 +9,7 @@ import { colors, spacing } from "@/src/theme";
 
 const ROLES = [
   { key: "STUDENT", label: "Student", icon: "school" as const },
+  { key: "NEIGHBOR", label: "Neighbor", icon: "home" as const },
   { key: "DRIVER", label: "Driver", icon: "car" as const },
 ];
 
@@ -45,14 +46,19 @@ export default function Register() {
               </Pressable>
             ))}
           </View>
+          {role === "NEIGHBOR" && (
+            <Text style={{ color: colors.textDim, fontSize: 13, marginBottom: spacing.md, marginTop: -8 }}>
+              Neighborhood service is drop-off & self-pickup — no driver pickup/delivery.
+            </Text>
+          )}
           <Field label="Full name" testID="reg-name-input" value={f.name} onChangeText={set("name")} placeholder="Jamie Doe" />
           <Field label="Email" testID="reg-email-input" value={f.email} onChangeText={set("email")} autoCapitalize="none" keyboardType="email-address" placeholder="you@school.edu" />
           <Field label="Password" testID="reg-password-input" value={f.password} onChangeText={set("password")} secureTextEntry placeholder="Create a password" />
           <Field label="Phone" testID="reg-phone-input" value={f.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="555-0100" />
-          {role === "STUDENT" && (<>
-            <Field label="Campus" testID="reg-campus-input" value={f.campus} onChangeText={set("campus")} placeholder="State University" />
-            <Field label="Dorm / Building" testID="reg-building-input" value={f.building} onChangeText={set("building")} placeholder="West Hall" />
-            <Field label="Room / Apt #" testID="reg-room-input" value={f.room} onChangeText={set("room")} placeholder="204" />
+          {role !== "DRIVER" && (<>
+            <Field label={role === "NEIGHBOR" ? "Neighborhood" : "Campus"} testID="reg-campus-input" value={f.campus} onChangeText={set("campus")} placeholder={role === "NEIGHBOR" ? "Maple Grove" : "State University"} />
+            <Field label={role === "NEIGHBOR" ? "Street address" : "Dorm / Building"} testID="reg-building-input" value={f.building} onChangeText={set("building")} placeholder={role === "NEIGHBOR" ? "123 Main St" : "West Hall"} />
+            <Field label={role === "NEIGHBOR" ? "Apt / Unit (optional)" : "Room / Apt #"} testID="reg-room-input" value={f.room} onChangeText={set("room")} placeholder={role === "NEIGHBOR" ? "Unit B" : "204"} />
           </>)}
           {!!err && <Text style={styles.err} testID="register-error">{err}</Text>}
           <Btn title="Create Account" onPress={submit} loading={loading} testID="register-submit-button" />

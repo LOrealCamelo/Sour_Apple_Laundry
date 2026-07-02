@@ -13,6 +13,8 @@ type AuthCtx = {
   register: (payload: any) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  isGuest: boolean;
+  continueAsGuest: () => void;
 };
 
 const Ctx = createContext<AuthCtx>({} as AuthCtx);
@@ -21,6 +23,8 @@ export const useAuth = () => useContext(Ctx);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
+  const continueAsGuest = () => setIsGuest(true);
 
   useEffect(() => {
     (async () => {
@@ -58,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     await clearToken();
     setUser(null);
+    setIsGuest(false);
   };
 
   const refreshUser = async () => {
@@ -66,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ user, loading, login, register, logout, refreshUser }}>
+    <Ctx.Provider value={{ user, loading, login, register, logout, refreshUser, isGuest, continueAsGuest }}>
       {children}
     </Ctx.Provider>
   );

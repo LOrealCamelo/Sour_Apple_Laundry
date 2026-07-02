@@ -25,7 +25,7 @@ export default function StudentHome() {
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="student-home">
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.apple} />}>
-        <Text style={styles.hi}>Hi, {user?.name?.split(" ")[0]} 👋</Text>
+        <Text style={styles.hi}>Hi, {user?.name?.split(" ")[0] || "there"} 👋</Text>
         <Text style={styles.sub}>{user?.campus || "Your campus"} · {user?.building}</Text>
 
         <Pressable testID="schedule-cta" style={styles.cta} onPress={() => router.push("/(student)/schedule")}>

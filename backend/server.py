@@ -77,6 +77,8 @@ SERVICE_PRICES = {
 RUSH_FEE = 10
 BEDDING_ADDON = 8
 EXTRA_BAG_FEE = 5
+# branded reusable bags available for purchase (set prices)
+BRANDED_BAG_PRICES = {"small": 5, "medium": 8, "large": 12}
 
 
 # ------------------------------ Pydantic models ------------------------------
@@ -116,7 +118,10 @@ class ProfileUpdate(BaseModel):
 
 
 class OrderCreate(BaseModel):
-    service_type: str
+    service_type: Optional[str] = None       # legacy single value (kept for compat)
+    services: List[str] = []                 # multiple services allowed
+    order_type: str = "Pickup & Delivery"    # or "Neighborhood Drop-off"
+    branded_bags: dict = {}                   # {"small": n, "medium": n, "large": n}
     pickup_date: str
     pickup_window: str
     delivery_date: str
@@ -131,10 +136,12 @@ class OrderCreate(BaseModel):
 
 
 class PriceEstimate(BaseModel):
-    service_type: str
+    service_type: Optional[str] = None
+    services: List[str] = []
     bags: int = 1
     rush: bool = False
     bedding_addon: bool = False
+    branded_bags: dict = {}
 
 
 class ApproveBody(BaseModel):
@@ -237,22 +244,26 @@ async def push_history(order_id: str, status_val: str):
 
 
 # ---------------------------------- Pricing ----------------------------------
-def estimate_price(service_type: str, bags: int, rush: bool, bedding: bool) -> float:
-    base = SERVICE_PRICES.get(service_type, 20) * max(1, bags)
-    extra = EXTRA_BAG_FEE * max(0, bags - 1)
-    total = base + extra
+def estimate_price(services, bags: int, rush: bool, bedding: bool, branded_bags=None) -> float:
+    if isinstance(services, str):
+        services = [services]
+    total = sum(SERVICE_PRICES.get(s, 20) for s in services)
+    total += EXTRA_BAG_FEE * max(0, bags - 1)
     if rush:
         total += RUSH_FEE
     if bedding:
         total += BEDDING_ADDON
+    if branded_bags:
+        for size, qty in branded_bags.items():
+            total += BRANDED_BAG_PRICES.get(size, 0) * int(qty or 0)
     return round(float(total), 2)
 
 
 # =============================== AUTH ROUTES ===============================
 @api.post("/auth/register")
 async def register(body: UserCreate):
-    if body.role not in ("STUDENT", "DRIVER"):
-        raise HTTPException(400, "Self-registration allowed for STUDENT or DRIVER only")
+    if body.role not in ("STUDENT", "DRIVER", "NEIGHBOR"):
+        raise HTTPException(400, "Self-registration allowed for STUDENT, NEIGHBOR or DRIVER only")
     if await db.users.find_one({"email": body.email.lower()}):
         raise HTTPException(400, "Email already registered")
     user = {
@@ -291,12 +302,14 @@ async def update_me(body: ProfileUpdate, user: dict = Depends(get_current_user))
 # ============================== STUDENT ORDERS ==============================
 @api.post("/orders/estimate")
 async def price_estimate(body: PriceEstimate):
-    return {"estimate": estimate_price(body.service_type, body.bags, body.rush, body.bedding_addon)}
+    services = body.services or ([body.service_type] if body.service_type else [])
+    return {"estimate": estimate_price(services, body.bags, body.rush, body.bedding_addon, body.branded_bags)}
 
 
 @api.post("/orders")
-async def create_order(body: OrderCreate, user: dict = Depends(require_role("STUDENT"))):
-    price = estimate_price(body.service_type, body.bags, body.rush, body.bedding_addon)
+async def create_order(body: OrderCreate, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    services = body.services or ([body.service_type] if body.service_type else ["Wash & Fold"])
+    price = estimate_price(services, body.bags, body.rush, body.bedding_addon, body.branded_bags)
     oid = new_id()
     code = "SA-" + oid[:8].upper()
     order = {
@@ -304,7 +317,9 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_role("STU
         "student_id": user["id"], "student_name": user["name"],
         "campus": user.get("campus", ""), "building": user.get("building", ""),
         "room": user.get("room", ""), "phone": user.get("phone", ""),
-        "service_type": body.service_type, "bags": body.bags,
+        "service_type": ", ".join(services), "services": services,
+        "order_type": body.order_type, "branded_bags": body.branded_bags,
+        "bags": body.bags,
         "rush": body.rush, "bedding_addon": body.bedding_addon,
         "preferences": body.preferences, "stain_notes": body.stain_notes,
         "photos": body.photos, "referral_code": body.referral_code,
@@ -326,7 +341,7 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_role("STU
 
 
 @api.get("/orders/my")
-async def my_orders(user: dict = Depends(require_role("STUDENT"))):
+async def my_orders(user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
     docs = await db.orders.find({"student_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
     return docs
 
@@ -336,13 +351,13 @@ async def get_order(order_id: str, user: dict = Depends(get_current_user)):
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
     if not order:
         raise HTTPException(404, "Order not found")
-    if user["role"] == "STUDENT" and order["student_id"] != user["id"]:
+    if user["role"] in ("STUDENT", "NEIGHBOR") and order["student_id"] != user["id"]:
         raise HTTPException(403, "Not your order")
     return order
 
 
 @api.post("/orders/{order_id}/rate")
-async def rate_order(order_id: str, body: RatingBody, user: dict = Depends(require_role("STUDENT"))):
+async def rate_order(order_id: str, body: RatingBody, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
     order = await db.orders.find_one({"id": order_id})
     if not order or order["student_id"] != user["id"]:
         raise HTTPException(404, "Order not found")
@@ -354,12 +369,15 @@ async def rate_order(order_id: str, body: RatingBody, user: dict = Depends(requi
 
 
 @api.post("/orders/{order_id}/reorder")
-async def reorder(order_id: str, user: dict = Depends(require_role("STUDENT"))):
+async def reorder(order_id: str, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
     prev = await db.orders.find_one({"id": order_id})
     if not prev or prev["student_id"] != user["id"]:
         raise HTTPException(404, "Order not found")
     body = OrderCreate(
-        service_type=prev["service_type"], pickup_date=prev["pickup_date"],
+        services=prev.get("services") or [prev["service_type"]],
+        order_type=prev.get("order_type", "Pickup & Delivery"),
+        branded_bags=prev.get("branded_bags", {}),
+        pickup_date=prev["pickup_date"],
         pickup_window=prev["pickup_window"], delivery_date=prev["delivery_date"],
         delivery_window=prev["delivery_window"], bags=prev["bags"], rush=prev["rush"],
         bedding_addon=prev["bedding_addon"], preferences=prev["preferences"],
@@ -573,7 +591,7 @@ async def driver_job_status(job_id: str, body: StatusUpdate, user: dict = Depend
 
 # ============================== PAYMENTS (Stripe) ==============================
 @api.post("/payments/checkout/{order_id}")
-async def checkout(order_id: str, user: dict = Depends(require_role("STUDENT"))):
+async def checkout(order_id: str, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
     """PLACEHOLDER Stripe checkout. TODO: with STRIPE_API_KEY create a real
     PaymentIntent / Checkout Session and return the client_secret / url."""
     order = await db.orders.find_one({"id": order_id})

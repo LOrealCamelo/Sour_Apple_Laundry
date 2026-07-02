@@ -3,67 +3,102 @@ import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Pl
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/src/context/AuthContext";
 import { api } from "@/src/api/client";
 import { colors, spacing, radius } from "@/src/theme";
 import { Btn, Field, Card } from "@/src/components/UI";
 
 const SERVICES = ["Wash & Fold", "Dry Cleaning", "Bedding", "Towels", "Rush Laundry", "Subscription Laundry Plan"];
 const PREFS = ["Cold wash only", "Hang dry items", "Separate whites/colors", "Extra fabric softener", "No detergent scent"];
+const BAG_SIZES = [
+  { key: "small", label: "Small", price: 5 },
+  { key: "medium", label: "Medium", price: 8 },
+  { key: "large", label: "Large", price: 12 },
+];
 
 export default function Schedule() {
   const router = useRouter();
-  const [service, setService] = useState("Wash & Fold");
+  const { user, isGuest } = useAuth();
+  const isNeighbor = user?.role === "NEIGHBOR";
+
+  const [services, setServices] = useState<string[]>(["Wash & Fold"]);
   const [bags, setBags] = useState(1);
   const [rush, setRush] = useState(false);
   const [bedding, setBedding] = useState(false);
+  const [brandedBags, setBrandedBags] = useState<Record<string, number>>({ small: 0, medium: 0, large: 0 });
   const [prefs, setPrefs] = useState<string[]>([]);
   const [stain, setStain] = useState("");
   const [pickupDate, setPickupDate] = useState("2026-06-25");
   const [pickupWindow, setPickupWindow] = useState("9am - 12pm");
   const [deliveryDate, setDeliveryDate] = useState("2026-06-27");
   const [deliveryWindow, setDeliveryWindow] = useState("3pm - 6pm");
+  const [dropDate, setDropDate] = useState("2026-06-25");
   const [estimate, setEstimate] = useState(0);
   const [aiTips, setAiTips] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    api("/orders/estimate", { method: "POST", auth: false, body: { service_type: service, bags, rush, bedding_addon: bedding } })
+    api("/orders/estimate", { method: "POST", auth: false, body: { services, bags, rush, bedding_addon: bedding, branded_bags: brandedBags } })
       .then((r: any) => setEstimate(r.estimate)).catch(() => {});
-  }, [service, bags, rush, bedding]);
+  }, [services, bags, rush, bedding, brandedBags]);
 
+  const toggleService = (s: string) => setServices((cur) => cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]);
   const togglePref = (p: string) => setPrefs((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]);
+  const setBag = (size: string, delta: number) => setBrandedBags((b) => ({ ...b, [size]: Math.max(0, (b[size] || 0) + delta) }));
 
   const getAiTips = async () => {
     if (!stain.trim()) return;
     setAiLoading(true);
-    try { const r: any = await api("/ai/stain-tips", { method: "POST", body: { notes: stain, service_type: service } }); setAiTips(r.tips); }
+    try { const r: any = await api("/ai/stain-tips", { method: "POST", body: { notes: stain, service_type: services.join(", ") } }); setAiTips(r.tips); }
     catch { setAiTips("Could not load tips right now."); } finally { setAiLoading(false); }
   };
 
   const submit = async () => {
+    if (isGuest) { router.push("/register"); return; }
+    if (services.length === 0) { alert("Select at least one service"); return; }
     setSubmitting(true);
     try {
-      const order: any = await api("/orders", { method: "POST", body: {
-        service_type: service, pickup_date: pickupDate, pickup_window: pickupWindow,
-        delivery_date: deliveryDate, delivery_window: deliveryWindow, bags, rush,
-        bedding_addon: bedding, preferences: prefs, stain_notes: stain, photos: [],
-      }});
+      const body: any = {
+        services, order_type: isNeighbor ? "Neighborhood Drop-off" : "Pickup & Delivery",
+        branded_bags: brandedBags, bags, rush, bedding_addon: bedding,
+        preferences: prefs, stain_notes: stain, photos: [],
+        pickup_date: isNeighbor ? dropDate : pickupDate,
+        pickup_window: isNeighbor ? "Self drop-off" : pickupWindow,
+        delivery_date: isNeighbor ? dropDate : deliveryDate,
+        delivery_window: isNeighbor ? "Self pickup" : deliveryWindow,
+      };
+      const order: any = await api("/orders", { method: "POST", body });
       router.replace(`/order/${order.id}?new=1`);
     } catch (e: any) { alert(e.message); } finally { setSubmitting(false); }
   };
+
+  const brandedTotal = BAG_SIZES.reduce((sum, b) => sum + b.price * (brandedBags[b.key] || 0), 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]} testID="schedule-screen">
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Schedule Pickup</Text>
+          <Text style={styles.title}>{isNeighbor ? "Drop-off Order" : "Schedule Pickup"}</Text>
+          {isGuest && (
+            <Card style={{ borderColor: colors.gold, backgroundColor: colors.gold + "18" }}>
+              <Text style={{ color: colors.text, fontWeight: "600" }}>You're browsing as a guest.</Text>
+              <Text style={{ color: colors.textDim, marginTop: 4, fontSize: 13 }}>Explore & estimate freely — sign up when you're ready to submit.</Text>
+            </Card>
+          )}
+          {isNeighbor && (
+            <Card style={{ borderColor: colors.info }}>
+              <Text style={{ color: colors.text, fontWeight: "700" }}>Neighborhood service</Text>
+              <Text style={{ color: colors.textDim, marginTop: 4, fontSize: 13 }}>Drop off & pick up at our location — no driver pickup/delivery.</Text>
+            </Card>
+          )}
 
-          <Text style={styles.label}>Service</Text>
+          <Text style={styles.label}>Services (choose one or more)</Text>
           <View style={styles.chipsWrap}>
             {SERVICES.map((s) => (
-              <Pressable key={s} testID={`service-${s}`} onPress={() => setService(s)} style={[styles.chip, service === s && styles.chipActive]}>
-                <Text style={[styles.chipText, service === s && { color: colors.bg }]}>{s}</Text>
+              <Pressable key={s} testID={`service-${s}`} onPress={() => toggleService(s)} style={[styles.chip, services.includes(s) && styles.chipActive]}>
+                {services.includes(s) && <Ionicons name="checkmark" size={14} color={colors.bg} style={{ marginRight: 4 }} />}
+                <Text style={[styles.chipText, services.includes(s) && { color: colors.bg }]}>{s}</Text>
               </Pressable>
             ))}
           </View>
@@ -79,6 +114,24 @@ export default function Schedule() {
             </View>
             <Toggle label="Rush service (+$10)" value={rush} onToggle={() => setRush(!rush)} testID="rush-toggle" />
             <Toggle label="Bedding add-on (+$8)" value={bedding} onToggle={() => setBedding(!bedding)} testID="bedding-toggle" />
+          </Card>
+
+          <Text style={styles.label}>Buy branded reusable bags (optional)</Text>
+          <Card>
+            {BAG_SIZES.map((b) => (
+              <View key={b.key} style={styles.bagRow}>
+                <View>
+                  <Text style={styles.rowLabel}>{b.label} bag</Text>
+                  <Text style={styles.bagPrice}>${b.price} each</Text>
+                </View>
+                <View style={styles.stepper}>
+                  <Pressable testID={`bag-${b.key}-minus`} onPress={() => setBag(b.key, -1)} style={styles.stepBtn}><Ionicons name="remove" size={18} color={colors.text} /></Pressable>
+                  <Text style={styles.stepVal}>{brandedBags[b.key] || 0}</Text>
+                  <Pressable testID={`bag-${b.key}-plus`} onPress={() => setBag(b.key, 1)} style={styles.stepBtn}><Ionicons name="add" size={18} color={colors.text} /></Pressable>
+                </View>
+              </View>
+            ))}
+            {brandedTotal > 0 && <Text style={styles.bagTotal} testID="branded-bag-total">Branded bags: +${brandedTotal.toFixed(2)}</Text>}
           </Card>
 
           <Text style={styles.label}>Laundry preferences</Text>
@@ -98,10 +151,14 @@ export default function Schedule() {
           {aiLoading && <ActivityIndicator color={colors.gold} style={{ marginVertical: 8 }} />}
           {!!aiTips && <Card style={{ borderColor: colors.gold }}><Text style={styles.aiTips} testID="ai-tips-result">{aiTips}</Text></Card>}
 
-          <Field label="Pickup date" testID="pickup-date-input" value={pickupDate} onChangeText={setPickupDate} />
-          <Field label="Pickup window" testID="pickup-window-input" value={pickupWindow} onChangeText={setPickupWindow} />
-          <Field label="Delivery date" testID="delivery-date-input" value={deliveryDate} onChangeText={setDeliveryDate} />
-          <Field label="Delivery window" testID="delivery-window-input" value={deliveryWindow} onChangeText={setDeliveryWindow} />
+          {isNeighbor ? (
+            <Field label="Preferred drop-off date" testID="dropoff-date-input" value={dropDate} onChangeText={setDropDate} />
+          ) : (<>
+            <Field label="Pickup date" testID="pickup-date-input" value={pickupDate} onChangeText={setPickupDate} />
+            <Field label="Pickup window" testID="pickup-window-input" value={pickupWindow} onChangeText={setPickupWindow} />
+            <Field label="Delivery date" testID="delivery-date-input" value={deliveryDate} onChangeText={setDeliveryDate} />
+            <Field label="Delivery window" testID="delivery-window-input" value={deliveryWindow} onChangeText={setDeliveryWindow} />
+          </>)}
 
           <Card style={{ backgroundColor: colors.surfaceAlt }}>
             <View style={styles.stepRow}>
@@ -110,8 +167,8 @@ export default function Schedule() {
             </View>
           </Card>
 
-          <Btn title="Submit Request" onPress={submit} loading={submitting} testID="submit-order-button" />
-          <Text style={styles.note}>Your request goes to Sour Apple VIP for approval before pickup.</Text>
+          <Btn title={isGuest ? "Sign up to submit" : "Submit Request"} onPress={submit} loading={submitting} testID="submit-order-button" />
+          <Text style={styles.note}>Your request goes to Sour Apple VIP for approval before {isNeighbor ? "drop-off" : "pickup"}.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -135,7 +192,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: "800", color: colors.text, marginBottom: spacing.lg },
   label: { color: colors.textDim, fontSize: 13, marginBottom: 8, fontWeight: "600" },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: spacing.md },
-  chip: { paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
+  chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
   chipActive: { backgroundColor: colors.apple, borderColor: colors.apple },
   chipText: { color: colors.text, fontSize: 13, fontWeight: "600" },
   stepRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
@@ -146,6 +203,9 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.md },
   switch: { width: 48, height: 28, borderRadius: 14, backgroundColor: colors.border, padding: 3, justifyContent: "center" },
   knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.white },
+  bagRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
+  bagPrice: { color: colors.textDim, fontSize: 12, marginTop: 2 },
+  bagTotal: { color: colors.gold, fontWeight: "700", marginTop: spacing.sm },
   aiBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: spacing.md },
   aiBtnText: { color: colors.gold, fontWeight: "700" },
   aiTips: { color: colors.text, lineHeight: 22 },
