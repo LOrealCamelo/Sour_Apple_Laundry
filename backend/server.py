@@ -357,7 +357,7 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_role("STU
         "delivery_date": body.delivery_date, "delivery_window": body.delivery_window,
         "rating": None, "feedback": "", "pickup_confirmed": False,
 
-        "contract_agreed": True,
+        "contract_agreed": body.contract_agreed,
         "signature_name": body.signature_name or user["name"],
         "signed_at": body.signed_at or now_iso(),
       
