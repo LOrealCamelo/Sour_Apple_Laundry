@@ -142,7 +142,9 @@ class OrderCreate(BaseModel):
     stain_notes: str = ""
     photos: List[str] = []           # base64 strings (optional)
     referral_code: str = ""
-
+    contract_agreed: bool = True
+    signature_name: str = ""          # Customer's typed legal name
+    signed_at: Optional[str] = None   # Timestamp when signed
 
 class PriceEstimate(BaseModel):
     service_type: Optional[str] = None
@@ -328,6 +330,8 @@ def tracking_number(customer_type: str, college: str, dorm: str, last_name: str,
 
 @api.post("/orders")
 async def create_order(body: OrderCreate, user: dict = Depends(require_role("STUDENT", "NEIGHBOR"))):
+    if not body.contract_agreed:
+        raise HTTPException(400, "You must accept the Sour Apple Service Agreement to place an order.")
     services = body.services or ([body.service_type] if body.service_type else ["Wash & Fold"])
     price = estimate_price(services, body.bags, body.rush, body.bedding_addon, body.branded_bags)
     oid = new_id()
@@ -352,6 +356,11 @@ async def create_order(body: OrderCreate, user: dict = Depends(require_role("STU
         "pickup_date": body.pickup_date, "pickup_window": body.pickup_window,
         "delivery_date": body.delivery_date, "delivery_window": body.delivery_window,
         "rating": None, "feedback": "", "pickup_confirmed": False,
+
+        "contract_agreed": True,
+        "signature_name": body.signature_name or user["name"],
+        "signed_at": body.signed_at or now_iso(),
+      
         "history": [
             {"status": "Request Submitted", "at": now_iso()},
             {"status": "Pending Admin Approval", "at": now_iso()},
