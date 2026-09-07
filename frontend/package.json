@@ -3,6 +3,9 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
+    "build": "expo export -p web",
+    "start": "expo start",
+    "web": "expo start --web",
     "preinstall": "./scripts/cmd-guard.js --preinstall",
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
