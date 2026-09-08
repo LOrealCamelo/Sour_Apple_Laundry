@@ -1,65 +1,176 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Pressable } from "react-native";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { Btn, Field } from "@/src/components/UI";
 import { colors, spacing } from "@/src/theme";
 
 export default function Login() {
   const { login, continueAsGuest } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const submit = async () => {
-    setErr(""); setLoading(true);
+  const submit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErr("");
+    setLoading(true);
+
     try {
       const u = await login(email.trim(), password);
-      if (u.role === "ADMIN") router.replace("/(admin)");
-      else if (u.role === "DRIVER") router.replace("/(driver)");
-      else router.replace("/(student)");
-    } catch (e: any) { setErr(e.message); } finally { setLoading(false); }
+      if (u.role === "ADMIN") {
+        navigate("/admin");
+      } else if (u.role === "DRIVER") {
+        navigate("/driver");
+      } else {
+        navigate("/student");
+      }
+    } catch (e: any) {
+      setErr(e.message || "Invalid email or password");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.safe} testID="login-screen">
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Pressable onPress={() => router.back()} style={styles.back}><Ionicons name="chevron-back" size={26} color={colors.text} /></Pressable>
-          <Image source={require("../assets/images/logo-hero.jpg")} style={{ width: 130, height: 130, alignSelf: "center" }} contentFit="contain" />
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.sub}>Log in to your Sour Apple VIP account</Text>
-          <View style={{ height: spacing.lg }} />
-          <Field label="Email" testID="login-email-input" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" placeholder="you@school.edu" />
-          <Field label="Password" testID="login-password-input" value={password} onChangeText={setPassword} secureTextEntry placeholder="••••••••" />
-          {!!err && <Text style={styles.err} testID="login-error">{err}</Text>}
-          <Btn title="Log In" onPress={submit} loading={loading} testID="login-submit-button" />
-          <Pressable onPress={() => router.replace("/register")} style={styles.linkRow}>
-            <Text style={styles.link}>New here? <Text style={{ color: colors.apple }}>Create account</Text></Text>
-          </Pressable>
-          <Pressable testID="login-guest-button" onPress={() => { continueAsGuest(); router.replace("/(student)"); }} style={styles.linkRow}>
-            <Text style={[styles.link, { color: colors.pink, textDecorationLine: "underline", fontWeight: "700" }]}>Continue as guest →</Text>
-          </Pressable>
-          <Text style={styles.demo}>Demo — Admin: admin@sourapple.com / Admin123!{"\n"}Student: student@sourapple.com / Student123!{"\n"}Driver: driver@sourapple.com / Driver123!</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+    <div
+      className="min-h-screen p-4 pb-16 max-w-md mx-auto flex flex-col justify-center"
+      style={{ backgroundColor: colors.bg || "#000" }}
+      data-testid="login-screen"
+    >
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="self-start p-2 -ml-2 mb-2 rounded-full transition-transform active:scale-90"
+        title="Go back"
+      >
+        <ChevronLeft size={28} style={{ color: colors.text || "#fff" }} />
+      </button>
+
+      {/* Hero Logo */}
+      <img
+        src="/assets/LOGO.png"
+        alt="Sour Apple VIP Logo"
+        className="w-28 h-28 object-contain mx-auto mb-2 drop-shadow-md"
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = "/logo-hero.jpg";
+        }}
+      />
+
+      {/* Title & Subtitle */}
+      <h1
+        className="text-3xl font-extrabold text-center mb-1"
+        style={{ color: colors.text || "#fff" }}
+      >
+        Welcome back
+      </h1>
+      <p
+        className="text-sm text-center mb-6"
+        style={{ color: colors.textDim || "#888" }}
+      >
+        Log in to your Sour Apple VIP account
+      </p>
+
+      {/* Login Form */}
+      <form onSubmit={submit} className="space-y-4">
+        <Field
+          label="Email"
+          data-testid="login-email-input"
+          value={email}
+          type="email"
+          onChangeText={setEmail}
+          placeholder="you@school.edu"
+          required
+        />
+
+        <Field
+          label="Password"
+          data-testid="login-password-input"
+          value={password}
+          type="password"
+          onChangeText={setPassword}
+          placeholder="••••••••"
+          required
+        />
+
+        {/* Error Alert */}
+        {Boolean(err) && (
+          <div
+            className="text-sm font-semibold p-2.5 rounded-lg text-center"
+            style={{
+              backgroundColor: "rgba(239, 68, 68, 0.15)",
+              color: colors.danger || "#ef4444",
+            }}
+            data-testid="login-error"
+          >
+            {err}
+          </div>
+        )}
+
+        {/* Submit Button */}
+        <div className="pt-2">
+          <Btn
+            title="Log In"
+            type="submit"
+            loading={loading}
+            data-testid="login-submit-button"
+          />
+        </div>
+      </form>
+
+      {/* Create Account Link */}
+      <div className="mt-5 text-center">
+        <span className="text-sm" style={{ color: colors.textDim || "#888" }}>
+          New here?{" "}
+          <Link
+            to="/register"
+            className="font-bold underline ml-1 hover:opacity-80 transition-opacity"
+            style={{ color: colors.apple || "#B0FF00" }}
+          >
+            Create account
+          </Link>
+        </span>
+      </div>
+
+      {/* Guest Mode Link */}
+      <div className="mt-3 text-center">
+        <button
+          type="button"
+          data-testid="login-guest-button"
+          onClick={() => {
+            continueAsGuest();
+            navigate("/student");
+          }}
+          className="text-sm font-bold underline transition-opacity hover:opacity-80"
+          style={{ color: colors.pink || "#ff2a85" }}
+        >
+          Continue as guest →
+        </button>
+      </div>
+
+      {/* Demo Credentials Box */}
+      <div
+        className="mt-8 p-3 rounded-xl border text-center text-xs leading-relaxed"
+        style={{
+          backgroundColor: colors.surfaceAlt || "#111",
+          borderColor: colors.border || "#222",
+          color: colors.textDim || "#777",
+        }}
+      >
+        <span className="font-bold text-zinc-400">Demo Accounts:</span>
+        <br />
+        Admin: <code className="text-zinc-300">natture1st@gmail.com</code> /{" "}
+        <code className="text-zinc-300">Admin123!</code>
+        <br />
+        Student: <code className="text-zinc-300">student@sourapple.com</code> /{" "}
+        <code className="text-zinc-300">Student123!</code>
+        <br />
+        Driver: <code className="text-zinc-300">driver@sourapple.com</code> /{" "}
+        <code className="text-zinc-300">Driver123!</code>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, flexGrow: 1 },
-  back: { marginBottom: spacing.md },
-  title: { fontSize: 28, fontWeight: "800", color: colors.text },
-  sub: { color: colors.textDim, marginTop: 6, fontSize: 15 },
-  err: { color: colors.danger, marginBottom: spacing.sm },
-  linkRow: { marginTop: spacing.md, alignItems: "center" },
-  link: { color: colors.textDim, fontSize: 15 },
-  demo: { color: colors.textDim, fontSize: 12, marginTop: spacing.xl, lineHeight: 18, textAlign: "center" },
-});
