@@ -653,11 +653,15 @@ async def campuses():
 
 # ================================ AI FEATURES ================================
 async def _ai(system: str, prompt: str) -> str:
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=new_id(),
-                   system_message=system).with_model("openai", "gpt-4o")
-    resp = await chat.send_message(UserMessage(text=prompt))
-    return resp if isinstance(resp, str) else str(resp)
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=new_id(),
+                       system_message=system).with_model("openai", "gpt-4o")
+        resp = await chat.send_message(UserMessage(text=prompt))
+        return resp if isinstance(resp, str) else str(resp)
+    except Exception as e:
+        logger.warning(f"AI service unavailable: {e}")
+        return "Pre-treat stains with cold water and mild detergent before washing. Do not apply heat until the stain is fully lifted."
 
 
 @api.post("/ai/stain-tips")
