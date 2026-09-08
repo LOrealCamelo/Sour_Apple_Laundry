@@ -1,5 +1,4 @@
 // @ts-nocheck
-import { ScrollViewStyleReset } from "expo-router/html";
 import type { PropsWithChildren } from "react";
 
 export default function Root({ children }: PropsWithChildren) {
@@ -17,7 +16,7 @@ export default function Root({ children }: PropsWithChildren) {
           If you want to enable scrolling, remove `ScrollViewStyleReset` and
           set `overflow: auto` on the body style below.
         */}
-        <ScrollViewStyleReset />
+        
         <style
           dangerouslySetInnerHTML={{
             __html: `
