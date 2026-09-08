@@ -1,98 +1,202 @@
-import { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Gift, Edit3, X } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { api } from "@/src/api/client";
-import { colors, spacing, radius } from "@/src/theme";
+import { colors, spacing } from "@/src/theme";
 import { Card, Btn, Field } from "@/src/components/UI";
 
-export default function Profile() {
+export default function StudentProfile() {
   const { user, logout, refreshUser } = useAuth();
-  const router = useRouter();
-  const [edit, setEdit] = useState(false);
-  const [f, setF] = useState({ name: user?.name || "", phone: user?.phone || "", campus: user?.campus || "", building: user?.building || "", room: user?.room || "" });
-  const [saving, setSaving] = useState(false);
-  const set = (k: string) => (v: string) => setF((s) => ({ ...s, [k]: v }));
+  const navigate = useNavigate();
 
-  const save = async () => {
+  const [edit, setEdit] = useState(false);
+  const [f, setF] = useState({
+    name: user?.name || "",
+    phone: user?.phone || "",
+    campus: user?.campus || "",
+    building: user?.building || "",
+    room: user?.room || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const setField = (key: string) => (val: string) =>
+    setF((prev) => ({ ...prev, [key]: val }));
+
+  const save = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setSaving(true);
-    try { await api("/auth/me", { method: "PUT", body: f }); await refreshUser(); setEdit(false); }
-    catch (e: any) { alert(e.message); } finally { setSaving(false); }
+    try {
+      await api("/auth/me", { method: "PUT", body: f });
+      if (refreshUser) await refreshUser();
+      setEdit(false);
+    } catch (e: any) {
+      alert(e.message || "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const referral = "SOUR-" + (user?.id?.slice(0, 5).toUpperCase() || "VIP");
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]} testID="profile-screen">
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase()}</Text></View>
-        <Text style={styles.name}>{user?.name}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
+    <div
+      className="min-h-screen p-4 pb-28 max-w-md mx-auto"
+      style={{ backgroundColor: colors.bg || "#0A0A0F" }}
+      data-testid="profile-screen"
+    >
+      {/* Avatar Circle */}
+      <div
+        className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 font-extrabold text-3xl shadow-lg"
+        style={{
+          backgroundColor: colors.apple || "#B0FF00",
+          color: colors.bg || "#0A0A0F",
+          boxShadow: "0 0 20px rgba(176, 255, 0, 0.3)",
+        }}
+      >
+        {user?.name?.[0]?.toUpperCase() || "U"}
+      </div>
 
-        <Card style={{ marginTop: spacing.lg }}>
-          <View style={styles.refRow}>
-            <View>
-              <Text style={styles.refLabel}>Your referral code</Text>
-              <Text style={styles.refCode} testID="referral-code">{referral}</Text>
-            </View>
-            <Ionicons name="gift" size={28} color={colors.gold} />
-          </View>
-          <Text style={styles.refNote}>Share with friends — you both get a discount.</Text>
+      {/* User Name & Email */}
+      <h1
+        className="text-2xl font-extrabold text-center tracking-tight"
+        style={{ color: colors.text || "#FFFFFF" }}
+      >
+        {user?.name || "Student"}
+      </h1>
+      <p
+        className="text-center text-sm mt-0.5 mb-6 font-medium"
+        style={{ color: colors.textDim || "#888899" }}
+      >
+        {user?.email}
+      </p>
+
+      {/* Referral Code Card */}
+      <Card className="mb-4 border" style={{ borderColor: colors.border || "#22222A" }}>
+        <div className="flex justify-between items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: colors.textDim || "#888899" }}>
+              Your referral code
+            </p>
+            <h2
+              className="text-2xl font-black mt-0.5 tracking-wider"
+              style={{ color: colors.gold || "#FFD700" }}
+              data-testid="referral-code"
+            >
+              {referral}
+            </h2>
+          </div>
+          <Gift size={32} style={{ color: colors.gold || "#FFD700" }} />
+        </div>
+        <p className="text-xs leading-relaxed mt-2" style={{ color: colors.textDim || "#888899" }}>
+          Share with friends — you both get a discount on laundry.
+        </p>
+      </Card>
+
+      {/* Profile Details (Edit Mode vs View Mode) */}
+      {edit ? (
+        <Card className="mb-6">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-bold" style={{ color: colors.text || "#FFFFFF" }}>
+              Edit Profile
+            </h3>
+            <button
+              type="button"
+              onClick={() => setEdit(false)}
+              className="p-1 text-zinc-400 hover:text-white"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          <form onSubmit={save} className="space-y-3">
+            <Field
+              label="Name"
+              value={f.name}
+              onChangeText={setField("name")}
+              data-testid="edit-name"
+              required
+            />
+            <Field
+              label="Phone"
+              value={f.phone}
+              onChangeText={setField("phone")}
+              data-testid="edit-phone"
+            />
+            <Field
+              label="Campus"
+              value={f.campus}
+              onChangeText={setField("campus")}
+              data-testid="edit-campus"
+            />
+            <Field
+              label="Building"
+              value={f.building}
+              onChangeText={setField("building")}
+              data-testid="edit-building"
+            />
+            <Field
+              label="Room / Apt #"
+              value={f.room}
+              onChangeText={setField("room")}
+              data-testid="edit-room"
+            />
+            <div className="pt-2">
+              <Btn
+                title="Save Profile"
+                type="submit"
+                loading={saving}
+                data-testid="save-profile-button"
+              />
+            </div>
+          </form>
         </Card>
+      ) : (
+        <Card className="mb-6">
+          <Info label="Phone" value={user?.phone} />
+          <Info label="Campus" value={user?.campus} />
+          <Info label="Building" value={user?.building} />
+          <Info label="Room / Apt" value={user?.room} />
 
-        {edit ? (
-          <Card>
-            <Field label="Name" value={f.name} onChangeText={set("name")} testID="edit-name" />
-            <Field label="Phone" value={f.phone} onChangeText={set("phone")} testID="edit-phone" />
-            <Field label="Campus" value={f.campus} onChangeText={set("campus")} testID="edit-campus" />
-            <Field label="Building" value={f.building} onChangeText={set("building")} testID="edit-building" />
-            <Field label="Room" value={f.room} onChangeText={set("room")} testID="edit-room" />
-            <Btn title="Save" onPress={save} loading={saving} testID="save-profile-button" />
-          </Card>
-        ) : (
-          <Card>
-            <Info label="Phone" value={user?.phone} />
-            <Info label="Campus" value={user?.campus} />
-            <Info label="Building" value={user?.building} />
-            <Info label="Room" value={user?.room} />
-            <Pressable testID="edit-profile-button" onPress={() => setEdit(true)} style={styles.editRow}>
-              <Ionicons name="create-outline" size={18} color={colors.apple} />
-              <Text style={styles.editText}>Edit profile</Text>
-            </Pressable>
-          </Card>
-        )}
+          <button
+            type="button"
+            data-testid="edit-profile-button"
+            onClick={() => setEdit(true)}
+            className="flex items-center gap-2 mt-4 pt-2 font-bold text-xs transition-opacity hover:opacity-80 active:scale-95"
+            style={{ color: colors.apple || "#B0FF00" }}
+          >
+            <Edit3 size={15} />
+            <span>Edit profile</span>
+          </button>
+        </Card>
+      )}
 
-        <Btn title="Log Out" variant="ghost" onPress={async () => { await logout(); router.replace("/"); }} testID="logout-button" />
-      </ScrollView>
-    </SafeAreaView>
+      {/* Log Out Button */}
+      <Btn
+        title="Log Out"
+        variant="ghost"
+        onClick={async () => {
+          await logout();
+          navigate("/");
+        }}
+        data-testid="logout-button"
+      />
+    </div>
   );
 }
 
 function Info({ label, value }: { label: string; value?: string }) {
   return (
-    <View style={styles.infoRow}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoVal}>{value || "—"}</Text>
-    </View>
+    <div
+      className="flex justify-between items-center py-2.5 border-b last:border-0"
+      style={{ borderColor: colors.border || "#22222A" }}
+    >
+      <span className="text-xs" style={{ color: colors.textDim || "#888899" }}>
+        {label}
+      </span>
+      <span className="text-xs font-semibold" style={{ color: colors.text || "#FFFFFF" }}>
+        {value || "—"}
+      </span>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 40, alignItems: "stretch" },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.apple, alignSelf: "center", alignItems: "center", justifyContent: "center", marginBottom: spacing.md },
-  avatarText: { fontSize: 36, fontWeight: "800", color: colors.bg },
-  name: { fontSize: 22, fontWeight: "800", color: colors.text, textAlign: "center" },
-  email: { color: colors.textDim, textAlign: "center", marginTop: 2 },
-  refRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  refLabel: { color: colors.textDim, fontSize: 13 },
-  refCode: { color: colors.gold, fontSize: 22, fontWeight: "800", marginTop: 2 },
-  refNote: { color: colors.textDim, fontSize: 13, marginTop: 8 },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
-  infoLabel: { color: colors.textDim },
-  infoVal: { color: colors.text, fontWeight: "600" },
-  editRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: spacing.md },
-  editText: { color: colors.apple, fontWeight: "700" },
-});
