@@ -1,21 +1,46 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ShoppingBag, ShieldCheck } from "lucide-react";
+import { ChevronLeft, ShoppingBag, ShieldCheck, MapPin, Check, AlertTriangle } from "lucide-react";
 import { api } from "@/src/api/client";
 import { colors } from "@/src/theme";
 import { Card, Btn, Field } from "@/src/components/UI";
 
-const SERVICES = [
-  { id: "Wash & Fold", name: "Wash & Fold", price: 20, desc: "Everyday clothes washed, dried & folded" },
-  { id: "Bedding", name: "Bedding / Comforter", price: 25, desc: "Sheets, blankets & comforters" },
-  { id: "Towels", name: "Towels Only", price: 15, desc: "Bath towels, washcloths & mats" },
-  { id: "Rush Laundry", name: "Rush Laundry (Same-Day)", price: 40, desc: "Guaranteed fast turnaround" },
+// Bag Sizes Matching the Official Sour Apple Size Chart
+const BAG_SIZES = [
+  {
+    id: "small",
+    name: "Small Bag (27 Inch)",
+    price: 10,
+    visual: "27\" Closed bag (drawstring, Velcro, zipper, or snaps)",
+    desc: "Up to 10 lbs · About 1-2 days of clothes",
+  },
+  {
+    id: "medium",
+    name: "Medium Bag (32 Inch — Most Popular)",
+    price: 20,
+    visual: "32\" Closed bag (drawstring, Velcro, zipper, or snaps)",
+    desc: "15-20 lbs · A full week of clothes for 1 person",
+  },
+  {
+    id: "large",
+    name: "Large Bag (40 Inch)",
+    price: 30,
+    visual: "40\" Heavy-duty closed bag (drawstring, Velcro, zipper, or snaps)",
+    desc: "25-30+ lbs · 2 weeks of laundry or family load",
+  },
+];
+
+const ADDON_SERVICES = [
+  { id: "Bedding", name: "Bedding / Comforter", price: 25, desc: "Comforters, blankets & heavy sheets" },
+  { id: "Towels", name: "Extra Towel Bundle", price: 15, desc: "Bundle of bath towels, mats & washcloths" },
+  { id: "Rush Laundry", name: "Rush Same-Day Turnaround", price: 40, desc: "Guaranteed priority turnaround" },
 ];
 
 const PREFERENCES = [
+  "Standard Sour Apple Fresh (Scented detergent, OxiClean, Scent booster & Softener)",
+  "I will provide my own detergent (Fragrance-free / Hypoallergenic)",
   "Cold wash only",
   "Separate whites and colors",
-  "Hypoallergenic / Fragrance-free",
   "Low heat dry",
   "Hang dry delicate items",
 ];
@@ -23,31 +48,27 @@ const PREFERENCES = [
 export default function Schedule() {
   const navigate = useNavigate();
 
-  // Booking Form State
-  const [selectedServices, setSelectedServices] = useState<string[]>(["Wash & Fold"]);
-  const [bags, setBags] = useState(1);
-  const [rush, setRush] = useState(false);
-  const [beddingAddon, setBeddingAddon] = useState(false);
-  const [preferences, setPreferences] = useState<string[]>([]);
+  // Booking Type & Size
+  const [customerType, setCustomerType] = useState("Local Drop-Off & Pick-Up");
+  const [selectedSize, setSelectedSize] = useState("medium");
+  const [bagQty, setBagQty] = useState(1);
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+
+  // Preferences & Notes
+  const [preferences, setPreferences] = useState<string[]>([
+    "Standard Sour Apple Fresh (Scented detergent, OxiClean, Scent booster & Softener)",
+  ]);
   const [stainNotes, setStainNotes] = useState("");
 
-  // Customer & Location
-  const [customerType, setCustomerType] = useState("College Student");
-  const [college, setCollege] = useState("MVCC");
-  const [dorm, setDorm] = useState("");
-  const [directions, setDirections] = useState("");
-  const [pickupDate, setPickupDate] = useState("");
-  const [pickupWindow, setPickupWindow] = useState("9am - 12pm");
+  // Customer Details & Schedule
+  const [customerName, setCustomerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [dormOrAddress, setDormOrAddress] = useState("");
+  const [campusName, setCampusName] = useState("MVCC");
+  const [dropoffDate, setDropoffDate] = useState("");
+  const [dropoffWindow, setDropoffWindow] = useState("Morning (9am - 12pm)");
 
-  // Branded Reusable Bags Add-on
-  const [bagStyle, setBagStyle] = useState<"GIRL" | "BOY">("GIRL");
-  const [brandedBags, setBrandedBags] = useState<{ [key: string]: number }>({
-    small: 0,
-    medium: 0,
-    large: 0,
-  });
-
-  // Digital Contract & Signature State
+  // Digital Contract State
   const [contractAgreed, setContractAgreed] = useState(false);
   const [signatureName, setSignatureName] = useState("");
 
@@ -55,28 +76,23 @@ export default function Schedule() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
-  // Calculate live estimate whenever selections change
+  // Calculate live estimate
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await api("/orders/estimate", {
-          method: "POST",
-          body: {
-            services: selectedServices,
-            bags,
-            rush,
-            bedding_addon: beddingAddon,
-            branded_bags: brandedBags,
-          },
-        });
-        setEstimate(res.estimate || 20);
-      } catch {}
-    })();
-  }, [selectedServices, bags, rush, beddingAddon, brandedBags]);
+    let total = 0;
+    const sizeObj = BAG_SIZES.find((s) => s.id === selectedSize) || BAG_SIZES;
+    total += sizeObj.price * bagQty;
 
-  const toggleService = (id: string) => {
-    setSelectedServices((prev) =>
-      prev.includes(id) ? (prev.length > 1 ? prev.filter((s) => s !== id) : prev) : [...prev, id]
+    selectedAddons.forEach((addonId) => {
+      const addon = ADDON_SERVICES.find((a) => a.id === addonId);
+      if (addon) total += addon.price;
+    });
+
+    setEstimate(total);
+  }, [selectedSize, bagQty, selectedAddons]);
+
+  const toggleAddon = (id: string) => {
+    setSelectedAddons((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
   };
 
@@ -86,52 +102,50 @@ export default function Schedule() {
     );
   };
 
-  const updateBagQty = (size: string, delta: number) => {
-    setBrandedBags((prev) => ({
-      ...prev,
-      [size]: Math.max(0, (prev[size] || 0) + delta),
-    }));
-  };
-
   const submitOrder = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErr("");
 
     if (!contractAgreed) {
-      setErr("Please review and agree to the Service Agreement before booking.");
+      setErr("Please check the box to agree to the Service Agreement and closure requirements before booking.");
       return;
     }
     if (!signatureName.trim()) {
-      setErr("Please type your full legal name as your digital signature.");
+      setErr("Please type your full legal name as your electronic signature.");
       return;
     }
 
     setLoading(true);
     try {
+      const sizeObj = BAG_SIZES.find((s) => s.id === selectedSize);
+      const allServices = [`${sizeObj?.name} (${sizeObj?.visual})`, ...selectedAddons];
+
       const order = await api("/orders", {
         method: "POST",
         body: {
-          services: selectedServices,
-          customer_type: customerType,
-          college: customerType === "College Student" ? college : "",
-          dorm,
-          directions,
-          pickup_date: pickupDate || new Date().toISOString().split("T")[0],
-          pickup_window: pickupWindow,
-          bags,
-          rush,
-          bedding_addon: beddingAddon,
+          services: allServices,
+          service_type: sizeObj?.name,
+          customer_type: customerType === "MVCC Student Curbside" ? "College Student" : "Neighborhood Resident",
+          college: customerType === "MVCC Student Curbside" ? campusName : "",
+          dorm: dormOrAddress,
+          directions: customerType === "Local Drop-Off & Pick-Up" ? "South Utica Drop-off" : "MVCC Campus Curbside",
+          pickup_date: dropoffDate || new Date().toISOString().split("T")[0],
+          pickup_window: dropoffWindow,
+          bags: bagQty,
+          rush: selectedAddons.includes("Rush Laundry"),
+          bedding_addon: selectedAddons.includes("Bedding"),
           preferences,
           stain_notes: stainNotes,
-          branded_bags: brandedBags,
+          branded_bags: {},
           contract_agreed: true,
           signature_name: signatureName.trim(),
           signed_at: new Date().toISOString(),
         },
       });
+
       navigate(`/order/${order.id}?new=1`);
     } catch (e: any) {
-      setErr(e.message || "Failed to schedule pickup");
+      setErr(e.message || "Failed to schedule service");
     } finally {
       setLoading(false);
     }
@@ -144,22 +158,42 @@ export default function Schedule() {
       data-testid="schedule-screen"
     >
       {/* Header */}
-      <div className="flex items-center gap-2 mb-6 pt-2">
+      <div className="flex items-center gap-2 mb-4 pt-2">
         <button
+          type="button"
           onClick={() => navigate(-1)}
           className="p-2 -ml-2 rounded-full active:scale-90 transition-transform"
         >
           <ChevronLeft size={28} style={{ color: colors.text || "#fff" }} />
         </button>
-        <h1 className="text-2xl font-black" style={{ color: colors.text || "#fff" }}>
-          Schedule Pickup
+        <h1 className="text-2xl font-black tracking-tight" style={{ color: colors.text || "#fff" }}>
+          Schedule Service
         </h1>
       </div>
 
+      {/* Location Banner */}
+      <div
+        className="p-3.5 rounded-2xl mb-5 border text-xs leading-relaxed flex items-start gap-3 shadow-md"
+        style={{
+          backgroundColor: "rgba(176, 255, 0, 0.06)",
+          borderColor: "rgba(176, 255, 0, 0.25)",
+        }}
+      >
+        <MapPin size={22} className="shrink-0 mt-0.5" style={{ color: colors.apple || "#B0FF00" }} />
+        <div>
+          <p className="font-extrabold text-sm" style={{ color: colors.apple || "#B0FF00" }}>
+            South Utica Drop-Off & Pick-Up
+          </p>
+          <p className="text-zinc-300 mt-0.5">
+            Anyone is welcome! Drop off dirty in South Utica, and we notify you as soon as your fresh, folded clothes are ready for pickup.
+          </p>
+        </div>
+      </div>
+
       <form onSubmit={submitOrder} className="space-y-5">
-        {/* Customer Type Toggle */}
+        {/* Customer Type Selector */}
         <div className="grid grid-cols-2 gap-2">
-          {["College Student", "Neighborhood Resident"].map((type) => (
+          {["Local Drop-Off & Pick-Up", "MVCC Student Curbside"].map((type) => (
             <button
               type="button"
               key={type}
@@ -176,69 +210,103 @@ export default function Schedule() {
           ))}
         </div>
 
-        {/* 1. Services Selection */}
+        {/* 1. Bag Size Selector with Official Size Chart */}
         <Card>
-          <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
-            1. Select Services
+          <h2 className="text-sm font-black mb-1 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+            1. Select Your Bag Size
           </h2>
-          <div className="space-y-2">
-            {SERVICES.map((s) => {
-              const active = selectedServices.includes(s.id);
+          <p className="text-xs mb-3 text-zinc-400">
+            No scale needed! Refer to our visual size chart below:
+          </p>
+
+          {/* Size Chart Image Banner */}
+          <div className="mb-3 rounded-xl overflow-hidden border border-zinc-800 shadow-md">
+            <img
+              src="/assets/images/bag-sizes.jpg"
+              alt="Sour Apple Bag Size Chart"
+              className="w-full h-auto object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/assets/LOGO.png";
+              }}
+            />
+          </div>
+
+          {/* 🚫 STRICT CLOSURE POLICY BOX */}
+          <div
+            className="p-3.5 rounded-xl mb-3 border text-xs leading-relaxed flex items-start gap-2.5 shadow-sm"
+            style={{
+              backgroundColor: "rgba(239, 68, 68, 0.12)",
+              borderColor: "rgba(239, 68, 68, 0.45)",
+              color: "#fca5a5",
+            }}
+          >
+            <AlertTriangle size={22} className="shrink-0 text-red-400 mt-0.5" />
+            <div>
+              <p className="font-extrabold text-xs text-red-300 uppercase tracking-wide">
+                Strict Closure Policy — No Open Baskets
+              </p>
+              <p className="mt-0.5 text-zinc-200">
+                All laundry <strong>MUST</strong> be dropped off in a bag with a secure closure via a <strong>drawstring, Velcro, zipper, or snap buttons</strong>. 
+                <br />
+                <span className="text-red-300 font-semibold">
+                  Open laundry baskets with no lids are NOT accepted
+                </span> (items fall out and get misplaced during transport).
+              </p>
+            </div>
+          </div>
+
+          {/* Size Options */}
+          <div className="space-y-2.5">
+            {BAG_SIZES.map((s) => {
+              const active = selectedSize === s.id;
               return (
                 <div
                   key={s.id}
-                  onClick={() => toggleService(s.id)}
-                  className="p-3 rounded-xl border cursor-pointer flex justify-between items-center transition-all select-none"
+                  onClick={() => setSelectedSize(s.id)}
+                  className="p-3.5 rounded-xl border cursor-pointer flex justify-between items-center transition-all select-none"
                   style={{
                     backgroundColor: active ? "rgba(176, 255, 0, 0.08)" : colors.surfaceAlt || "#1a1a1a",
                     borderColor: active ? colors.apple || "#B0FF00" : colors.border || "#222",
                   }}
                 >
-                  <div>
-                    <p className="text-sm font-bold" style={{ color: colors.text || "#fff" }}>
-                      {s.name}
+                  <div className="pr-2">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-bold text-white">{s.name}</p>
+                      {active && <Check size={14} style={{ color: colors.apple || "#B0FF00" }} />}
+                    </div>
+                    <p className="text-xs font-semibold mt-0.5" style={{ color: colors.apple || "#B0FF00" }}>
+                      📏 {s.visual}
                     </p>
-                    <p className="text-xs" style={{ color: colors.textDim || "#888" }}>
-                      {s.desc}
-                    </p>
+                    <p className="text-[11px] text-zinc-400 mt-0.5">{s.desc}</p>
                   </div>
-                  <span className="text-sm font-black" style={{ color: colors.apple || "#B0FF00" }}>
+                  <span className="text-base font-black shrink-0" style={{ color: colors.apple || "#B0FF00" }}>
                     ${s.price}
                   </span>
                 </div>
               );
             })}
           </div>
-        </Card>
 
-        {/* 2. Laundry Bags Count */}
-        <Card>
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-sm font-black" style={{ color: colors.text || "#fff" }}>
-                Number of Bags
-              </h2>
-              <p className="text-xs" style={{ color: colors.textDim || "#888" }}>
-                $5 per additional bag after the first
-              </p>
-            </div>
+          {/* Bag Quantity Counter */}
+          <div className="flex justify-between items-center mt-4 pt-3 border-t border-zinc-800">
+            <span className="text-xs font-bold text-white">Quantity of bags this size:</span>
             <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setBags(Math.max(1, bags - 1))}
-                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold"
-                style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+                onClick={() => setBagQty(Math.max(1, bagQty - 1))}
+                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold text-white active:scale-90 transition-transform"
+                style={{ borderColor: colors.border || "#333", backgroundColor: colors.surface || "#111" }}
               >
                 -
               </button>
               <span className="font-black text-lg" style={{ color: colors.apple || "#B0FF00" }}>
-                {bags}
+                {bagQty}
               </span>
               <button
                 type="button"
-                onClick={() => setBags(bags + 1)}
-                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold"
-                style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+                onClick={() => setBagQty(bagQty + 1)}
+                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold text-white active:scale-90 transition-transform"
+                style={{ borderColor: colors.border || "#333", backgroundColor: colors.surface || "#111" }}
               >
                 +
               </button>
@@ -246,89 +314,90 @@ export default function Schedule() {
           </div>
         </Card>
 
-        {/* 3. Reusable Branded Bags Add-On */}
+        {/* Optional Add-ons */}
         <Card>
-          <div className="flex items-center gap-2 mb-2">
-            <ShoppingBag size={18} style={{ color: colors.apple || "#B0FF00" }} />
-            <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
-              Reusable Laundry Bags (Optional)
-            </h2>
-          </div>
-          <p className="text-xs mb-3" style={{ color: colors.textDim || "#888" }}>
-            Heavy-duty, water-resistant drawstring bags. One-time purchase!
-          </p>
-
-          {/* Style Selector */}
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <button
-              type="button"
-              onClick={() => setBagStyle("GIRL")}
-              className="py-1.5 rounded-lg border text-xs font-bold"
-              style={{
-                borderColor: bagStyle === "GIRL" ? colors.pink || "#ff2a85" : colors.border || "#333",
-                color: bagStyle === "GIRL" ? colors.pink || "#ff2a85" : colors.textDim || "#888",
-              }}
-            >
-              Girl Apple (Pink/Gray)
-            </button>
-            <button
-              type="button"
-              onClick={() => setBagStyle("BOY")}
-              className="py-1.5 rounded-lg border text-xs font-bold"
-              style={{
-                borderColor: bagStyle === "BOY" ? colors.info || "#00b4d8" : colors.border || "#333",
-                color: bagStyle === "BOY" ? colors.info || "#00b4d8" : colors.textDim || "#888",
-              }}
-            >
-              Boy Apple (Navy/Blue)
-            </button>
-          </div>
-
-          {/* Sizes */}
-          {[
-            { size: "small", label: "Small Bag (Up to 10 lbs)", price: 8 },
-            { size: "medium", label: "Medium Bag (15-20 lbs)", price: 10 },
-            { size: "large", label: "Large Bag (Dorm Heavy)", price: 12 },
-          ].map((item) => (
-            <div key={item.size} className="flex justify-between items-center py-2 border-b last:border-0 border-zinc-800">
-              <div>
-                <span className="text-xs font-bold" style={{ color: colors.text || "#fff" }}>
-                  {item.label}
-                </span>
-                <span className="text-xs ml-2 font-semibold" style={{ color: colors.apple || "#B0FF00" }}>
-                  +${item.price}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => updateBagQty(item.size, -1)}
-                  className="w-7 h-7 rounded border flex items-center justify-center text-xs"
-                  style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+          <h2 className="text-sm font-black mb-2 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+            Optional Add-ons
+          </h2>
+          <div className="space-y-2">
+            {ADDON_SERVICES.map((a) => {
+              const checked = selectedAddons.includes(a.id);
+              return (
+                <div
+                  key={a.id}
+                  onClick={() => toggleAddon(a.id)}
+                  className="p-3 rounded-xl border cursor-pointer flex justify-between items-center select-none"
+                  style={{
+                    backgroundColor: checked ? "rgba(176, 255, 0, 0.08)" : colors.surfaceAlt || "#1a1a1a",
+                    borderColor: checked ? colors.apple || "#B0FF00" : colors.border || "#222",
+                  }}
                 >
-                  -
-                </button>
-                <span className="w-5 text-center text-xs font-bold" style={{ color: colors.text || "#fff" }}>
-                  {brandedBags[item.size] || 0}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => updateBagQty(item.size, 1)}
-                  className="w-7 h-7 rounded border flex items-center justify-center text-xs"
-                  style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          ))}
+                  <div>
+                    <p className="text-sm font-bold text-white">{a.name}</p>
+                    <p className="text-xs text-zinc-400">{a.desc}</p>
+                  </div>
+                  <span className="text-sm font-black" style={{ color: colors.apple || "#B0FF00" }}>
+                    +${a.price}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </Card>
 
-        {/* 4. Preferences & Stains */}
+        {/* Reusable Branded Bags (Coming Soon Section) */}
+        <Card className="border relative overflow-hidden" style={{ borderColor: "rgba(255, 42, 133, 0.3)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <ShoppingBag size={18} style={{ color: colors.pink || "#ff2a85" }} />
+              <h2 className="text-sm font-black uppercase tracking-wider text-white">
+                Sour Apple Reusable Bags
+              </h2>
+            </div>
+            <span
+              className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+              style={{ backgroundColor: colors.pink || "#ff2a85", color: "#fff" }}
+            >
+              Coming Soon!
+            </span>
+          </div>
+
+          <p className="text-xs text-zinc-400 mb-2">
+            Heavy-duty, water-resistant drawstring closure bags in <strong>Girl Apple</strong> and <strong>Boy Apple</strong> styles. Small 27" ($8), Medium 32" ($10), Large 40" ($12).
+          </p>
+
+          <div
+            className="p-2.5 rounded-xl border text-center text-xs text-zinc-300"
+            style={{ backgroundColor: colors.surfaceAlt || "#111", borderColor: colors.border || "#222" }}
+          >
+            🌟 Custom branded bags with drawstring closures are in production! In the meantime, please use any standard bag with a drawstring, zipper, Velcro, or snap buttons.
+          </div>
+        </Card>
+
+        {/* 2. Wash Preferences & Scent Notice */}
         <Card>
-          <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+          <h2 className="text-sm font-black mb-2 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
             2. Wash Preferences
           </h2>
+
+          <div
+            className="p-3 rounded-xl mb-3 border text-xs leading-relaxed"
+            style={{
+              backgroundColor: "rgba(176, 255, 0, 0.06)",
+              borderColor: "rgba(176, 255, 0, 0.25)",
+              color: colors.text || "#fff",
+            }}
+          >
+            <p className="font-bold mb-1" style={{ color: colors.apple || "#B0FF00" }}>
+              🧺 Our Standard Wash Formula:
+            </p>
+            We wash all standard loads with fresh scented detergent, OxiClean, scent boosters, and scented fabric softener.
+            <br />
+            <span className="text-zinc-300 mt-1 block">
+              <strong>Prefer unscented or hypoallergenic?</strong> Check the box below and include your own detergent bottle with your bag at drop-off!
+            </span>
+          </div>
+
           <div className="space-y-2 mb-4">
             {PREFERENCES.map((p) => (
               <label key={p} className="flex items-center gap-2 text-xs cursor-pointer select-none">
@@ -344,35 +413,76 @@ export default function Schedule() {
           </div>
 
           <Field
-            label="Specific Stain Notes or Fragile Items"
+            label="Stain Notes or Fragile Instructions"
             value={stainNotes}
             onChangeText={setStainNotes}
-            placeholder="e.g. coffee stain on collar, don't machine dry the red hoodie"
+            placeholder="e.g. coffee stain on collar, using my own hypoallergenic detergent"
           />
         </Card>
 
-        {/* 5. Pickup Timing & Address */}
+        {/* 3. Schedule & Contact */}
         <Card>
           <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
-            3. Pickup Details
+            3. Schedule & Contact
           </h2>
-          {customerType === "College Student" ? (
-            <>
-              <Field label="College / Campus" value={college} onChangeText={setCollege} placeholder="MVCC" />
-              <Field label="Dorm / Building & Room #" value={dorm} onChangeText={setDorm} placeholder="e.g. West Hall Rm 204" required />
-            </>
+
+          <Field
+            label="Full Name"
+            value={customerName}
+            onChangeText={setCustomerName}
+            placeholder="Jamie Doe"
+            required
+          />
+
+          <Field
+            label="Phone Number"
+            type="tel"
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="(315) 555-0199"
+            required
+          />
+
+          {customerType === "Local Drop-Off & Pick-Up" ? (
+            <Field
+              label="Your Street Address / Area"
+              value={dormOrAddress}
+              onChangeText={setDormOrAddress}
+              placeholder="e.g. 123 Elm St, South Utica (or New Hartford, Whitesboro, etc.)"
+              required
+            />
           ) : (
-            <Field label="Street Address / Neighborhood" value={dorm} onChangeText={setDorm} placeholder="e.g. 123 Elm St, South Utica" required />
+            <>
+              <Field
+                label="College / Campus"
+                value={campusName}
+                onChangeText={setCampusName}
+                placeholder="MVCC"
+              />
+              <Field
+                label="Residence Hall & Room #"
+                value={dormOrAddress}
+                onChangeText={setDormOrAddress}
+                placeholder="e.g. West Hall Rm 204"
+                required
+              />
+            </>
           )}
 
-          <Field label="Preferred Date" type="date" value={pickupDate} onChangeText={setPickupDate} />
-          
+          <Field
+            label="Preferred Date"
+            type="date"
+            value={dropoffDate}
+            onChangeText={setDropoffDate}
+            required
+          />
+
           <label className="block text-xs font-semibold mb-1" style={{ color: colors.textDim || "#888" }}>
-            Preferred Pickup Window
+            Preferred Drop-off / Pickup Window
           </label>
           <select
-            value={pickupWindow}
-            onChange={(e) => setPickupWindow(e.target.value)}
+            value={dropoffWindow}
+            onChange={(e) => setDropoffWindow(e.target.value)}
             className="w-full h-10 px-3 rounded-xl border text-sm mb-2"
             style={{
               backgroundColor: colors.surfaceAlt || "#1a1a1a",
@@ -380,13 +490,13 @@ export default function Schedule() {
               color: colors.text || "#fff",
             }}
           >
-            <option value="9am - 12pm">Morning (9am - 12pm)</option>
-            <option value="12pm - 3pm">Afternoon (12pm - 3pm)</option>
-            <option value="3pm - 6pm">Evening (3pm - 6pm)</option>
+            <option value="Morning (9am - 12pm)">Morning (9am - 12pm)</option>
+            <option value="Afternoon (12pm - 3pm)">Afternoon (12pm - 3pm)</option>
+            <option value="Evening (3pm - 6pm)">Evening (3pm - 6pm)</option>
           </select>
         </Card>
 
-        {/* 6. Digital Contract & Electronic Signature */}
+        {/* 4. Service Agreement & Electronic Signature */}
         <Card className="border-2" style={{ borderColor: colors.apple || "#B0FF00" }}>
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck size={20} style={{ color: colors.apple || "#B0FF00" }} />
@@ -399,7 +509,7 @@ export default function Schedule() {
             className="p-3 rounded-lg text-[11px] leading-relaxed max-h-28 overflow-y-auto mb-3 border text-zinc-300"
             style={{ backgroundColor: colors.surfaceAlt || "#111", borderColor: colors.border || "#222" }}
           >
-            By booking with Sour Apple VIP, you agree: All laundry is handled with professional care. Sour Apple VIP is not liable for normal wear/tear, color bleeding from non-separated clothes, or items left in pockets. Liability for lost items is limited up to $100 per bag. Payment is due upon delivery/pickup confirmation.
+            By booking with Sour Apple VIP, you agree: All laundry is handled with professional care. <strong>All laundry must be delivered in bags with a secure closure via drawstring, Velcro, zipper, or snap buttons (no open-top baskets without lids are permitted).</strong> Sour Apple VIP is not liable for items left in pockets, or normal wear/tear. Liability for lost or damaged items is limited up to $100 per bag. Payment is collected upon drop-off or completion confirmation.
           </div>
 
           <label className="flex items-start gap-2 text-xs cursor-pointer select-none mb-3">
@@ -411,7 +521,7 @@ export default function Schedule() {
               required
             />
             <span className="font-semibold" style={{ color: colors.text || "#fff" }}>
-              I have read, understood, and legally agree to the Sour Apple VIP Laundry Service Agreement.
+              I have read, understood, and legally agree to the Sour Apple VIP Laundry Service Agreement (including closed-bag requirements via drawstring, Velcro, zipper, or snap buttons).
             </span>
           </label>
 
@@ -431,19 +541,17 @@ export default function Schedule() {
           </div>
         )}
 
-        {/* Sticky Price & Submit Button */}
+        {/* Price & Submit */}
         <div className="pt-2">
           <div className="flex justify-between items-center mb-2 px-1">
-            <span className="text-sm font-bold" style={{ color: colors.textDim || "#888" }}>
-              Estimated Total:
-            </span>
+            <span className="text-sm font-bold text-zinc-400">Estimated Total:</span>
             <span className="text-2xl font-black" style={{ color: colors.apple || "#B0FF00" }}>
               ${estimate.toFixed(2)}
             </span>
           </div>
 
           <Btn
-            title={`Book Pickup — $${estimate.toFixed(2)}`}
+            title={`Book Service — $${estimate.toFixed(2)}`}
             type="submit"
             loading={loading}
             data-testid="submit-order-button"
