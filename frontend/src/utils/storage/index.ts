@@ -1,91 +1,59 @@
-// Native storage (Metro picks index.web.ts on web).
-// Helpers never throw: reads return `fallback`, writes return `false`.
-// Values supported: string | number | boolean | null (JSON-serialized on disk).
-// Usage: import { storage } from "@/src/utils/storage"; await storage.getItem(key, fallback);
+// src/utils/storage/index.ts - Universal Web Storage (Zero Expo)
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as SecureStore from "expo-secure-store";
-
-import { AssertNoExtras, StorageBase, StorageItemValue } from "./storage-base";
-
-export class Storage extends StorageBase {
-  // General KV — backed by AsyncStorage.
-  async getItem<Fallback extends StorageItemValue>(
-    key: string,
-    fallback: Fallback,
-  ): Promise<Fallback | null> {
+export const storage = {
+  // Standard Storage
+  get: async <T = any>(key: string, defaultValue: T | null = null): Promise<T | null> => {
+    if (typeof window === "undefined") return defaultValue;
     try {
-      const raw = await AsyncStorage.getItem(key);
-      return this.retrieve(raw, fallback);
-    } catch (e) {
-      this.warn("getItem", key, e);
-      return fallback;
+      const item = localStorage.getItem(key);
+      if (item === null) return defaultValue;
+      return JSON.parse(item);
+    } catch {
+      // If not JSON, return as plain string
+      return (localStorage.getItem(key) as unknown as T) || defaultValue;
     }
-  }
+  },
 
-  async setItem<Value extends StorageItemValue>(
-    key: string,
-    value: Value,
-  ): Promise<boolean> {
+  set: async (key: string, value: any): Promise<void> => {
+    if (typeof window === "undefined") return;
     try {
-      await AsyncStorage.setItem(key, JSON.stringify(value));
-      return true;
+      const serialized = typeof value === "string" ? value : JSON.stringify(value);
+      localStorage.setItem(key, serialized);
     } catch (e) {
-      this.warn("setItem", key, e);
-      return false;
+      console.error(`Failed to set storage key "${key}":`, e);
     }
-  }
+  },
 
-  async removeItem(key: string): Promise<boolean> {
+  remove: async (key: string): Promise<void> => {
+    if (typeof window === "undefined") return;
     try {
-      await AsyncStorage.removeItem(key);
-      return true;
+      localStorage.removeItem(key);
     } catch (e) {
-      this.warn("removeItem", key, e);
-      return false;
+      console.error(`Failed to remove storage key "${key}":`, e);
     }
-  }
+  },
 
-  // Sensitive values — Keychain (iOS) / EncryptedSharedPreferences (Android).
-  async secureGet<Fallback extends StorageItemValue>(
-    key: string,
-    fallback: Fallback,
-  ): Promise<Fallback | null> {
+  // Secure Storage Stubs (Web uses localStorage safely)
+  secureGet: async <T = any>(key: string, defaultValue: T | null = null): Promise<T | null> => {
+    return storage.get(key, defaultValue);
+  },
+
+  secureSet: async (key: string, value: any): Promise<void> => {
+    return storage.set(key, value);
+  },
+
+  secureRemove: async (key: string): Promise<void> => {
+    return storage.remove(key);
+  },
+
+  clear: async (): Promise<void> => {
+    if (typeof window === "undefined") return;
     try {
-      const raw = await SecureStore.getItemAsync(key);
-      return this.retrieve(raw, fallback);
+      localStorage.clear();
     } catch (e) {
-      this.warn("secureGet", key, e);
-      return fallback;
+      console.error("Failed to clear storage:", e);
     }
-  }
+  },
+};
 
-  async secureSet<Value extends StorageItemValue>(
-    key: string,
-    value: Value,
-  ): Promise<boolean> {
-    try {
-      await SecureStore.setItemAsync(key, JSON.stringify(value));
-      return true;
-    } catch (e) {
-      this.warn("secureSet", key, e);
-      return false;
-    }
-  }
-
-  async secureRemove(key: string): Promise<boolean> {
-    try {
-      await SecureStore.deleteItemAsync(key);
-      return true;
-    } catch (e) {
-      this.warn("secureRemove", key, e);
-      return false;
-    }
-  }
-}
-
-export const storage = new Storage();
-
-// Compile-time guard: any new method must be declared in storage-base.ts first.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- intentional compile-time-only assertion
-type _NoExtras = AssertNoExtras<Exclude<keyof Storage, keyof StorageBase>>;
+export default storage;
