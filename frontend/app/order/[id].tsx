@@ -35,6 +35,7 @@ export default function OrderTracking() {
   const [methods, setMethods] = useState<any>({});
   const [stars, setStars] = useState(0);
   const [busy, setBusy] = useState(false);
++  const [hoverStars, setHoverStars] = useState(0);
 
   const load = async () => {
     try {
@@ -413,25 +414,41 @@ export default function OrderTracking() {
           <h3 className="font-bold text-sm mb-3" style={{ color: colors.text || "#fff" }}>
             Rate your service
           </h3>
-          <div className="flex gap-2 mb-4">
-            {[1, 2, 3, 4, 5].map((n) => (
+          <div className="flex gap-2 mb-4" role="radiogroup" aria-label="Rating stars">
+            {Array.from({ length: 5 }, (_, i) => i + 1).map((n) => (
               <button
                 key={n}
                 type="button"
                 data-testid={`star-${n}`}
                 onClick={() => setStars(n)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setStars(n);
+                  }
+                }}
+                onMouseEnter={() => setHoverStars(n)}
+                onMouseLeave={() => setHoverStars(0)}
+                aria-pressed={stars === n}
+                aria-label={`${n} star${n > 1 ? "s" : ""}`}
                 className="p-1 transition-transform active:scale-125"
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                }}
               >
                 <Star
                   size={28}
                   style={{
                     color: colors.gold || "#FFD700",
-                    fill: n <= stars ? colors.gold || "#FFD700" : "none",
+                    fill: n <= (hoverStars || stars) ? colors.gold || "#FFD700" : "none",
                   }}
                 />
               </button>
             ))}
           </div>
+          <div className="sr-only" aria-live="polite">{stars ? `You selected ${stars} star${stars > 1 ? "s" : ""}` : "No rating selected"}</div>
           <Btn title="Submit Rating" onClick={rate} data-testid="submit-rating-button" />
         </Card>
       )}
