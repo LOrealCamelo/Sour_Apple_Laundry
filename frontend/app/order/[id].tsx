@@ -414,7 +414,7 @@ export default function OrderTracking() {
             Rate your service
           </h3>
           <div className="flex gap-2 mb-4">
-            {.map((n) => (
+            {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"
