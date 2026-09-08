@@ -1,52 +1,109 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { FileText } from "lucide-react";
 import { useAuth } from "@/src/context/AuthContext";
 import { colors, spacing } from "@/src/theme";
 import { Card, Btn, Badge } from "@/src/components/UI";
 
 export default function DriverProfile() {
   const { user, logout } = useAuth();
-  const router = useRouter();
-  return (
-    <SafeAreaView style={styles.safe} edges={["top"]} testID="driver-profile-screen">
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatar}><Text style={styles.avatarText}>{user?.name?.[0]?.toUpperCase()}</Text></View>
-        <Text style={styles.name}>{user?.name}</Text>
-        <Text style={styles.email}>{user?.email}</Text>
-        <View style={{ alignItems: "center", marginTop: 8 }}><Badge text="Approved Driver" color={colors.apple} /></View>
+  const navigate = useNavigate();
 
-        <Card style={{ marginTop: spacing.lg }}>
-          <Text style={styles.h}>Earnings</Text>
-          <Text style={styles.earn}>$0.00</Text>
-          <Text style={styles.dim}>Payout tracking placeholder — connects to Stripe payouts later.</Text>
-        </Card>
-        <Card>
-          <Text style={styles.h}>Onboarding Documents</Text>
-          <Doc label="Driver's license" /><Doc label="Insurance" /><Doc label="W-9" /><Doc label="Background check consent" />
-          <Text style={styles.dim}>Document upload & verification are placeholders.</Text>
-        </Card>
-        <Btn title="Log Out" variant="ghost" onPress={async () => { await logout(); router.replace("/"); }} testID="driver-logout-button" />
-      </ScrollView>
-    </SafeAreaView>
+  return (
+    <div
+      className="min-h-screen p-4 pb-24 max-w-md mx-auto"
+      style={{ backgroundColor: colors.bg || "#000" }}
+      data-testid="driver-profile-screen"
+    >
+      {/* Avatar */}
+      <div
+        className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-3 font-extrabold text-3xl shadow-lg"
+        style={{
+          backgroundColor: colors.apple || "#B0FF00",
+          color: colors.bg || "#000",
+        }}
+      >
+        {user?.name?.[0]?.toUpperCase() || "D"}
+      </div>
+
+      {/* User Info */}
+      <h1
+        className="text-2xl font-extrabold text-center"
+        style={{ color: colors.text || "#fff" }}
+      >
+        {user?.name || "Driver"}
+      </h1>
+      <p
+        className="text-center text-sm mt-1"
+        style={{ color: colors.textDim || "#888" }}
+      >
+        {user?.email}
+      </p>
+
+      {/* Badge */}
+      <div className="flex justify-center mt-2 mb-6">
+        <Badge text="Approved Driver" color={colors.apple || "#B0FF00"} />
+      </div>
+
+      {/* Earnings Card */}
+      <Card className="mb-4">
+        <h2 className="font-bold text-base mb-1" style={{ color: colors.text || "#fff" }}>
+          Earnings
+        </h2>
+        <div
+          className="text-3xl font-extrabold mb-1"
+          style={{ color: colors.apple || "#B0FF00" }}
+        >
+          $0.00
+        </div>
+        <p className="text-xs leading-relaxed" style={{ color: colors.textDim || "#888" }}>
+          Payout tracking placeholder — connects to Stripe payouts later.
+        </p>
+      </Card>
+
+      {/* Onboarding Documents Card */}
+      <Card className="mb-6">
+        <h2 className="font-bold text-base mb-3" style={{ color: colors.text || "#fff" }}>
+          Onboarding Documents
+        </h2>
+        <Doc label="Driver's license" />
+        <Doc label="Insurance" />
+        <Doc label="W-9" />
+        <Doc label="Background check consent" />
+        <p className="text-xs leading-relaxed mt-3" style={{ color: colors.textDim || "#888" }}>
+          Document upload & verification are placeholders.
+        </p>
+      </Card>
+
+      {/* Log Out Button */}
+      <Btn
+        title="Log Out"
+        variant="ghost"
+        onClick={async () => {
+          await logout();
+          navigate("/login");
+        }}
+        data-testid="driver-logout-button"
+      />
+    </div>
   );
 }
 
 function Doc({ label }: { label: string }) {
-  return <View style={styles.docRow}><Ionicons name="document-text-outline" size={18} color={colors.textDim} /><Text style={styles.docText}>{label}</Text><Ionicons name="ellipse" size={10} color={colors.warn} /></View>;
+  return (
+    <div
+      className="flex items-center gap-3 py-2 border-b last:border-0"
+      style={{ borderColor: colors.border || "#222" }}
+    >
+      <FileText size={18} style={{ color: colors.textDim || "#888" }} />
+      <span className="flex-1 text-sm" style={{ color: colors.text || "#fff" }}>
+        {label}
+      </span>
+      {/* Warning Status Dot */}
+      <span
+        className="w-2.5 h-2.5 rounded-full"
+        style={{ backgroundColor: colors.warn || "#ffaa00" }}
+      />
+    </div>
+  );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 40 },
-  avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.apple, alignSelf: "center", alignItems: "center", justifyContent: "center", marginBottom: spacing.md },
-  avatarText: { fontSize: 36, fontWeight: "800", color: colors.bg },
-  name: { fontSize: 22, fontWeight: "800", color: colors.text, textAlign: "center" },
-  email: { color: colors.textDim, textAlign: "center", marginTop: 2 },
-  h: { color: colors.text, fontWeight: "700", fontSize: 16, marginBottom: 6 },
-  earn: { color: colors.apple, fontSize: 28, fontWeight: "800", marginBottom: 4 },
-  dim: { color: colors.textDim, fontSize: 13, marginTop: 4, lineHeight: 19 },
-  docRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8 },
-  docText: { color: colors.text, flex: 1 },
-});
