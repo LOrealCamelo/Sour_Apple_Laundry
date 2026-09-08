@@ -1,90 +1,143 @@
-import { useEffect } from "react";
-import { View, Text, ActivityIndicator, StyleSheet, Pressable } from "react-native";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/src/context/AuthContext";
-import { colors, spacing, radius, glow } from "@/src/theme";
+import { colors } from "@/src/theme";
 
-export default function Index() {
+export default function Welcome() {
   const { user, loading, isGuest, continueAsGuest } = useAuth();
-  const router = useRouter();
+  const navigate = useNavigate();
 
+  // Automatic redirect if already logged in or guest
   useEffect(() => {
     if (loading) return;
     if (user) {
-      if (user.role === "ADMIN") router.replace("/(admin)");
-      else if (user.role === "DRIVER") router.replace("/(driver)");
-      else router.replace("/(student)");
+      if (user.role === "ADMIN") navigate("/admin");
+      else if (user.role === "DRIVER") navigate("/driver");
+      else navigate("/student");
     } else if (isGuest) {
-      router.replace("/(student)");
+      navigate("/student");
     }
-  }, [user, loading, isGuest]);
+  }, [user, loading, isGuest, navigate]);
 
+  // Loading spinner while checking auth session
   if (loading || user || isGuest) {
     return (
-      <View style={styles.center} testID="splash-loading">
-        <ActivityIndicator color={colors.apple} size="large" />
-      </View>
+      <div
+        className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: colors.bg || "#0A0A0F" }}
+        data-testid="splash-loading"
+      >
+        <div
+          className="w-10 h-10 border-4 border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: `${colors.apple || "#B0FF00"} transparent transparent transparent` }}
+        />
+      </div>
     );
   }
 
   return (
-    <View style={styles.container} testID="welcome-screen">
-      <LinearGradient
-        colors={["#141018", "#0A0A0F", "#160A14"]}
-        style={StyleSheet.absoluteFill}
-      />
-      <View style={styles.hero}>
-        <View style={styles.logoGlow}>
-          <Image
-            source={require("../assets/images/logo-hero.jpg")}
-            style={styles.logo}
-            contentFit="contain"
-            testID="hero-logo"
+    <div
+      className="min-h-screen relative flex flex-col justify-between p-6 pb-12 pt-10 max-w-md mx-auto overflow-hidden select-none"
+      style={{
+        background: "linear-gradient(180deg, #141018 0%, #0A0A0F 50%, #160A14 100%)",
+      }}
+      data-testid="welcome-screen"
+    >
+      {/* Hero Section */}
+      <div className="flex-1 flex flex-col items-center justify-center my-auto">
+        {/* Logo with Green Neon Glow */}
+        <div className="relative mb-6">
+          <div
+            className="absolute inset-0 rounded-full blur-2xl opacity-40"
+            style={{ backgroundColor: colors.apple || "#B0FF00" }}
           />
-        </View>
-        <View style={styles.taglinePill}>
-          <Text style={styles.tagline}>WE TAKE THE <Text style={{ color: colors.apple }}>STINK</Text> OUT OF LAUNDRY</Text>
-        </View>
-        <View style={styles.badges}>
-          <Text style={styles.badge}>✓ WE PICK UP</Text>
-          <Text style={styles.badge}>✓ WE WASH</Text>
-          <Text style={styles.badge}>✓ WE FOLD</Text>
-          <Text style={styles.badge}>✓ WE DELIVER</Text>
-        </View>
-      </View>
+          <img
+            src="/assets/LOGO.png"
+            alt="Sour Apple VIP Logo"
+            className="relative w-64 h-64 sm:w-72 sm:h-72 object-contain drop-shadow-2xl transition-transform hover:scale-105 duration-300"
+            data-testid="hero-logo"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = "/logo-hero.jpg";
+            }}
+          />
+        </div>
 
-      <View style={styles.actions}>
-        <Pressable testID="get-started-button" style={[styles.primary, glow(colors.apple)]} onPress={() => router.push("/register")}>
-          <Text style={styles.primaryText}>SCHEDULE IN THE APP →</Text>
-        </Pressable>
-        <Pressable testID="login-link-button" style={styles.pinkBtn} onPress={() => router.push("/login")}>
-          <Text style={styles.pinkText}>I already have an account</Text>
-        </Pressable>
-        <Pressable testID="guest-button" style={styles.guest} onPress={() => { continueAsGuest(); router.replace("/(student)"); }}>
-          <Text style={styles.guestText}>Continue as guest →</Text>
-        </Pressable>
-      </View>
-    </View>
+        {/* Tagline Pill */}
+        <div
+          className="px-5 py-2 rounded-full border-2 bg-black shadow-lg mb-6"
+          style={{ borderColor: colors.apple || "#B0FF00" }}
+        >
+          <p className="text-white font-extrabold text-xs tracking-wider uppercase">
+            WE TAKE THE{" "}
+            <span style={{ color: colors.apple || "#B0FF00" }}>STINK</span> OUT
+            OF LAUNDRY
+          </p>
+        </div>
+
+        {/* Feature Badges */}
+        <div className="flex flex-wrap justify-center gap-2 max-w-xs">
+          {["✓ WE PICK UP", "✓ WE WASH", "✓ WE FOLD", "✓ WE DELIVER"].map((badge) => (
+            <span
+              key={badge}
+              className="text-xs font-extrabold px-3 py-1.5 rounded-md tracking-tight"
+              style={{
+                backgroundColor: colors.surfaceAlt || "#1a1a1a",
+                color: colors.apple || "#B0FF00",
+                border: "1px solid rgba(176, 255, 0, 0.2)",
+              }}
+            >
+              {badge}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex flex-col gap-3 mt-8">
+        {/* Schedule / Get Started Button */}
+        <button
+          type="button"
+          data-testid="get-started-button"
+          onClick={() => navigate("/register")}
+          className="h-14 w-full rounded-xl font-black text-base tracking-wider uppercase transition-all duration-200 active:scale-95 shadow-lg flex items-center justify-center"
+          style={{
+            backgroundColor: colors.apple || "#B0FF00",
+            color: "#0A0A0F",
+            boxShadow: "0 0 20px rgba(176, 255, 0, 0.4)",
+          }}
+        >
+          SCHEDULE IN THE APP →
+        </button>
+
+        {/* Login Button */}
+        <button
+          type="button"
+          data-testid="login-link-button"
+          onClick={() => navigate("/login")}
+          className="h-13 w-full rounded-xl font-bold text-sm tracking-wide border-2 transition-all duration-200 active:scale-95 flex items-center justify-center"
+          style={{
+            borderColor: colors.pink || "#ff2a85",
+            color: colors.pink || "#ff2a85",
+            backgroundColor: "transparent",
+          }}
+        >
+          I already have an account
+        </button>
+
+        {/* Guest Mode Link */}
+        <button
+          type="button"
+          data-testid="guest-button"
+          onClick={() => {
+            continueAsGuest();
+            navigate("/student");
+          }}
+          className="h-10 text-sm font-bold underline transition-opacity hover:opacity-80 flex items-center justify-center"
+          style={{ color: colors.textDim || "#888" }}
+        >
+          Continue as guest →
+        </button>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  center: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center" },
-  container: { flex: 1, backgroundColor: colors.bg, justifyContent: "space-between", padding: spacing.lg, paddingBottom: 44, paddingTop: 60 },
-  hero: { alignItems: "center", flex: 1, justifyContent: "center" },
-  logoGlow: { borderRadius: 200, ...glow(colors.apple) },
-  logo: { width: 300, height: 300 },
-  taglinePill: { backgroundColor: "#000", borderColor: colors.apple, borderWidth: 1.5, borderRadius: radius.pill, paddingHorizontal: 16, paddingVertical: 8, marginTop: spacing.sm },
-  tagline: { color: colors.white, fontWeight: "800", fontSize: 13, letterSpacing: 0.5 },
-  badges: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 8, marginTop: spacing.lg },
-  badge: { color: colors.apple, fontWeight: "800", fontSize: 12, backgroundColor: colors.surfaceAlt, paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.sm, overflow: "hidden" },
-  actions: { gap: spacing.sm },
-  primary: { backgroundColor: colors.apple, height: 56, borderRadius: radius.md, alignItems: "center", justifyContent: "center" },
-  primaryText: { color: "#0A0A0F", fontWeight: "900", fontSize: 17, letterSpacing: 0.5 },
-  pinkBtn: { height: 52, borderRadius: radius.md, alignItems: "center", justifyContent: "center", borderWidth: 1.5, borderColor: colors.pink },
-  pinkText: { color: colors.pink, fontWeight: "800", fontSize: 15 },
-  guest: { height: 42, alignItems: "center", justifyContent: "center" },
-  guestText: { color: colors.textDim, fontWeight: "700", fontSize: 14, textDecorationLine: "underline" },
-});
