@@ -1,246 +1,455 @@
-import { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, Pressable, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import { useAuth } from "@/src/context/AuthContext";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { ChevronLeft, ShoppingBag, ShieldCheck } from "lucide-react";
 import { api } from "@/src/api/client";
-import { colors, spacing, radius } from "@/src/theme";
-import { Btn, Field, Card } from "@/src/components/UI";
+import { colors } from "@/src/theme";
+import { Card, Btn, Field } from "@/src/components/UI";
 
-const SERVICES = ["Wash & Fold", "Bedding", "Towels", "Rush Laundry", "Subscription Laundry Plan"];
-const PREFS = ["Cold wash only", "Hang dry items", "Separate whites/colors", "Extra fabric softener", "No detergent scent"];
-const COLLEGES = ["MVCC", "Utica University"];
-const BAG_SIZES = [
-  { key: "small", label: "Small", price: 5 },
-  { key: "medium", label: "Medium", price: 8 },
-  { key: "large", label: "Large", price: 12 },
+const SERVICES = [
+  { id: "Wash & Fold", name: "Wash & Fold", price: 20, desc: "Everyday clothes washed, dried & folded" },
+  { id: "Bedding", name: "Bedding / Comforter", price: 25, desc: "Sheets, blankets & comforters" },
+  { id: "Towels", name: "Towels Only", price: 15, desc: "Bath towels, washcloths & mats" },
+  { id: "Rush Laundry", name: "Rush Laundry (Same-Day)", price: 40, desc: "Guaranteed fast turnaround" },
 ];
-const TIMES = ["Morning (9am–12pm)", "Afternoon (12–3pm)", "Evening (3–6pm)"];
+
+const PREFERENCES = [
+  "Cold wash only",
+  "Separate whites and colors",
+  "Hypoallergenic / Fragrance-free",
+  "Low heat dry",
+  "Hang dry delicate items",
+];
 
 export default function Schedule() {
-  const router = useRouter();
-  const { user, isGuest } = useAuth();
+  const navigate = useNavigate();
 
-  const [customerType, setCustomerType] = useState(user?.role === "NEIGHBOR" ? "Non College Student" : "College Student");
+  // Booking Form State
+  const [selectedServices, setSelectedServices] = useState<string[]>(["Wash & Fold"]);
+  const [bags, setBags] = useState(1);
+  const [rush, setRush] = useState(false);
+  const [beddingAddon, setBeddingAddon] = useState(false);
+  const [preferences, setPreferences] = useState<string[]>([]);
+  const [stainNotes, setStainNotes] = useState("");
+
+  // Customer & Location
+  const [customerType, setCustomerType] = useState("College Student");
   const [college, setCollege] = useState("MVCC");
   const [dorm, setDorm] = useState("");
   const [directions, setDirections] = useState("");
-  const [services, setServices] = useState<string[]>(["Wash & Fold"]);
-  const [bags, setBags] = useState(1);
-  const [rush, setRush] = useState(false);
-  const [bedding, setBedding] = useState(false);
-  const [prefs, setPrefs] = useState<string[]>([]);
-  const [stain, setStain] = useState("");
-  const [prefDate, setPrefDate] = useState("06/25/2026");
-  const [prefTime, setPrefTime] = useState(TIMES[0]);
-  const [estimate, setEstimate] = useState(0);
-  const [aiTips, setAiTips] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [pickupDate, setPickupDate] = useState("");
+  const [pickupWindow, setPickupWindow] = useState("9am - 12pm");
 
-  const isCollege = customerType === "College Student";
+  // Branded Reusable Bags Add-on
+  const [bagStyle, setBagStyle] = useState<"GIRL" | "BOY">("GIRL");
+  const [brandedBags, setBrandedBags] = useState<{ [key: string]: number }>({
+    small: 0,
+    medium: 0,
+    large: 0,
+  });
 
+  // Digital Contract & Signature State
+  const [contractAgreed, setContractAgreed] = useState(false);
+  const [signatureName, setSignatureName] = useState("");
+
+  const [estimate, setEstimate] = useState(20);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState("");
+
+  // Calculate live estimate whenever selections change
   useEffect(() => {
-    api("/orders/estimate", { method: "POST", auth: false, body: { services, bags, rush, bedding_addon: bedding } })
-      .then((r: any) => setEstimate(r.estimate)).catch(() => {});
-  }, [services, bags, rush, bedding]);
+    (async () => {
+      try {
+        const res = await api("/orders/estimate", {
+          method: "POST",
+          body: {
+            services: selectedServices,
+            bags,
+            rush,
+            bedding_addon: beddingAddon,
+            branded_bags: brandedBags,
+          },
+        });
+        setEstimate(res.estimate || 20);
+      } catch {}
+    })();
+  }, [selectedServices, bags, rush, beddingAddon, brandedBags]);
 
-  const toggleService = (s: string) => setServices((cur) => cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]);
-  const togglePref = (p: string) => setPrefs((s) => s.includes(p) ? s.filter((x) => x !== p) : [...s, p]);
-
-  const getAiTips = async () => {
-    if (!stain.trim()) return;
-    setAiLoading(true);
-    try { const r: any = await api("/ai/stain-tips", { method: "POST", body: { notes: stain, service_type: services.join(", ") } }); setAiTips(r.tips); }
-    catch { setAiTips("Could not load tips right now."); } finally { setAiLoading(false); }
+  const toggleService = (id: string) => {
+    setSelectedServices((prev) =>
+      prev.includes(id) ? (prev.length > 1 ? prev.filter((s) => s !== id) : prev) : [...prev, id]
+    );
   };
 
-  const submit = async () => {
-    if (isGuest) { router.push("/register"); return; }
-    if (services.length === 0) { alert("Select at least one service"); return; }
-    if (isCollege && !dorm.trim()) { alert("Please enter your dorm/building"); return; }
-    setSubmitting(true);
+  const togglePref = (p: string) => {
+    setPreferences((prev) =>
+      prev.includes(p) ? prev.filter((item) => item !== p) : [...prev, p]
+    );
+  };
+
+  const updateBagQty = (size: string, delta: number) => {
+    setBrandedBags((prev) => ({
+      ...prev,
+      [size]: Math.max(0, (prev[size] || 0) + delta),
+    }));
+  };
+
+  const submitOrder = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErr("");
+
+    if (!contractAgreed) {
+      setErr("Please review and agree to the Service Agreement before booking.");
+      return;
+    }
+    if (!signatureName.trim()) {
+      setErr("Please type your full legal name as your digital signature.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const body: any = {
-        services, customer_type: customerType,
-        college: isCollege ? college : "", dorm: isCollege ? dorm : "",
-        directions: isCollege ? directions : "",
-        order_type: isCollege ? "College Pickup & Delivery" : "Drop-off & Pickup",
-        bags, rush, bedding_addon: bedding, preferences: prefs, stain_notes: stain, photos: [],
-        pickup_date: prefDate, pickup_window: prefTime,
-        delivery_date: "", delivery_window: "",
-      };
-      const order: any = await api("/orders", { method: "POST", body });
-      router.replace(`/order/${order.id}?new=1`);
-    } catch (e: any) { alert(e.message); } finally { setSubmitting(false); }
+      const order = await api("/orders", {
+        method: "POST",
+        body: {
+          services: selectedServices,
+          customer_type: customerType,
+          college: customerType === "College Student" ? college : "",
+          dorm,
+          directions,
+          pickup_date: pickupDate || new Date().toISOString().split("T")[0],
+          pickup_window: pickupWindow,
+          bags,
+          rush,
+          bedding_addon: beddingAddon,
+          preferences,
+          stain_notes: stainNotes,
+          branded_bags: brandedBags,
+          contract_agreed: true,
+          signature_name: signatureName.trim(),
+          signed_at: new Date().toISOString(),
+        },
+      });
+      navigate(`/order/${order.id}?new=1`);
+    } catch (e: any) {
+      setErr(e.message || "Failed to schedule pickup");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]} testID="schedule-screen">
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-          <Text style={styles.title}>Schedule Laundry</Text>
-          {isGuest && (
-            <Card style={{ borderColor: colors.gold, backgroundColor: colors.gold + "18" }}>
-              <Text style={{ color: colors.text, fontWeight: "600" }}>You're browsing as a guest.</Text>
-              <Text style={{ color: colors.textDim, marginTop: 4, fontSize: 13 }}>Explore & estimate freely — sign up when ready to submit.</Text>
-            </Card>
+    <div
+      className="min-h-screen p-4 pb-28 max-w-md mx-auto"
+      style={{ backgroundColor: colors.bg || "#0A0A0F" }}
+      data-testid="schedule-screen"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-6 pt-2">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 -ml-2 rounded-full active:scale-90 transition-transform"
+        >
+          <ChevronLeft size={28} style={{ color: colors.text || "#fff" }} />
+        </button>
+        <h1 className="text-2xl font-black" style={{ color: colors.text || "#fff" }}>
+          Schedule Pickup
+        </h1>
+      </div>
+
+      <form onSubmit={submitOrder} className="space-y-5">
+        {/* Customer Type Toggle */}
+        <div className="grid grid-cols-2 gap-2">
+          {["College Student", "Neighborhood Resident"].map((type) => (
+            <button
+              type="button"
+              key={type}
+              onClick={() => setCustomerType(type)}
+              className="py-2.5 rounded-xl border text-xs font-bold transition-all active:scale-95"
+              style={{
+                backgroundColor: customerType === type ? colors.apple || "#B0FF00" : colors.surfaceAlt || "#1a1a1a",
+                borderColor: customerType === type ? colors.apple || "#B0FF00" : colors.border || "#333",
+                color: customerType === type ? colors.bg || "#000" : colors.text || "#fff",
+              }}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+
+        {/* 1. Services Selection */}
+        <Card>
+          <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+            1. Select Services
+          </h2>
+          <div className="space-y-2">
+            {SERVICES.map((s) => {
+              const active = selectedServices.includes(s.id);
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => toggleService(s.id)}
+                  className="p-3 rounded-xl border cursor-pointer flex justify-between items-center transition-all select-none"
+                  style={{
+                    backgroundColor: active ? "rgba(176, 255, 0, 0.08)" : colors.surfaceAlt || "#1a1a1a",
+                    borderColor: active ? colors.apple || "#B0FF00" : colors.border || "#222",
+                  }}
+                >
+                  <div>
+                    <p className="text-sm font-bold" style={{ color: colors.text || "#fff" }}>
+                      {s.name}
+                    </p>
+                    <p className="text-xs" style={{ color: colors.textDim || "#888" }}>
+                      {s.desc}
+                    </p>
+                  </div>
+                  <span className="text-sm font-black" style={{ color: colors.apple || "#B0FF00" }}>
+                    ${s.price}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+
+        {/* 2. Laundry Bags Count */}
+        <Card>
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-sm font-black" style={{ color: colors.text || "#fff" }}>
+                Number of Bags
+              </h2>
+              <p className="text-xs" style={{ color: colors.textDim || "#888" }}>
+                $5 per additional bag after the first
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setBags(Math.max(1, bags - 1))}
+                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold"
+                style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+              >
+                -
+              </button>
+              <span className="font-black text-lg" style={{ color: colors.apple || "#B0FF00" }}>
+                {bags}
+              </span>
+              <button
+                type="button"
+                onClick={() => setBags(bags + 1)}
+                className="w-8 h-8 rounded-full border flex items-center justify-center font-bold"
+                style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </Card>
+
+        {/* 3. Reusable Branded Bags Add-On */}
+        <Card>
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingBag size={18} style={{ color: colors.apple || "#B0FF00" }} />
+            <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+              Reusable Laundry Bags (Optional)
+            </h2>
+          </div>
+          <p className="text-xs mb-3" style={{ color: colors.textDim || "#888" }}>
+            Heavy-duty, water-resistant drawstring bags. One-time purchase!
+          </p>
+
+          {/* Style Selector */}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setBagStyle("GIRL")}
+              className="py-1.5 rounded-lg border text-xs font-bold"
+              style={{
+                borderColor: bagStyle === "GIRL" ? colors.pink || "#ff2a85" : colors.border || "#333",
+                color: bagStyle === "GIRL" ? colors.pink || "#ff2a85" : colors.textDim || "#888",
+              }}
+            >
+              Girl Apple (Pink/Gray)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBagStyle("BOY")}
+              className="py-1.5 rounded-lg border text-xs font-bold"
+              style={{
+                borderColor: bagStyle === "BOY" ? colors.info || "#00b4d8" : colors.border || "#333",
+                color: bagStyle === "BOY" ? colors.info || "#00b4d8" : colors.textDim || "#888",
+              }}
+            >
+              Boy Apple (Navy/Blue)
+            </button>
+          </div>
+
+          {/* Sizes */}
+          {[
+            { size: "small", label: "Small Bag (Up to 10 lbs)", price: 8 },
+            { size: "medium", label: "Medium Bag (15-20 lbs)", price: 10 },
+            { size: "large", label: "Large Bag (Dorm Heavy)", price: 12 },
+          ].map((item) => (
+            <div key={item.size} className="flex justify-between items-center py-2 border-b last:border-0 border-zinc-800">
+              <div>
+                <span className="text-xs font-bold" style={{ color: colors.text || "#fff" }}>
+                  {item.label}
+                </span>
+                <span className="text-xs ml-2 font-semibold" style={{ color: colors.apple || "#B0FF00" }}>
+                  +${item.price}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => updateBagQty(item.size, -1)}
+                  className="w-7 h-7 rounded border flex items-center justify-center text-xs"
+                  style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+                >
+                  -
+                </button>
+                <span className="w-5 text-center text-xs font-bold" style={{ color: colors.text || "#fff" }}>
+                  {brandedBags[item.size] || 0}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => updateBagQty(item.size, 1)}
+                  className="w-7 h-7 rounded border flex items-center justify-center text-xs"
+                  style={{ borderColor: colors.border || "#333", color: colors.text || "#fff" }}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          ))}
+        </Card>
+
+        {/* 4. Preferences & Stains */}
+        <Card>
+          <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+            2. Wash Preferences
+          </h2>
+          <div className="space-y-2 mb-4">
+            {PREFERENCES.map((p) => (
+              <label key={p} className="flex items-center gap-2 text-xs cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={preferences.includes(p)}
+                  onChange={() => togglePref(p)}
+                  className="w-4 h-4 accent-lime-400"
+                />
+                <span style={{ color: colors.text || "#fff" }}>{p}</span>
+              </label>
+            ))}
+          </div>
+
+          <Field
+            label="Specific Stain Notes or Fragile Items"
+            value={stainNotes}
+            onChangeText={setStainNotes}
+            placeholder="e.g. coffee stain on collar, don't machine dry the red hoodie"
+          />
+        </Card>
+
+        {/* 5. Pickup Timing & Address */}
+        <Card>
+          <h2 className="text-sm font-black mb-3 uppercase tracking-wider" style={{ color: colors.gold || "#FFD700" }}>
+            3. Pickup Details
+          </h2>
+          {customerType === "College Student" ? (
+            <>
+              <Field label="College / Campus" value={college} onChangeText={setCollege} placeholder="MVCC" />
+              <Field label="Dorm / Building & Room #" value={dorm} onChangeText={setDorm} placeholder="e.g. West Hall Rm 204" required />
+            </>
+          ) : (
+            <Field label="Street Address / Neighborhood" value={dorm} onChangeText={setDorm} placeholder="e.g. 123 Elm St, South Utica" required />
           )}
 
-          {/* Customer type */}
-          <Text style={styles.label}>Who are you?</Text>
-          <View style={styles.typeRow}>
-            {["College Student", "Non College Student"].map((t) => (
-              <Pressable key={t} testID={`ctype-${t}`} onPress={() => setCustomerType(t)} style={[styles.typeCard, customerType === t && styles.typeActive]}>
-                <Ionicons name={t === "College Student" ? "school" : "home"} size={20} color={customerType === t ? colors.bg : colors.textDim} />
-                <Text style={[styles.typeText, customerType === t && { color: colors.bg }]}>{t}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <Field label="Preferred Date" type="date" value={pickupDate} onChangeText={setPickupDate} />
+          
+          <label className="block text-xs font-semibold mb-1" style={{ color: colors.textDim || "#888" }}>
+            Preferred Pickup Window
+          </label>
+          <select
+            value={pickupWindow}
+            onChange={(e) => setPickupWindow(e.target.value)}
+            className="w-full h-10 px-3 rounded-xl border text-sm mb-2"
+            style={{
+              backgroundColor: colors.surfaceAlt || "#1a1a1a",
+              borderColor: colors.border || "#333",
+              color: colors.text || "#fff",
+            }}
+          >
+            <option value="9am - 12pm">Morning (9am - 12pm)</option>
+            <option value="12pm - 3pm">Afternoon (12pm - 3pm)</option>
+            <option value="3pm - 6pm">Evening (3pm - 6pm)</option>
+          </select>
+        </Card>
 
-          {isCollege ? (<>
-            <Text style={styles.label}>Which college?</Text>
-            <View style={styles.chipsWrap}>
-              {COLLEGES.map((c) => (
-                <Pressable key={c} testID={`college-${c}`} onPress={() => setCollege(c)} style={[styles.chip, college === c && styles.chipActive]}>
-                  <Text style={[styles.chipText, college === c && { color: colors.bg }]}>{c}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Field label="Dorm / building" testID="dorm-input" value={dorm} onChangeText={setDorm} placeholder="e.g. North Hall" />
-            <Field label="Directions to your dorm & parking lot" testID="directions-input" value={directions} onChangeText={setDirections} placeholder="Where should we meet you? (bring bags out to the car)" multiline />
-            <Card style={{ borderColor: colors.info }}>
-              <Text style={styles.infoText}>📍 Bring your laundry bags out to the car — we don't enter the building. You'll pick up your clean laundry from the car in the lot too.</Text>
-            </Card>
-          </>) : (
-            <Card style={{ borderColor: colors.info }}>
-              <Text style={styles.infoText}>🏠 Non-college: you drop your laundry to us. We'll message you in-app when it's ready and you'll confirm a pickup time.</Text>
-            </Card>
-          )}
+        {/* 6. Digital Contract & Electronic Signature */}
+        <Card className="border-2" style={{ borderColor: colors.apple || "#B0FF00" }}>
+          <div className="flex items-center gap-2 mb-2">
+            <ShieldCheck size={20} style={{ color: colors.apple || "#B0FF00" }} />
+            <h2 className="text-sm font-black uppercase tracking-wider" style={{ color: colors.apple || "#B0FF00" }}>
+              Service Agreement & Signature
+            </h2>
+          </div>
 
-          <Text style={styles.label}>Services (choose one or more)</Text>
-          <View style={styles.chipsWrap}>
-            {SERVICES.map((s) => (
-              <Pressable key={s} testID={`service-${s}`} onPress={() => toggleService(s)} style={[styles.chip, services.includes(s) && styles.chipActive]}>
-                {services.includes(s) && <Ionicons name="checkmark" size={14} color={colors.bg} style={{ marginRight: 4 }} />}
-                <Text style={[styles.chipText, services.includes(s) && { color: colors.bg }]}>{s}</Text>
-              </Pressable>
-            ))}
-          </View>
+          <div
+            className="p-3 rounded-lg text-[11px] leading-relaxed max-h-28 overflow-y-auto mb-3 border text-zinc-300"
+            style={{ backgroundColor: colors.surfaceAlt || "#111", borderColor: colors.border || "#222" }}
+          >
+            By booking with Sour Apple VIP, you agree: All laundry is handled with professional care. Sour Apple VIP is not liable for normal wear/tear, color bleeding from non-separated clothes, or items left in pockets. Liability for lost items is limited up to $100 per bag. Payment is due upon delivery/pickup confirmation.
+          </div>
 
-          <Card>
-            <View style={styles.stepRow}>
-              <Text style={styles.rowLabel}>Bags</Text>
-              <View style={styles.stepper}>
-                <Pressable testID="bags-minus" onPress={() => setBags((b) => Math.max(1, b - 1))} style={styles.stepBtn}><Ionicons name="remove" size={20} color={colors.text} /></Pressable>
-                <Text style={styles.stepVal}>{bags}</Text>
-                <Pressable testID="bags-plus" onPress={() => setBags((b) => b + 1)} style={styles.stepBtn}><Ionicons name="add" size={20} color={colors.text} /></Pressable>
-              </View>
-            </View>
-            <Toggle label="Rush service (+$10)" value={rush} onToggle={() => setRush(!rush)} testID="rush-toggle" />
-            <Toggle label="Bedding add-on (+$8)" value={bedding} onToggle={() => setBedding(!bedding)} testID="bedding-toggle" />
-          </Card>
+          <label className="flex items-start gap-2 text-xs cursor-pointer select-none mb-3">
+            <input
+              type="checkbox"
+              checked={contractAgreed}
+              onChange={(e) => setContractAgreed(e.target.checked)}
+              className="w-4 h-4 mt-0.5 accent-lime-400"
+              required
+            />
+            <span className="font-semibold" style={{ color: colors.text || "#fff" }}>
+              I have read, understood, and legally agree to the Sour Apple VIP Laundry Service Agreement.
+            </span>
+          </label>
 
-          <View style={styles.bagsHeader}>
-            <Text style={styles.label}>Buy branded reusable bags</Text>
-            <View style={styles.comingSoonPill}><Text style={styles.comingSoonText}>COMING SOON</Text></View>
-          </View>
-          <Card style={{ opacity: 0.45 }}>
-            {BAG_SIZES.map((b) => (
-              <View key={b.key} style={styles.bagRow} pointerEvents="none">
-                <View><Text style={styles.rowLabel}>{b.label} bag</Text><Text style={styles.bagPrice}>${b.price} each</Text></View>
-                <View style={styles.stepper}>
-                  <View style={styles.stepBtn}><Ionicons name="remove" size={18} color={colors.textDim} /></View>
-                  <Text style={styles.stepVal}>0</Text>
-                  <View style={styles.stepBtn}><Ionicons name="add" size={18} color={colors.textDim} /></View>
-                </View>
-              </View>
-            ))}
-          </Card>
+          <Field
+            label="Type Full Legal Name (Digital Signature)"
+            value={signatureName}
+            onChangeText={setSignatureName}
+            placeholder="e.g. Jamie M. Doe"
+            required
+          />
+        </Card>
 
-          <Text style={styles.label}>Laundry preferences</Text>
-          <View style={styles.chipsWrap}>
-            {PREFS.map((p) => (
-              <Pressable key={p} testID={`pref-${p}`} onPress={() => togglePref(p)} style={[styles.chip, prefs.includes(p) && styles.chipActive]}>
-                <Text style={[styles.chipText, prefs.includes(p) && { color: colors.bg }]}>{p}</Text>
-              </Pressable>
-            ))}
-          </View>
+        {/* Error Alert */}
+        {Boolean(err) && (
+          <div className="p-3 rounded-xl bg-red-900/30 border border-red-500 text-red-400 text-xs font-bold text-center">
+            {err}
+          </div>
+        )}
 
-          <Field label="Stain / special notes" testID="stain-input" value={stain} onChangeText={setStain} placeholder="e.g. coffee stain on white shirt" multiline />
-          <Pressable testID="ai-tips-button" onPress={getAiTips} style={styles.aiBtn}>
-            <Ionicons name="sparkles" size={16} color={colors.gold} /><Text style={styles.aiBtnText}>Get AI stain-care tips</Text>
-          </Pressable>
-          {aiLoading && <ActivityIndicator color={colors.gold} style={{ marginVertical: 8 }} />}
-          {!!aiTips && <Card style={{ borderColor: colors.gold }}><Text style={styles.aiTips} testID="ai-tips-result">{aiTips}</Text></Card>}
+        {/* Sticky Price & Submit Button */}
+        <div className="pt-2">
+          <div className="flex justify-between items-center mb-2 px-1">
+            <span className="text-sm font-bold" style={{ color: colors.textDim || "#888" }}>
+              Estimated Total:
+            </span>
+            <span className="text-2xl font-black" style={{ color: colors.apple || "#B0FF00" }}>
+              ${estimate.toFixed(2)}
+            </span>
+          </div>
 
-          <Field label={isCollege ? "Preferred pickup date (mm/dd/yyyy)" : "Preferred drop-off date (mm/dd/yyyy)"} testID="pref-date-input" value={prefDate} onChangeText={setPrefDate} placeholder="06/25/2026" />
-          <Text style={styles.label}>Preferred {isCollege ? "pickup" : "drop-off"} time</Text>
-          <View style={styles.chipsWrap}>
-            {TIMES.map((t) => (
-              <Pressable key={t} testID={`time-${t}`} onPress={() => setPrefTime(t)} style={[styles.chip, prefTime === t && styles.chipActive]}>
-                <Text style={[styles.chipText, prefTime === t && { color: colors.bg }]}>{t}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <Text style={styles.smallNote}>⏱ Sour Apple VIP confirms the final {isCollege ? "pickup & sets your delivery time" : "times"} — you'll see them here and get a message.</Text>
-
-          <Card style={{ backgroundColor: colors.surfaceAlt }}>
-            <View style={styles.stepRow}>
-              <Text style={styles.rowLabel}>Estimated total</Text>
-              <Text style={styles.estimate} testID="price-estimate">${estimate.toFixed(2)}</Text>
-            </View>
-          </Card>
-
-          <Btn title={isGuest ? "Sign up to submit" : "Submit Request"} onPress={submit} loading={submitting} testID="submit-order-button" />
-          <Text style={styles.note}>Your request goes to Sour Apple VIP for approval first.</Text>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          <Btn
+            title={`Book Pickup — $${estimate.toFixed(2)}`}
+            type="submit"
+            loading={loading}
+            data-testid="submit-order-button"
+          />
+        </div>
+      </form>
+    </div>
   );
 }
-
-function Toggle({ label, value, onToggle, testID }: { label: string; value: boolean; onToggle: () => void; testID: string }) {
-  return (
-    <Pressable testID={testID} onPress={onToggle} style={styles.toggleRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <View style={[styles.switch, value && { backgroundColor: colors.apple, alignItems: "flex-end" }]}><View style={styles.knob} /></View>
-    </Pressable>
-  );
-}
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 60 },
-  title: { fontSize: 26, fontWeight: "800", color: colors.text, marginBottom: spacing.lg },
-  label: { color: colors.textDim, fontSize: 13, marginBottom: 8, fontWeight: "600" },
-  typeRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.md },
-  typeCard: { flex: 1, height: 68, borderRadius: radius.md, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, alignItems: "center", justifyContent: "center", gap: 4, paddingHorizontal: 6 },
-  typeActive: { backgroundColor: colors.apple, borderColor: colors.apple },
-  typeText: { color: colors.textDim, fontWeight: "700", fontSize: 12, textAlign: "center" },
-  infoText: { color: colors.text, fontSize: 13, lineHeight: 19 },
-  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: spacing.md },
-  chip: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, borderRadius: radius.pill, backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border },
-  chipActive: { backgroundColor: colors.apple, borderColor: colors.apple },
-  chipText: { color: colors.text, fontSize: 13, fontWeight: "600" },
-  stepRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  rowLabel: { color: colors.text, fontSize: 15, fontWeight: "600" },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 16 },
-  stepBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.surfaceAlt, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border },
-  stepVal: { color: colors.text, fontSize: 18, fontWeight: "700", minWidth: 24, textAlign: "center" },
-  toggleRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: spacing.md },
-  switch: { width: 48, height: 28, borderRadius: 14, backgroundColor: colors.border, padding: 3, justifyContent: "center" },
-  knob: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.white },
-  bagsHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
-  comingSoonPill: { backgroundColor: colors.pink, paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.pill },
-  comingSoonText: { color: "#0A0A0F", fontWeight: "900", fontSize: 11, letterSpacing: 0.5 },
-  bagRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border },
-  bagPrice: { color: colors.textDim, fontSize: 12, marginTop: 2 },
-  aiBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: spacing.md },
-  aiBtnText: { color: colors.gold, fontWeight: "700" },
-  aiTips: { color: colors.text, lineHeight: 22 },
-  smallNote: { color: colors.textDim, fontSize: 12, marginBottom: spacing.md, lineHeight: 17 },
-  estimate: { color: colors.apple, fontSize: 24, fontWeight: "800" },
-  note: { color: colors.textDim, fontSize: 13, textAlign: "center", marginTop: spacing.sm },
-});
