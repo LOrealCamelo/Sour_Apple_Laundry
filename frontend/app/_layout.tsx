@@ -1,46 +1,48 @@
-import { Stack } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
-import { LogBox } from "react-native";
-import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
-
-import { useIconFonts } from "@/src/hooks/use-icon-fonts";
+import React from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/src/context/AuthContext";
 import { colors } from "@/src/theme";
 
-// Disable logbox errors etc so that users can see the app
-// and agent works as expected.
-LogBox.ignoreAllLogs(true);
+// Screens
+import Welcome from "./app/index";
+import Login from "./app/login";
+import Register from "./app/register";
 
-// Keep the native splash visible from cold start until icon fonts register.
-// Required because @expo/vector-icons' componentDidMount fallback fires
-// Font.loadAsync against a broken vendor path if any <Icon> mounts before
-// the family is registered — which throws on Android Expo Go.
-SplashScreen.preventAutoHideAsync();
+// Driver Screens & Layout
+import DriverLayout from "./app/(driver)/_layout";
+import AvailableJobs from "./app/(driver)/index";
+import MyJobs from "./app/(driver)/mine";
+import DriverProfile from "./app/(driver)/profile";
 
-export default function RootLayout() {
-  const [loaded, error] = useIconFonts();
-
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
-  // If the CDN is unreachable we fall through on error rather than wedging
-  // the app — icons will tofu, but the app still boots.
-  if (!loaded && !error) return null;
-
+export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
-        </AuthProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <div
+      className="min-h-screen font-sans antialiased select-none"
+      style={{
+        backgroundColor: colors.bg || "#0A0A0F",
+        color: colors.text || "#FFFFFF",
+      }}
+    >
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Auth Routes */}
+            <Route path="/" element={<Welcome />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Driver Portal Routes */}
+            <Route path="/driver" element={<DriverLayout />}>
+              <Route index element={<AvailableJobs />} />
+              <Route path="mine" element={<MyJobs />} />
+              <Route path="profile" element={<DriverProfile />} />
+            </Route>
+
+            {/* Fallback to Welcome */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </div>
   );
 }
