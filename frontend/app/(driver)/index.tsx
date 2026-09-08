@@ -1,62 +1,144 @@
-import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { MapPin, Clock, RotateCw } from "lucide-react";
 import { api } from "@/src/api/client";
 import { colors, spacing } from "@/src/theme";
 import { Card, Btn, Badge } from "@/src/components/UI";
 
 export default function AvailableJobs() {
   const [jobs, setJobs] = useState<any[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
-  const [busy, setBusy] = useState("");
-  const load = async () => { try { setJobs(await api("/driver/jobs/open")); } catch {} };
-  useFocusEffect(useCallback(() => { load(); }, []));
+  const [loading, setLoading] = useState(false);
+  const [busy, setBusy] = useState<string>("");
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const data = await api("/driver/jobs/open");
+      setJobs(data || []);
+    } catch (e) {
+      console.error("Failed to load open jobs", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const claim = async (id: string) => {
     setBusy(id);
-    try { await api(`/driver/jobs/${id}/claim`, { method: "POST" }); await load(); }
-    catch (e: any) { alert(e.message); } finally { setBusy(""); }
+    try {
+      await api(`/driver/jobs/${id}/claim`, { method: "POST" });
+      await load();
+    } catch (e: any) {
+      alert(e.message || "Failed to claim job");
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={["top"]} testID="driver-available-screen">
-      <Text style={styles.title}>Available Jobs</Text>
-      <ScrollView contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} tintColor={colors.apple} />}>
-        {jobs.length === 0 && <Text style={styles.empty}>No open jobs right now. Pull to refresh.</Text>}
+    <div
+      className="min-h-screen p-4 pb-24 max-w-md mx-auto"
+      style={{ backgroundColor: colors.bg || "#000" }}
+      data-testid="driver-available-screen"
+    >
+      {/* Header with Title & Refresh Icon */}
+      <div className="flex justify-between items-center mb-6 pt-2">
+        <h1
+          className="text-2xl font-extrabold"
+          style={{ color: colors.text || "#fff" }}
+        >
+          Available Jobs
+        </h1>
+        <button
+          onClick={load}
+          className="p-2 rounded-full transition-transform active:scale-95"
+          style={{ backgroundColor: colors.surface || "#111" }}
+          title="Refresh available jobs"
+        >
+          <RotateCw
+            size={18}
+            className={loading ? "animate-spin" : ""}
+            style={{ color: colors.apple || "#B0FF00" }}
+          />
+        </button>
+      </div>
+
+      {/* Empty State */}
+      {jobs.length === 0 && !loading && (
+        <p
+          className="text-sm text-center py-12"
+          style={{ color: colors.textDim || "#888" }}
+        >
+          No open jobs right now. Tap refresh to check again.
+        </p>
+      )}
+
+      {/* Available Jobs List */}
+      <div className="space-y-4">
         {jobs.map((j) => (
-          <Card key={j.id} testID={`job-card-${j.order_code}`}>
-            <View style={styles.row}>
-              <Text style={styles.code}>{j.order_code}</Text>
-              <Badge text={j.job_type} color={colors.info} />
-            </View>
-            <View style={styles.metaRow}><Ionicons name="location" size={15} color={colors.textDim} /><Text style={styles.dim}>{j.campus} · {j.building}</Text></View>
-            <View style={styles.metaRow}><Ionicons name="time" size={15} color={colors.textDim} /><Text style={styles.dim}>Pickup {j.pickup_window} · Delivery {j.delivery_window}</Text></View>
-            {!!j.special_instructions && <Text style={styles.dim}>Note: {j.special_instructions}</Text>}
-            <View style={styles.payRow}>
-              <Text style={styles.payout}>${j.payout} payout</Text>
-              <Text style={styles.dist}>~1.2 mi</Text>
-            </View>
-            <Btn title={j.auto_assign_first_claim ? "Claim Job" : "Request Job"} onPress={() => claim(j.id)} loading={busy === j.id} testID={`claim-${j.order_code}`} />
+          <Card key={j.id} data-testid={`job-card-${j.order_code}`}>
+            {/* Order Code & Job Type Badge */}
+            <div className="flex justify-between items-center mb-2">
+              <span
+                className="font-extrabold text-sm tracking-wide"
+                style={{ color: colors.gold || "#FFD700" }}
+              >
+                {j.order_code}
+              </span>
+              <Badge text={j.job_type} color={colors.info || "#00b4d8"} />
+            </div>
+
+            {/* Location */}
+            <div className="flex items-center gap-2 mb-1.5">
+              <MapPin size={15} style={{ color: colors.textDim || "#888" }} />
+              <span className="text-xs" style={{ color: colors.textDim || "#888" }}>
+                {j.campus} · {j.building}
+              </span>
+            </div>
+
+            {/* Time Window */}
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={15} style={{ color: colors.textDim || "#888" }} />
+              <span className="text-xs" style={{ color: colors.textDim || "#888" }}>
+                Pickup {j.pickup_window} · Delivery {j.delivery_window}
+              </span>
+            </div>
+
+            {/* Special Instructions Note */}
+            {Boolean(j.special_instructions) && (
+              <p
+                className="text-xs mb-3 italic"
+                style={{ color: colors.textDim || "#888" }}
+              >
+                Note: {j.special_instructions}
+              </p>
+            )}
+
+            {/* Payout & Distance Row */}
+            <div className="flex justify-between items-center my-3 pt-2 border-t border-zinc-800">
+              <span
+                className="text-lg font-extrabold"
+                style={{ color: colors.apple || "#B0FF00" }}
+              >
+                ${j.payout} payout
+              </span>
+              <span className="text-xs" style={{ color: colors.textDim || "#888" }}>
+                ~1.2 mi
+              </span>
+            </div>
+
+            {/* Claim/Request Button */}
+            <Btn
+              title={j.auto_assign_first_claim ? "Claim Job" : "Request Job"}
+              onClick={() => claim(j.id)}
+              loading={busy === j.id}
+              data-testid={`claim-${j.order_code}`}
+            />
           </Card>
         ))}
-      </ScrollView>
-    </SafeAreaView>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  title: { fontSize: 26, fontWeight: "800", color: colors.text, padding: spacing.lg, paddingBottom: spacing.md },
-  content: { paddingHorizontal: spacing.lg, paddingBottom: 40 },
-  empty: { color: colors.textDim },
-  row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  code: { color: colors.gold, fontWeight: "800", fontSize: 15 },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  dim: { color: colors.textDim, fontSize: 13 },
-  payRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: spacing.sm },
-  payout: { color: colors.apple, fontWeight: "800", fontSize: 18 },
-  dist: { color: colors.textDim, fontSize: 13 },
-});
