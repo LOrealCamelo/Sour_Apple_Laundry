@@ -226,4 +226,216 @@ export default function OrderTracking() {
       <Card className="mb-4">
         <div className="flex justify-between items-center mb-2">
           <span
-{
+            className="text-2xl font-black"
+            style={{ color: colors.apple || "#B0FF00" }}
+            data-testid="order-price"
+          >
+            ${Number(order.price || 0).toFixed(2)}
+          </span>
+          <Badge
+            text={order.payment_status}
+            color={order.payment_status === "Paid" ? colors.apple || "#B0FF00" : colors.warn || "#ffaa00"}
+          />
+        </div>
+
+        {Boolean(order.payment_method) && order.payment_status !== "Unpaid" && (
+          <p className="text-xs mb-2" style={{ color: colors.textDim || "#888" }}>
+            Method: {order.payment_method}
+          </p>
+        )}
+
+        {/* Payment Options (if unpaid) */}
+        {unpaid && order.status !== "Pending Admin Approval" && (
+          <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
+            <p className="text-xs font-bold" style={{ color: colors.text || "#fff" }}>
+              Pay now
+            </p>
+
+            {methods.stripe_enabled && (
+              <Btn
+                title="Pay with Card (Stripe)"
+                variant="gold"
+                onClick={payStripe}
+                loading={busy}
+                data-testid="pay-stripe-button"
+              />
+            )}
+
+            {/* CashApp Button */}
+            <button
+              type="button"
+              data-testid="pay-cashapp"
+              onClick={() => payManual("CashApp")}
+              className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border font-bold text-sm transition-all active:scale-95"
+              style={{
+                backgroundColor: colors.surfaceAlt || "#1a1a1a",
+                borderColor: colors.border || "#333",
+                color: colors.text || "#fff",
+              }}
+            >
+              <DollarSign size={18} style={{ color: colors.apple || "#B0FF00" }} />
+              <span>CashApp: {methods.cashapp || "$SourAppleLaundry"}</span>
+            </button>
+
+            {/* Venmo Button */}
+            <button
+              type="button"
+              data-testid="pay-venmo"
+              onClick={() => payManual("Venmo")}
+              className="w-full flex items-center justify-center gap-2 h-12 rounded-xl border font-bold text-sm transition-all active:scale-95"
+              style={{
+                backgroundColor: colors.surfaceAlt || "#1a1a1a",
+                borderColor: colors.border || "#333",
+                color: colors.text || "#fff",
+              }}
+            >
+              <Wallet size={18} style={{ color: colors.info || "#00b4d8" }} />
+              <span>Venmo: {methods.venmo || "@SourAppleLaundry"}</span>
+            </button>
+
+            <p className="text-xs leading-relaxed mt-2" style={{ color: colors.textDim || "#888" }}>
+              For CashApp/Venmo, send to the handle above with your tracking # in the note. We'll confirm it in-app.
+            </p>
+          </div>
+        )}
+
+        {order.payment_status === "Pending Confirmation" && (
+          <p className="text-xs font-semibold mt-2" style={{ color: colors.gold || "#FFD700" }}>
+            Waiting for Sour Apple VIP to confirm your {order.payment_method} payment.
+          </p>
+        )}
+      </Card>
+
+      {/* Tracking Timeline */}
+      <h2 className="text-base font-bold mb-3 mt-5" style={{ color: colors.text || "#fff" }}>
+        Order tracking
+      </h2>
+      <Card className="mb-4 space-y-3">
+        {FLOW.map((s, i) => {
+          const done = doneStatuses.has(s);
+          const current = i === currentIdx;
+
+          return (
+            <div key={s} className="flex items-center gap-3">
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center border-2 transition-colors"
+                style={{
+                  backgroundColor: done
+                    ? colors.apple || "#B0FF00"
+                    : current
+                    ? colors.gold || "#FFD700"
+                    : "transparent",
+                  borderColor: done
+                    ? colors.apple || "#B0FF00"
+                    : current
+                    ? colors.gold || "#FFD700"
+                    : colors.border || "#333",
+                }}
+              >
+                {done && <Check size={12} color="#000" />}
+              </div>
+              <span
+                className="text-xs"
+                style={{
+                  color: done || current ? colors.text || "#fff" : colors.textDim || "#666",
+                  fontWeight: done || current ? "700" : "400",
+                }}
+              >
+                {s}
+              </span>
+            </div>
+          );
+        })}
+      </Card>
+
+      {/* Confirm Pickup Action */}
+      {order.status === "Ready for Pickup" && !order.pickup_confirmed && (
+        <div className="mb-4">
+          <Btn
+            title="Confirm Pickup Time"
+            onClick={confirmPickup}
+            loading={busy}
+            data-testid="confirm-pickup-button"
+          />
+        </div>
+      )}
+
+      {order.pickup_confirmed && (
+        <Card className="mb-4 text-center">
+          <p className="text-xs font-bold" style={{ color: colors.gold || "#FFD700" }}>
+            ✅ You confirmed your pickup.
+          </p>
+        </Card>
+      )}
+
+      {/* In-App Messages */}
+      <h2 className="text-base font-bold mb-3 mt-5" style={{ color: colors.text || "#fff" }}>
+        Messages
+      </h2>
+      <Card className="mb-4">
+        <OrderChat orderId={id!} myRole={user?.role || "STUDENT"} />
+      </Card>
+
+      {/* Change / Cancel Actions */}
+      {canCancel && (
+        <div className="flex gap-3 mb-4">
+          <button
+            type="button"
+            data-testid="request-change-button"
+            onClick={requestChange}
+            className="flex-1 h-11 rounded-xl border text-xs font-bold transition-all active:scale-95"
+            style={{
+              borderColor: colors.border || "#333",
+              color: colors.text || "#fff",
+              backgroundColor: colors.surface || "#111",
+            }}
+          >
+            Request Change
+          </button>
+          <button
+            type="button"
+            data-testid="cancel-order-button"
+            onClick={cancel}
+            className="flex-1 h-11 rounded-xl border text-xs font-bold transition-all active:scale-95"
+            style={{
+              borderColor: colors.danger || "#ef4444",
+              color: colors.danger || "#ef4444",
+              backgroundColor: "transparent",
+            }}
+          >
+            Cancel Order
+          </button>
+        </div>
+      )}
+
+      {/* Rate Your Service */}
+      {order.status === "Delivered" && order.rating == null && (
+        <Card className="mb-4">
+          <h3 className="font-bold text-sm mb-3" style={{ color: colors.text || "#fff" }}>
+            Rate your service
+          </h3>
+          <div className="mb-4">
+            <RatingStars value={stars} onChange={setStars} />
+          </div>
+          <Btn title="Submit Rating" onClick={rate} data-testid="submit-rating-button" />
+        </Card>
+      )}
+
+      {order.rating != null && (
+        <Card className="mb-4 text-center">
+          <p className="text-xs" style={{ color: colors.textDim || "#888" }}>
+            You rated this order {order.rating} ★
+          </p>
+        </Card>
+      )}
+
+      {/* Reorder Button */}
+      <Btn
+        title="Reorder this service"
+        variant="ghost"
+        onClick={reorder}
+        data-testid="reorder-button"
+      />
+    </div>
+  );
+}
