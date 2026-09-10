@@ -208,6 +208,19 @@ async def serve_homepage():
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Shlop Font -->
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
+<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
+<span style="
+  font-family: 'Shlop', cursive, sans-serif;
+  font-size: 26px;
+  letter-spacing: 2px;
+  color: #FFFFFF;
+  text-shadow: -4px 4px 16px #B0FF00;
+  letter-spacing: 2px;
+">
+  SOUR APPLE <span style="color: #FF2A85; text-shadow: -4px 4px 18px #FF2A85;">VIP</span>
+ </span>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sour Apple Wash & Fold VIP Laundry | Utica</title>
@@ -235,7 +248,7 @@ async def serve_homepage():
   <div class="flex items-center justify-between py-3 mb-4 border-b border-zinc-800">
     <div class="flex items-center gap-2.5">
       <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-20 h-20 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
-      <span class="font-Shlop text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold VIP Laundry</span></span>
+      <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold VIP Laundry</span></span>
     </div>
     <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">UTICA, NY</span>
   </div>
@@ -282,8 +295,8 @@ async def serve_homepage():
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
       
       <!-- Size Chart Image Graphic -->
-      <div class="mb-4 rounded-xl overflow-hidden border border-zinc-800 shadow-md">
-        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-500 h-500 object-cover" onerror="this.style.display='none';">
+      <div class="mb-4 rounded-xl overflow-hidden border border-zinc-800 shadow-md max-w-[260] mx-auto">
+        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-full h-auto object-contain" onerror="this.src='/assets/images/bag/sizes.jpeg';">
       </div>
 
       <!-- No Open Baskets Policy -->
