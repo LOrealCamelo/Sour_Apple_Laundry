@@ -249,7 +249,10 @@ async def serve_homepage():
     
     <!-- Top Row: Tilted Pink Crown Image + Big Tilted SOUR APPLE -->
     <div class="relative inline-flex items-center justify-center mb-1" style="transform: rotate(-3deg);">
-      
+      <!-- Tilted Pink Crown -->
+      <span class="absolute -top-4 -left-5 text-2xl" style="transform: rotate(-18deg); filter: drop-shadow(0 0 8px #FF2A85);">
+        👑
+      </span>
       <!-- Your Real Crown Image -->
       <img 
         src="/assets/images/crown.png" 
@@ -301,7 +304,7 @@ async def serve_homepage():
   <div id="booking-app">
     <!-- Hero / Tagline -->
     <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 mb-5">
-      <h1 class="text-lg font-black">FRESH CLOTHES ZERO STRESS</h1>
+      <h1 class="text-lg font-black accent-apple mb-1">FRESH CLOTHES ZERO STRESS</h1>
       <p class="text-xs text-zinc-300 leading-relaxed">
         Drop off your dirty laundry in South Utica, we wash, dry & fold it, and notify you as soon as it's fresh and ready for pickup!
       </p>
