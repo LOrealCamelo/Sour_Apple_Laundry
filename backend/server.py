@@ -219,7 +219,7 @@ async def serve_homepage():
   text-shadow: -4px 4px 16px #B0FF00;
   letter-spacing: 2px;
 ">
-  SOUR APPLE <span style="color: #FF2A85; text-shadow: -4px 4px 18px #FF2A85;">VIP</span>
+  SOUR APPLE <span style="color: #FF2A85; text-shadow: -4px 4px 18px #FF2A85;">
  </span>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -237,6 +237,7 @@ async def serve_homepage():
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+  * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, Shlop, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .apple-glow { box-shadow: 0 0 25px rgba(176, 255, 0, 0.3); }
     .accent-apple { color: #B0FF00; }
@@ -244,13 +245,59 @@ async def serve_homepage():
   </style>
 </head>
 <body class="min-h-screen p-4 pb-24 max-w-md mx-auto">
-  <!-- Brand Header with Real Logo Image -->
-  <div class="flex items-center justify-between py-3 mb-4 border-b border-zinc-800">
-    <div class="flex items-center gap-2.5">
-      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-20 h-20 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
-      <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold VIP Laundry</span></span>
+
+ <!-- Brand Header matching your Flyer -->
+  <div class="py-4 mb-5 border-b border-zinc-800 text-center flex flex-col items-center justify-center">
+    
+    <!-- Top Row: Tilted Pink Crown Image + Big Tilted SOUR APPLE -->
+    <div class="relative inline-flex items-center justify-center mb-1" style="transform: rotate(-3deg);">
+      
+      <!-- Your Real Crown Image -->
+      <img 
+        src="/assets/images/crown.png" 
+        alt="Pink Crown" 
+        style="
+          position: absolute;
+          top: -20px;
+          left: -24px;
+          width: 36px;
+          height: 36px;
+          object-fit: contain;
+          transform: rotate(-18deg);
+          filter: drop-shadow(0 0 8px #FF2A85);
+        "
+        onerror="this.style.display='none';"
+      >
+      
+      <!-- Big Tilted 'SOUR APPLE' in Shlop -->
+      <h1 style="
+        font-family: 'Shlop', cursive !important;
+        font-size: 44px;
+        line-height: 1;
+        letter-spacing: 3px;
+        color: #FFFFFF;
+        text-shadow: -4px 4px 18px #B0FF00, 0 0 10px rgba(176, 255, 0, 0.4);
+        margin: 0;
+        display: inline-block;
+      ">
+        SOUR APPLE
+      </h1>
     </div>
-    <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">UTICA, NY</span>
+
+    <!-- Stylized Subtitle: WASH & FOLD • VIP LAUNDRY -->
+    <div class="mt-2 tracking-widest uppercase font-black" style="letter-spacing: 2px;">
+      <span style="color: #FF2A85; font-style: italic; font-size: 13px; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">
+        WASH & FOLD
+      </span>
+      <span style="color: #B0FF00; font-size: 12px; margin: 0 5px;">•</span>
+      <span style="color: #FFFFFF; font-size: 12px; font-weight: 900; letter-spacing: 2px;">
+        VIP LAUNDRY
+      </span>
+    </div>
+
+    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">
+      UTICA, NY
+    </span>
   </div>
 
   <div id="booking-app">
@@ -294,9 +341,14 @@ async def serve_homepage():
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
       
-      <!-- Size Chart Image Graphic -->
-      <div class="mb-4 rounded-xl overflow-hidden border border-zinc-800 shadow-md max-w-[260] mx-auto">
-        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-full h-auto object-contain" onerror="this.src='/assets/images/bag/sizes.jpeg';">
+      <!-- Size Chart Image Graphic (Forced 50% / Centered) -->
+      <div style="text-align: center; margin: 0 auto 1rem auto;">
+        <img 
+          src="/assets/images/bag-sizes.jpg" 
+          alt="Sour Apple Bag Size Chart" 
+          style="width: 190px !important; max-width: 50% !important; height: auto !important; display: block !important; margin: 0 auto !important; border-radius: 12px; border: 1px solid #27272a; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" 
+          onerror="this.onerror=null; this.src='/assets/images/bag-sizes.jpeg';"
+        >
       </div>
 
       <!-- No Open Baskets Policy -->
