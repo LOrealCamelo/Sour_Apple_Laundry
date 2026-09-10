@@ -215,11 +215,11 @@ async def serve_homepage():
   <!-- PWA & Mobile Home Screen Icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sour Apple Wash & Fold">
+  <meta name="apple-mobile-web-app-title" content="Sour Apple Wash & Fold VIP Laundry">
   <meta name="theme-color" content="#0A0A0F">
   <link rel="icon" type="image/png" href="/assets/images/favicon.png">
   <link rel="apple-touch-icon" href="/assets/images/icon.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icon.png">
+  <link rel="apple-touch-icon" sizes="300x300" href="/assets/images/icon.png">
   <link rel="manifest" href="/manifest.json">
 
   <script src="https://cdn.tailwindcss.com"></script>
