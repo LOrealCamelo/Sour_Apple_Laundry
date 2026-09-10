@@ -249,10 +249,7 @@ async def serve_homepage():
     
     <!-- Top Row: Tilted Pink Crown Image + Big Tilted SOUR APPLE -->
     <div class="relative inline-flex items-center justify-center mb-1" style="transform: rotate(-3deg);">
-      <!-- Tilted Pink Crown -->
-      <span class="absolute -top-6 -left-8 text-2xl" style="transform: rotate(-18deg);">
-        👑
-      </span>
+      
       <!-- Your Real Crown Image -->
       <img 
         src="/assets/images/crown.png" 
