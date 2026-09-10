@@ -171,12 +171,40 @@ app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 # =============================== LIVE EMBEDDED FRONTEND ===============================
+@app.get("/manifest.json")
+async def manifest():
+    return {
+        "name": "Sour Apple VIP Laundry",
+        "short_name": "Sour Apple",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#0A0A0F",
+        "theme_color": "#B0FF00",
+        "icons": [
+            {
+                "src": "/assets/images/favicon.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    }
+
 @app.get("/", response_class=HTMLResponse)
 async def serve_homepage():
     return """
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Mobile Web App Capability -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Sour Apple VIP">
+  <meta name="theme-color" content="#0A0A0F">
+
+  <!-- App Icons -->
+  <link rel="apple-touch-icon" href="/assets/images/icon.png">
+  <link rel="manifest" href="/manifest.json">
+  
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sour Apple VIP Laundry | South Utica & MVCC</title>
