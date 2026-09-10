@@ -258,8 +258,8 @@ async def serve_homepage():
           position: absolute;
           top: -20px;
           left: -24px;
-          width: 56px;
-          height: 356px;
+          width: 36px;
+          height: 36px;
           object-fit: contain;
           transform: rotate(-18deg);
           filter: drop-shadow(0 0 8px #FF2A85);
@@ -301,7 +301,7 @@ async def serve_homepage():
   <div id="booking-app">
     <!-- Hero / Tagline -->
     <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 mb-5">
-      <h1 class="text-lg font-black accent-apple mb-1">FRESH CLOTHES. ZERO STRESS.</h1>
+      <h1 class="text-lg font-black">FRESH CLOTHES ZERO STRESS</h1>
       <p class="text-xs text-zinc-300 leading-relaxed">
         Drop off your dirty laundry in South Utica, we wash, dry & fold it, and notify you as soon as it's fresh and ready for pickup!
       </p>
@@ -313,11 +313,11 @@ async def serve_homepage():
       <div class="grid grid-cols-2 gap-2">
         <button id="btn-non-student" type="button" onclick="setCustomerType('NON_STUDENT')" class="p-3 rounded-xl border text-center transition-all bg-apple text-black font-black text-sm">
           🏠 Non Student
-          <span class="block text-[10px] font-medium opacity-80">South Utica Drop-Off</span>
+          <span class="block text-[12px] font-medium opacity-80">South Utica Drop-Off</span>
         </button>
         <button id="btn-mvcc" type="button" onclick="setCustomerType('MVCC')" class="p-3 rounded-xl border border-zinc-800 text-center transition-all bg-zinc-900 text-zinc-300 font-black text-sm">
           🎓 MVCC Campus
-          <span class="block text-[10px] font-medium opacity-80">Curbside Pickup</span>
+          <span class="block text-[12px] font-medium opacity-80">Curbside Pickup</span>
         </button>
       </div>
     </div>
