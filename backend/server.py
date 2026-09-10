@@ -1,7 +1,6 @@
 """
 Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Embedded Web App
-No Cloudflare or build tools required. Runs 100% live on Render.
+FastAPI + MongoDB + Embedded Web App + Static Assets
 """
 
 import os
@@ -9,15 +8,16 @@ import uuid
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import List, Optional, Annotated
+from typing import List, Optional
 
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, status
+from fastapi import FastAPI, APIRouter, HTTPException, status
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel, EmailStr, BeforeValidator
+from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from jose import jwt, JWTError
 import stripe
@@ -46,18 +46,23 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 app = FastAPI(title="Sour Apple VIP Laundry")
 api = APIRouter(prefix="/api")
 
+# Mount Static Assets (/assets/images/...)
+assets_dirs = [
+    ROOT_DIR.parent / "frontend" / "assets",
+    ROOT_DIR / "assets",
+    Path("/opt/render/project/src/frontend/assets"),
+]
+for p in assets_dirs:
+    if p.exists() and p.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(p)), name="assets")
+        logger.info(f"Mounted static assets from {p}")
+        break
+
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 def new_id() -> str:
     return str(uuid.uuid4())
-
-class UserCreate(BaseModel):
-    name: str
-    email: EmailStr
-    password: str
-    role: str = "STUDENT"
-    phone: Optional[str] = ""
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -170,44 +175,53 @@ async def approve_order(order_id: str):
 app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-# =============================== LIVE EMBEDDED FRONTEND ===============================
+# =============================== PWA MANIFEST ===============================
 @app.get("/manifest.json")
-async def manifest():
+async def get_manifest():
     return {
-        "name": "Sour Apple VIP Laundry",
-        "short_name": "Sour Apple",
+        "name": "Sour Apple Wash & Fold VIP Laundry",
+        "short_name": "Sour Apple Laundry",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#0A0A0F",
-        "theme_color": "#B0FF00",
+        "theme_color": "#0A0A0F",
         "icons": [
             {
-                "src": "/assets/images/favicon.png",
+                "src": "/assets/images/icon.png",
+                "sizes": "192x192",
+                "type": "image/png",
+                "purpose": "any maskable"
+            },
+            {
+                "src": "/assets/images/icon.png",
                 "sizes": "512x512",
-                "type": "image/png"
+                "type": "image/png",
+                "purpose": "any maskable"
             }
         ]
     }
 
+# =============================== LIVE EMBEDDED FRONTEND ===============================
 @app.get("/", response_class=HTMLResponse)
 async def serve_homepage():
     return """
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Mobile Web App Capability -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sour Apple Wash & Fold VIP Laundry | Utica</title>
+
+  <!-- PWA & Mobile Home Screen Icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Sour Apple VIP">
   <meta name="theme-color" content="#0A0A0F">
-
-  <!-- App Icons -->
+  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
   <link rel="apple-touch-icon" href="/assets/images/icon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icon.png">
   <link rel="manifest" href="/manifest.json">
-  
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sour Apple VIP Laundry | South Utica & MVCC</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
@@ -217,10 +231,10 @@ async def serve_homepage():
   </style>
 </head>
 <body class="min-h-screen p-4 pb-24 max-w-md mx-auto">
-  <!-- Brand Header -->
-  <div class="flex items-center justify-between py-4 mb-4 border-b border-zinc-800">
-    <div class="flex items-center gap-2">
-      <span class="text-3xl">🍏</span>
+  <!-- Brand Header with Real Logo Image -->
+  <div class="flex items-center justify-between py-3 mb-4 border-b border-zinc-800">
+    <div class="flex items-center gap-2.5">
+      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-9 h-9 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
       <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">VIP</span></span>
     </div>
     <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">UTICA, NY</span>
@@ -263,10 +277,15 @@ async def serve_homepage():
       📍 <strong>South Utica Drop-Off Location:</strong> Open to everyone! Bring your laundry to our South Utica location, and pick it up fresh and neatly folded. <em>(Standard turnaround is 48–72 hours).</em>
     </div>
 
-    <!-- 2. Bag Size Chart (Visuals) -->
+    <!-- 2. Bag Size Chart (Visual Banner & Cards) -->
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
       
+      <!-- Size Chart Image Graphic -->
+      <div class="mb-4 rounded-xl overflow-hidden border border-zinc-800 shadow-md">
+        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-full h-auto object-cover" onerror="this.style.display='none';">
+      </div>
+
       <!-- No Open Baskets Policy -->
       <div class="p-3 rounded-xl bg-red-950/30 border border-red-800/60 text-red-300 text-xs mb-4">
         <strong>🚫 STRICT CLOSURE POLICY:</strong> All laundry must be in a bag with a secure closure (drawstring, Velcro, zipper, or snaps). <strong>Open plastic baskets with no lids are NOT accepted.</strong>
@@ -368,7 +387,7 @@ async def serve_homepage():
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">Your Details</h2>
       <input type="text" id="cust-name" placeholder="Your Full Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
       <input type="tel" id="cust-phone" placeholder="Phone Number (315) 555-0100" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      <input type="text" id="cust-location" placeholder="Your Street Address (South Utica, New Hartford, etc.)" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      <input type="text" id="cust-location" placeholder="Your Street Address / Area" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
       <input type="date" id="cust-date" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
       <select id="cust-window" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm">
         <option value="Morning (9am - 12pm)">Morning (9am - 12pm)</option>
