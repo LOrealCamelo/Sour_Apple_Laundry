@@ -234,8 +234,8 @@ async def serve_homepage():
   <!-- Brand Header with Real Logo Image -->
   <div class="flex items-center justify-between py-3 mb-4 border-b border-zinc-800">
     <div class="flex items-center gap-2.5">
-      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-12 h-12 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
-      <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold</span></span>
+      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-20 h-20 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
+      <span class="font-Shlop text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold VIP Laundry</span></span>
     </div>
     <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">UTICA, NY</span>
   </div>
