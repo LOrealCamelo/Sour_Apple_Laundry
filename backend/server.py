@@ -209,7 +209,6 @@ async def serve_homepage():
 <html lang="en">
 <head>
 <!-- Shlop Font -->
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
 <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
 <span style="
   font-family: 'Shlop', cursive, sans-serif;
@@ -219,8 +218,7 @@ async def serve_homepage():
   text-shadow: -4px 4px 16px #B0FF00;
   letter-spacing: 2px;
 ">
-  SOUR APPLE <span style="color: #FF2A85; text-shadow: -4px 4px 18px #FF2A85;">
- </span>
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sour Apple Wash & Fold VIP Laundry | Utica</title>
@@ -260,8 +258,8 @@ async def serve_homepage():
           position: absolute;
           top: -20px;
           left: -24px;
-          width: 36px;
-          height: 36px;
+          width: 56px;
+          height: 356px;
           object-fit: contain;
           transform: rotate(-18deg);
           filter: drop-shadow(0 0 8px #FF2A85);
@@ -272,7 +270,7 @@ async def serve_homepage():
       <!-- Big Tilted 'SOUR APPLE' in Shlop -->
       <h1 style="
         font-family: 'Shlop', cursive !important;
-        font-size: 44px;
+        font-size: 52px;
         line-height: 1;
         letter-spacing: 3px;
         color: #FFFFFF;
@@ -286,16 +284,16 @@ async def serve_homepage():
 
     <!-- Stylized Subtitle: WASH & FOLD • VIP LAUNDRY -->
     <div class="mt-2 tracking-widest uppercase font-black" style="letter-spacing: 2px;">
-      <span style="color: #FF2A85; font-style: italic; font-size: 13px; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">
+      <span style="color: #FF2A85; font-style: italic; font-size: 16px; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">
         WASH & FOLD
       </span>
-      <span style="color: #B0FF00; font-size: 12px; margin: 0 5px;">•</span>
-      <span style="color: #FFFFFF; font-size: 12px; font-weight: 900; letter-spacing: 2px;">
+      <span style="color: #B0FF00; font-size: 16px; margin: 0 5px;">•</span>
+      <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; letter-spacing: 2px;">
         VIP LAUNDRY
       </span>
     </div>
 
-    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">
+    <span class="text-[10px] font-bold px-6 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">
       UTICA, NY
     </span>
   </div>
