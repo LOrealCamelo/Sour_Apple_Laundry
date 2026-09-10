@@ -188,7 +188,7 @@ async def get_manifest():
         "icons": [
             {
                 "src": "/assets/images/icon.png",
-                "sizes": "192x192",
+                "sizes": "300x300",
                 "type": "image/png",
                 "purpose": "any maskable"
             },
@@ -215,7 +215,7 @@ async def serve_homepage():
   <!-- PWA & Mobile Home Screen Icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sour Apple VIP">
+  <meta name="apple-mobile-web-app-title" content="Sour Apple Wash & Fold">
   <meta name="theme-color" content="#0A0A0F">
   <link rel="icon" type="image/png" href="/assets/images/favicon.png">
   <link rel="apple-touch-icon" href="/assets/images/icon.png">
@@ -224,7 +224,7 @@ async def serve_homepage():
 
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, Shlop, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     .apple-glow { box-shadow: 0 0 25px rgba(176, 255, 0, 0.3); }
     .accent-apple { color: #B0FF00; }
     .bg-apple { background-color: #B0FF00; }
@@ -234,8 +234,8 @@ async def serve_homepage():
   <!-- Brand Header with Real Logo Image -->
   <div class="flex items-center justify-between py-3 mb-4 border-b border-zinc-800">
     <div class="flex items-center gap-2.5">
-      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-9 h-9 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
-      <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">VIP</span></span>
+      <img src="/assets/images/icon.png" alt="Sour Apple Logo" class="w-12 h-12 rounded-xl object-contain" onerror="this.onerror=null; this.src='/assets/images/favicon.png';">
+      <span class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">Wash & Fold</span></span>
     </div>
     <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-zinc-800 text-zinc-400">UTICA, NY</span>
   </div>
@@ -283,7 +283,7 @@ async def serve_homepage():
       
       <!-- Size Chart Image Graphic -->
       <div class="mb-4 rounded-xl overflow-hidden border border-zinc-800 shadow-md">
-        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-full h-auto object-cover" onerror="this.style.display='none';">
+        <img src="/assets/images/bag-sizes.jpg" alt="Sour Apple Laundry Bag Size Chart" class="w-500 h-500 object-cover" onerror="this.style.display='none';">
       </div>
 
       <!-- No Open Baskets Policy -->
