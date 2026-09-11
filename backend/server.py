@@ -1,14 +1,18 @@
 """
 Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker
+FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Email Alerts
 """
 
 import os
 import uuid
+import smtplib
+import asyncio
 import logging
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 from fastapi import FastAPI, APIRouter, HTTPException, status
 from fastapi.responses import HTMLResponse
@@ -37,6 +41,10 @@ JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "43200"))
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminPass123!")
 
+# Email Alert Settings (Google App Password)
+SMTP_USER = os.environ.get("SMTP_USER", "natture1st@gmail.com")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+
 # Public GitHub Asset URLs for 100% Reliable CDN Loading
 GITHUB_ASSET_BASE = "https://raw.githubusercontent.com/LOrealCamelo/Sour_Apple_Laundry/main/frontend/assets/images"
 ICON_URL = f"{GITHUB_ASSET_BASE}/icon.png"
@@ -55,6 +63,42 @@ def now_iso() -> str:
 
 def new_id() -> str:
     return str(uuid.uuid4())
+
+def send_booking_email_alert(order: dict):
+    if not SMTP_PASSWORD:
+        logger.info("SMTP_PASSWORD not set in environment. Skipping email alert.")
+        return
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_USER
+        msg["To"] = ADMIN_EMAIL
+        msg["Subject"] = f"🍏 New Laundry Order Alert: {order['code']} (${order['price']:.2f})"
+        
+        body_text = f"""Hello LOreal,
+
+A new laundry order was just submitted on your website!
+
+• Order Code: {order['code']}
+• Customer: {order['customer_name']}
+• Email: {order['email']}
+• Phone: {order['phone']}
+• Drop-Off Date: {order['pickup_date']} ({order['pickup_window']})
+• Location: {order['location']}
+• Total Price: ${order['price']:.2f}
+
+Click below to review the bag photo and approve the order in your Admin Portal:
+https://sourapplelaundry.com/admin
+
+— Sour Apple VIP Laundry System
+"""
+        msg.attach(MIMEText(body_text, "plain"))
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, [ADMIN_EMAIL], msg.as_string())
+        logger.info(f"Successfully sent email notification to {ADMIN_EMAIL} for order {order['code']}")
+    except Exception as e:
+        logger.error(f"Failed to send email alert: {e}")
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -176,6 +220,10 @@ async def create_order(body: OrderCreate):
     }
     await db.orders.insert_one(order)
     order.pop("_id", None)
+
+    # Send automatic email alert to natture1st@gmail.com
+    asyncio.create_task(asyncio.to_thread(send_booking_email_alert, order))
+
     return order
 
 @api.get("/orders/{order_id}")
