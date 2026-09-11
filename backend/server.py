@@ -1,6 +1,6 @@
 """
 Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + Email Alerts
+FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + Cash App / Venmo Verification
 """
 
 import os
@@ -289,7 +289,6 @@ async def approve_order(order_id: str, body: Optional[ApproveBody] = None):
         updates["admin_note"] = body.admin_note
     await db.orders.update_one({"id": order_id}, {"$set": updates})
 
-    # Fetch updated order and automatically email customer the approval link
     order = await db.orders.find_one({"id": order_id})
     if order:
         asyncio.create_task(asyncio.to_thread(send_customer_approval_email, order))
@@ -300,6 +299,17 @@ async def approve_order(order_id: str, body: Optional[ApproveBody] = None):
 async def reject_order(order_id: str, body: Optional[RejectBody] = None):
     reason = body.reason if body else "Declined"
     await db.orders.update_one({"id": order_id}, {"$set": {"status": "Rejected", "admin_note": reason}})
+    return {"ok": True}
+
+# =============================== MARK PAID ROUTE (CASH APP / VENMO) ===============================
+@api.post("/admin/orders/{order_id}/mark_paid")
+async def mark_order_paid(order_id: str):
+    await db.orders.update_one({"id": order_id}, {"$set": {"payment_status": "Paid"}})
+    return {"ok": True}
+
+@api.post("/orders/{code}/claim_paid")
+async def claim_payment_sent(code: str):
+    await db.orders.update_one({"code": code}, {"$set": {"payment_status": "Verifying Payment"}})
     return {"ok": True}
 
 # =============================== STRIPE CHECKOUT ROUTE ===============================
@@ -396,6 +406,7 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
             order["payment_status"] = "Paid"
 
     is_paid = order.get("payment_status") == "Paid"
+    is_verifying = order.get("payment_status") == "Verifying Payment"
     is_approved = order.get("status") == "Approved"
     price = float(order.get("price", 30.0))
     customer_name = order.get("customer_name", "Valued Customer")
@@ -404,10 +415,18 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
 
     if is_paid:
         payment_section = """
-        <div class="p-4 rounded-2xl bg-lime-950/40 border-2 border-lime-400 text-center mb-5">
-          <span class="text-2xl">🎉</span>
-          <h2 class="text-sm font-black text-lime-300 uppercase tracking-wide mt-1">PAYMENT COMPLETE!</h2>
+        <div class="p-5 rounded-2xl bg-lime-950/40 border-2 border-lime-400 text-center mb-5">
+          <span class="text-3xl">🎉</span>
+          <h2 class="text-base font-black text-lime-300 uppercase tracking-wide mt-1">PAYMENT COMPLETE!</h2>
           <p class="text-xs text-zinc-300 mt-1">Thank you! Your payment was received. See drop-off instructions below.</p>
+        </div>
+        """
+    elif is_verifying:
+        payment_section = """
+        <div class="p-5 rounded-2xl bg-amber-950/40 border-2 border-amber-400 text-center mb-5">
+          <span class="text-3xl">⏳</span>
+          <h2 class="text-sm font-black text-amber-300 uppercase tracking-wide mt-1">VERIFYING PAYMENT...</h2>
+          <p class="text-xs text-zinc-300 mt-1">We are verifying your Cash App / Venmo payment. This page will update automatically!</p>
         </div>
         """
     else:
@@ -433,6 +452,10 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
             <span>${price:.2f} →</span>
           </a>
           <p class="text-[11px] text-zinc-400 text-center">If using Cash App or Venmo, enter your Order Code <strong>{code}</strong> in the note!</p>
+
+          <button onclick="claimPayment()" id="btn-claim-paid" class="w-full py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all">
+            ✓ I Already Sent Payment via Cash App / Venmo
+          </button>
         </div>
         """
 
@@ -466,7 +489,7 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Order {code} | Sour Apple VIP Laundry</title>
-  {"" if is_approved else '<meta http-equiv="refresh" content="5">'}
+  {"" if is_paid else '<meta http-equiv="refresh" content="6">'}
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
@@ -492,6 +515,13 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
       </span>
     </div>
 
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold uppercase text-zinc-400">Payment</span>
+      <span class="text-xs font-black px-2.5 py-1 rounded-full {'bg-lime-400 text-black' if is_paid else ('bg-amber-400/20 text-amber-300' if is_verifying else 'bg-zinc-800 text-zinc-400')}">
+        {'PAID ✓' if is_paid else ('VERIFYING ⏳' if is_verifying else 'UNPAID')}
+      </span>
+    </div>
+
     <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
       <span class="text-xs font-bold text-zinc-400">Customer</span>
       <span class="text-xs font-bold text-white">{customer_name}</span>
@@ -503,7 +533,7 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
     </div>
 
     <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-      <span class="text-sm font-bold text-white">Total Due</span>
+      <span class="text-sm font-bold text-white">Total Amount</span>
       <span class="text-2xl font-black accent-apple">${price:.2f}</span>
     </div>
   </div>
@@ -513,6 +543,19 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
   <div class="text-center mt-8">
     <a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 underline">← Return to Homepage</a>
   </div>
+
+  <script>
+    async function claimPayment() {{
+      const btn = document.getElementById('btn-claim-paid');
+      if (btn) {{ btn.innerText = 'Submitting...'; btn.disabled = true; }}
+      try {{
+        await fetch('/api/orders/{code}/claim_paid', {{ method: 'POST' }});
+        location.reload();
+      }} catch (e) {{
+        alert('Could not update status');
+      }}
+    }}
+  </script>
 </body>
 </html>
     """
@@ -998,7 +1041,7 @@ async def serve_admin_portal():
   <div class="flex items-center justify-between py-4 mb-6 border-b border-zinc-800">
     <div>
       <h1 class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">ADMIN</span></h1>
-      <p class="text-xs text-zinc-400">Order Approvals & Customer Notification</p>
+      <p class="text-xs text-zinc-400">Order Approvals & Payment Confirmation</p>
     </div>
     <button onclick="logoutAdmin()" id="btn-logout" class="hidden text-xs font-bold text-red-400 underline">Log Out</button>
   </div>
@@ -1097,9 +1140,10 @@ async def serve_admin_portal():
             <div class="flex justify-between items-start">
               <div>
                 <span class="text-xs font-black px-2 py-0.5 rounded ${{o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}}">${{o.status}}</span>
-                <h3 class="font-black text-lg text-white mt-1">${{o.code}}</h3>
-              </div>
-              <span class="text-xl font-black accent-apple">$${{Number(o.price || 0).toFixed(2)}}</span>
+                <span class="text-xs font-black px-2 py-0.5 rounded ml-1.5 ${{o.payment_status === 'Paid' ? 'bg-lime-400 text-black' : (o.payment_status === 'Verifying Payment' ? 'bg-amber-400/30 text-amber-300' : 'bg-zinc-800 text-zinc-400')}}">
+                  ${{o.payment_status === 'Paid' ? 'PAID ✓' : (o.payment_status === 'Verifying Payment' ? 'VERIFYING ⏳' : 'UNPAID')}}
+                </span>
+                <h3 class="font-black text-lg text-white mt-1">${{o.code}}</h3>               </div>               <span class="text-xl font-black accent-apple">$${{Number(o.price || 0).toFixed(2)}}</span>
             </div>
 
             <!-- Customer Details -->
@@ -1107,10 +1151,9 @@ async def serve_admin_portal():
               <p><strong>Customer:</strong> ${{o.customer_name || 'Anonymous'}}</p>
               <p><strong>Email:</strong> <a href="mailto:${{o.email}}" class="text-sky-400 underline">${{o.email || 'None provided'}}</a></p>
               <p><strong>Phone:</strong> <a href="tel:${{o.phone}}" class="text-lime-400 underline font-bold">${{o.phone || 'None provided'}}</a></p>
-              <p><strong>Type:</strong> ${{o.customer_type}} ${{o.college ? '(' + o.college + ')' : ''}}</p>
+              <p><strong>Type:</strong> ${{o.customer_type}}${{o.college ? '(' + o.college + ')' : ''}}</p>
               <p><strong>Location:</strong> ${{o.location || o.dorm || 'South Utica'}}</p>
-              <p><strong>Drop-Off Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
-              ${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
+              <p><strong>Drop-Off Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
             </div>
 
             <!-- Customer Bag Photo -->
@@ -1123,24 +1166,33 @@ async def serve_admin_portal():
               </div>
             ` : '<p class="text-xs text-zinc-500 italic">No bag photo uploaded.</p>'}}
 
-            <!-- Desktop & Mobile Customer Contact Actions -->
+            <!-- Admin Actions -->
             <div class="pt-2 border-t border-zinc-800 space-y-2">
               <div class="grid grid-cols-2 gap-2">
-                <!-- 1-Click Desktop Gmail Draft -->
                 <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${{o.email || ''}}&su=${{encodeURIComponent('Sour Apple VIP Laundry - Order ' + o.code + ' Approved!')}}&body=${{encodeURIComponent('Hi ' + (o.customer_name || 'Customer') + ',\\n\\nGreat news! Your laundry order (' + o.code + ') has been APPROVED.\\n\\nTotal Due: $' + Number(o.price).toFixed(2) + '\\n\\nPlease view your order, complete payment, and get your South Utica hallway drop-off instructions here:\\nhttps://sourapplelaundry.com/orders/' + o.code + '\\n\\nThank you,\\nSour Apple VIP Laundry Services')}}" 
                    target="_blank"
                    class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 text-center">
                   📧 Open in Gmail
                 </a>
 
-                <!-- 1-Click Copy Link -->
-                <button onclick="copyLink('${{o.code}}', '${{o.customer_name}}', '${{o.price}}')" 
+                <button onclick="copyLink('${{o.code}}')" 
                         class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider">
                   📋 Copy Link
                 </button>
               </div>
 
-              <!-- Price Adjustment & Approval Buttons -->
+              <!-- Payment Action Button -->
+              ${{o.payment_status !== 'Paid' ? `
+                <button onclick="markPaid('${{o.id}}')" class="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-xs uppercase tracking-wider active:scale-95 shadow-lg">
+                  💵 Mark Paid (Cash App / Venmo Received)
+                </button>
+              ` : `
+                <div class="p-2 rounded-lg bg-lime-950/40 border border-lime-500 text-center">
+                  <span class="text-xs font-black text-lime-400">✓ PAYMENT CONFIRMED (PAID)</span>
+                </div>
+              `}}
+
+              <!-- Approval Buttons -->
               ${{o.status === 'Pending Admin Approval' ? `
                 <div class="flex items-center gap-2 pt-1">
                   <label class="text-xs text-zinc-400">Adjust Price ($):</label>
@@ -1168,10 +1220,19 @@ async def serve_admin_portal():
       }}
     }}
 
-    function copyLink(code, name, price) {{
+    function copyLink(code) {{
       const link = 'https://sourapplelaundry.com/orders/' + code;
       navigator.clipboard.writeText(link);
       alert('Copied link: ' + link);
+    }}
+
+    async function markPaid(id) {{
+      try {{
+        await fetch('/api/admin/orders/' + id + '/mark_paid', {{ method: 'POST' }});
+        loadOrders();
+      }} catch (e) {{
+        alert('Could not update payment status');
+      }}
     }}
 
     async function approveOrder(id) {{
