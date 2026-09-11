@@ -1,6 +1,6 @@
 """
-Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Embedded Web App + Static Assets
+Sour Apple VIP Laundry Services — Production Server & Web Portal
+FastAPI + MongoDB + Customer Booking Form + Admin Review Portal
 """
 
 import os
@@ -12,7 +12,6 @@ from typing import List, Optional
 
 from fastapi import FastAPI, APIRouter, HTTPException, status
 from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -20,7 +19,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from jose import jwt, JWTError
-import stripe
 import certifi
 
 ROOT_DIR = Path(__file__).parent
@@ -36,27 +34,21 @@ db = client[os.environ.get("DB_NAME", "sour_apple_laundry")]
 JWT_SECRET = os.environ.get("JWT_SECRET", "sourapplesecretkey1234567890")
 JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "43200"))
-stripe.api_key = os.environ.get("STRIPE_API_KEY", "")
-CASHAPP_HANDLE = os.environ.get("CASHAPP_HANDLE", "$SourAppleLaundry")
-VENMO_HANDLE = os.environ.get("VENMO_HANDLE", "@SourAppleLaundry")
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminPass123!")
+
+# Public GitHub Asset URLs for 100% Reliable Loading
+GITHUB_ASSET_BASE = "https://raw.githubusercontent.com/LOrealCamelo/Sour_Apple_Laundry/main/frontend/assets/images"
+ICON_URL = f"{GITHUB_ASSET_BASE}/icon.png"
+CROWN_URL = f"{GITHUB_ASSET_BASE}/crown.png"
+BAG_SIZES_URL = f"{GITHUB_ASSET_BASE}/bag-sizes.jpg"
+FAVICON_URL = f"{GITHUB_ASSET_BASE}/favicon.png"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 app = FastAPI(title="Sour Apple VIP Laundry")
 api = APIRouter(prefix="/api")
-
-# Mount Static Assets (/assets/images/...)
-assets_dirs = [
-    ROOT_DIR.parent / "frontend" / "assets",
-    ROOT_DIR / "assets",
-    Path("/opt/render/project/src/frontend/assets"),
-]
-for p in assets_dirs:
-    if p.exists() and p.is_dir():
-        app.mount("/assets", StaticFiles(directory=str(p)), name="assets")
-        logger.info(f"Mounted static assets from {p}")
-        break
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -89,6 +81,14 @@ class OrderCreate(BaseModel):
     contract_agreed: bool = True
     signature_name: str = ""
     signed_at: Optional[str] = None
+    phone: Optional[str] = ""
+
+class ApproveBody(BaseModel):
+    price: Optional[float] = None
+    admin_note: Optional[str] = ""
+
+class RejectBody(BaseModel):
+    reason: Optional[str] = ""
 
 def hash_pw(p: str) -> str:
     return pwd_context.hash(p)
@@ -124,12 +124,36 @@ async def create_order(body: OrderCreate):
         price += 25.0
 
     oid = new_id()
-    code = f"SA-{oid[:6].upper()}"
+
+    # Custom Ticket Format: 1stInitial_LastName_MMDDYY (with duplicate collision handling A, B, C...)
+    parts = (body.signature_name or "Customer").strip().split()
+    if len(parts) >= 2:
+        first_init = parts[0][0].upper()
+        last_name = "".join(c for c in parts[-1] if c.isalnum()).upper()
+    elif len(parts) == 1:
+        first_init = parts[0][0].upper()
+        last_name = "".join(c for c in parts[0] if c.isalnum()).upper()
+    else:
+        first_init = "C"
+        last_name = "CUSTOMER"
+
+    date_part = datetime.now().strftime("%m%d%y")
+    base_code = f"{first_init}_{last_name}_{date_part}"
+    code = base_code
+
+    existing = await db.orders.find_one({"code": code})
+    if existing:
+        suffix_char = 65  # 'A'
+        while existing and suffix_char <= 90:
+            code = f"{base_code}{chr(suffix_char)}"
+            existing = await db.orders.find_one({"code": code})
+            suffix_char += 1
 
     order = {
         "id": oid,
         "code": code,
         "customer_name": body.signature_name,
+        "phone": body.phone or "",
         "customer_type": body.customer_type,
         "college": body.college,
         "dorm": body.dorm,
@@ -150,6 +174,7 @@ async def create_order(body: OrderCreate):
         "pickup_window": body.pickup_window,
         "signature_name": body.signature_name,
         "signed_at": body.signed_at or now_iso(),
+        "admin_note": "",
         "created_at": now_iso(),
     }
     await db.orders.insert_one(order)
@@ -168,8 +193,19 @@ async def admin_orders():
     return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
 
 @api.post("/admin/orders/{order_id}/approve")
-async def approve_order(order_id: str):
-    await db.orders.update_one({"id": order_id}, {"$set": {"status": "Approved"}})
+async def approve_order(order_id: str, body: Optional[ApproveBody] = None):
+    updates = {"status": "Approved"}
+    if body and body.price is not None:
+        updates["price"] = body.price
+    if body and body.admin_note:
+        updates["admin_note"] = body.admin_note
+    await db.orders.update_one({"id": order_id}, {"$set": updates})
+    return {"ok": True}
+
+@api.post("/admin/orders/{order_id}/reject")
+async def reject_order(order_id: str, body: Optional[RejectBody] = None):
+    reason = body.reason if body else "Declined"
+    await db.orders.update_one({"id": order_id}, {"$set": {"status": "Rejected", "admin_note": reason}})
     return {"ok": True}
 
 app.include_router(api)
@@ -179,21 +215,21 @@ app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], 
 @app.get("/manifest.json")
 async def get_manifest():
     return {
-        "name": "Sour Apple Wash & Fold VIP Laundry",
-        "short_name": "Sour Apple Laundry",
+        "name": "Sour Apple VIP Laundry",
+        "short_name": "Sour Apple",
         "start_url": "/",
         "display": "standalone",
         "background_color": "#0A0A0F",
         "theme_color": "#0A0A0F",
         "icons": [
             {
-                "src": "/assets/images/icon.png",
-                "sizes": "300x300",
+                "src": ICON_URL,
+                "sizes": "192x192",
                 "type": "image/png",
                 "purpose": "any maskable"
             },
             {
-                "src": "/assets/images/icon.png",
+                "src": ICON_URL,
                 "sizes": "512x512",
                 "type": "image/png",
                 "purpose": "any maskable"
@@ -201,122 +237,69 @@ async def get_manifest():
         ]
     }
 
-# =============================== LIVE EMBEDDED FRONTEND ===============================
+# =============================== CUSTOMER BOOKING PORTAL ===============================
 @app.get("/", response_class=HTMLResponse)
 async def serve_homepage():
-    return """
+    return f"""
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Shlop Font -->
-<link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
-<span style="
-  font-family: 'Shlop', cursive, sans-serif;
-  font-size: 26px;
-  letter-spacing: 2px;
-  color: #FFFFFF;
-  text-shadow: -4px 4px 16px #B0FF00;
-  letter-spacing: 2px;
-">
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sour Apple Wash & Fold VIP Laundry | Utica</title>
+  <title>Sour Apple VIP Laundry | South Utica & MVCC</title>
 
   <!-- PWA & Mobile Home Screen Icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sour Apple Wash & Fold VIP Laundry">
+  <meta name="apple-mobile-web-app-title" content="Sour Apple VIP">
   <meta name="theme-color" content="#0A0A0F">
-  <link rel="icon" type="image/png" href="/assets/images/favicon.png">
-  <link rel="apple-touch-icon" href="/assets/images/icon.png">
-  <link rel="apple-touch-icon" sizes="300x300" href="/assets/images/icon.png">
+  <link rel="icon" type="image/png" href="{FAVICON_URL}">
+  <link rel="apple-touch-icon" href="{ICON_URL}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{ICON_URL}">
   <link rel="manifest" href="/manifest.json">
 
+  <!-- Shlop Font -->
+  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-  * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, Shlop, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .apple-glow { box-shadow: 0 0 25px rgba(176, 255, 0, 0.3); }
-    .accent-apple { color: #B0FF00; }
-    .bg-apple { background-color: #B0FF00; }
+    * {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+    body {{ background-color: #0A0A0F; color: #FFFFFF; }}
+    .font-shlop {{ font-family: 'Shlop', cursive !important; }}
+    .apple-glow {{ box-shadow: 0 0 25px rgba(176, 255, 0, 0.35); }}
+    .accent-apple {{ color: #B0FF00; }}
+    .bg-apple {{ background-color: #B0FF00; }}
   </style>
 </head>
 <body class="min-h-screen p-4 pb-24 max-w-md mx-auto">
-
- <!-- Brand Header matching your Flyer -->
-  <div class="py-4 mb-5 border-b border-zinc-800 text-center flex flex-col items-center justify-center">
-    
-    <!-- Top Row: Tilted Pink Crown Image + Big Tilted SOUR APPLE -->
+  
+  <!-- Tilted Brand Header with Crown matching Flyer -->
+  <div class="py-4 mb-4 border-b border-zinc-800 text-center flex flex-col items-center justify-center">
     <div class="relative inline-flex items-center justify-center mb-1" style="transform: rotate(-3deg);">
-      
-      <!-- Your Real Crown Image -->
-      <img 
-        src="/assets/images/crown.png" 
-        alt="Pink Crown" 
-        style="
-          position: absolute;
-          top: -20px;
-          left: -24px;
-          width: 36px;
-          height: 36px;
-          object-fit: contain;
-          transform: rotate(-18deg);
-        "
-        onerror="this.style.display='none';"
-      >
-      
-      <!-- Big Tilted 'SOUR APPLE' in Shlop -->
-      <h1 style="
-        font-family: 'Shlop', cursive !important;
-        font-size: 52px;
-        line-height: 1;
-        letter-spacing: 3px;
-        color: #FFFFFF;
-        text-shadow: -4px 4px 18px #B0FF00, 0 0 10px rgba(176, 255, 0, 0.4);
-        margin: 0;
-        display: inline-block;
-      ">
+      <img src="{CROWN_URL}" alt="Crown" style="position: absolute; top: -18px; left: -22px; width: 34px; height: 34px; object-fit: contain; transform: rotate(-18deg); filter: drop-shadow(0 0 8px #FF2A85);">
+      <h1 class="font-shlop text-4xl sm:text-5xl text-white tracking-widest leading-none m-0" style="text-shadow: -4px 4px 18px #B0FF00, 0 0 10px rgba(176, 255, 0, 0.4);">
         SOUR APPLE
       </h1>
     </div>
-
-    <!-- Stylized Subtitle: WASH & FOLD • VIP LAUNDRY -->
-    <div class="mt-2 tracking-widest uppercase font-black" style="letter-spacing: 2px;">
-      <span style="color: #FF2A85; font-style: italic; font-size: 16px; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">
-        WASH & FOLD
-      </span>
-      <span style="color: #B0FF00; font-size: 16px; margin: 0 5px;">•</span>
-      <span style="color: #FFFFFF; font-size: 16px; font-weight: 900; letter-spacing: 2px;">
-        VIP LAUNDRY
-      </span>
+    <div class="mt-2 tracking-widest uppercase font-black text-xs">
+      <span style="color: #FF2A85; font-style: italic; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">WASH & FOLD</span>
+      <span style="color: #B0FF00; margin: 0 4px;">•</span>
+      <span class="text-white">VIP LAUNDRY</span>
     </div>
-
-    <span class="text-[10px] font-bold px-6 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">
-      UTICA, NY
-    </span>
+    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">SOUTH UTICA, NY</span>
   </div>
 
   <div id="booking-app">
-    <!-- Hero / Tagline -->
-    <div class="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 mb-5">
-      <h1 class="text-lg font-black accent-apple mb-1">FRESH CLOTHES ZERO STRESS</h1>
-      <p class="text-xs text-zinc-300 leading-relaxed">
-        Drop off your dirty laundry in South Utica, we wash, dry & fold it, and notify you as soon as it's fresh and ready for pickup!
-      </p>
-    </div>
-
     <!-- 1. Who Are You? (Customer Selector) -->
     <div class="mb-5">
       <label class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">Who are you?</label>
       <div class="grid grid-cols-2 gap-2">
         <button id="btn-non-student" type="button" onclick="setCustomerType('NON_STUDENT')" class="p-3 rounded-xl border text-center transition-all bg-apple text-black font-black text-sm">
           🏠 Non Student
-          <span class="block text-[12px] font-medium opacity-80">South Utica Drop-Off</span>
+          <span class="block text-[10px] font-medium opacity-80">South Utica Drop-Off</span>
         </button>
         <button id="btn-mvcc" type="button" onclick="setCustomerType('MVCC')" class="p-3 rounded-xl border border-zinc-800 text-center transition-all bg-zinc-900 text-zinc-300 font-black text-sm">
           🎓 MVCC Campus
-          <span class="block text-[12px] font-medium opacity-80">Curbside Pickup</span>
+          <span class="block text-[10px] font-medium opacity-80">Curbside Pickup</span>
         </button>
       </div>
     </div>
@@ -331,20 +314,19 @@ async def serve_homepage():
 
     <!-- Location Notice -->
     <div id="location-notice" class="p-3.5 rounded-xl border border-blue-900/40 bg-blue-950/20 text-xs text-blue-200 mb-5 leading-relaxed">
-      📍 <strong>South Utica Drop-Off Location:</strong> Open to everyone! Bring your laundry to our South Utica location, and pick it up fresh and neatly folded. <em>(Standard turnaround is 48–72 hours).</em>
+      📍 <strong>South Utica Drop-Off Location:</strong> Open to everyone! Bring your laundry bags to our South Utica location, and pick them up fresh and folded. <em>(Standard turnaround 48–72 hours).</em>
     </div>
 
-    <!-- 2. Bag Size Chart (Visual Banner & Cards) -->
+    <!-- 2. Bag Size Chart (Visuals 50% Centered) -->
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
       
-      <!-- Size Chart Image Graphic (Forced 50% / Centered) -->
+      <!-- Size Chart Image Forced 50% Centered via GitHub CDN -->
       <div style="text-align: center; margin: 0 auto 1rem auto;">
         <img 
-          src="/assets/images/bag-sizes.jpg" 
+          src="{BAG_SIZES_URL}" 
           alt="Sour Apple Bag Size Chart" 
           style="width: 190px !important; max-width: 50% !important; height: auto !important; display: block !important; margin: 0 auto !important; border-radius: 12px; border: 1px solid #27272a; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" 
-          onerror="this.onerror=null; this.src='/assets/images/bag-sizes.jpeg';"
         >
       </div>
 
@@ -354,7 +336,6 @@ async def serve_homepage():
       </div>
 
       <div class="space-y-2.5" id="bag-size-options">
-        <!-- Small -->
         <div onclick="selectSize('small', 20, 10)" id="size-small" class="p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center">
           <div>
             <p class="text-sm font-bold text-white">Small Bag (27 Inch)</p>
@@ -362,7 +343,6 @@ async def serve_homepage():
           </div>
           <span class="text-base font-black accent-apple" id="price-small">$20</span>
         </div>
-        <!-- Medium -->
         <div onclick="selectSize('medium', 30, 20)" id="size-medium" class="p-3 rounded-xl border border-lime-400 bg-lime-400/10 cursor-pointer flex justify-between items-center">
           <div>
             <p class="text-sm font-bold text-white">Medium Bag (32 Inch — Most Popular)</p>
@@ -370,7 +350,6 @@ async def serve_homepage():
           </div>
           <span class="text-base font-black accent-apple" id="price-medium">$30</span>
         </div>
-        <!-- Large -->
         <div onclick="selectSize('large', 40, 30)" id="size-large" class="p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center">
           <div>
             <p class="text-sm font-bold text-white">Large Bag (40 Inch)</p>
@@ -395,7 +374,7 @@ async def serve_homepage():
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">📸 Bag Verification Photo</h2>
       <p class="text-xs text-zinc-400 mb-3">Snap a photo of your closed bag so we can verify size before approval:</p>
-      <input type="file" id="bag-photo" accept="image/*" onchange="previewPhoto(event)" class="w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-apple file:text-black cursor-pointer">
+      <input type="file" id="bag-photo" accept="image/*" capture="environment" onchange="previewPhoto(event)" class="w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-apple file:text-black cursor-pointer">
       <div id="photo-preview-box" class="hidden mt-3 w-20 h-20 rounded-xl overflow-hidden border-2 border-lime-400">
         <img id="photo-preview" class="w-full h-full object-cover">
       </div>
@@ -458,17 +437,58 @@ async def serve_homepage():
       </select>
     </div>
 
-    <!-- 7. Agreement & Signature -->
+    <!-- 7. OFFICIAL LIABILITY WAIVER & HUGE PSA -->
     <div class="p-4 rounded-2xl bg-zinc-900 border-2 border-lime-400 mb-6">
-      <h2 class="text-sm font-black uppercase tracking-wider accent-apple mb-1">Service Agreement</h2>
-      <div class="p-2.5 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-400 mb-3 max-h-20 overflow-y-auto">
-        By booking, you agree: All laundry must be delivered in closed bags (drawstring, Velcro, zipper, or snaps — no open baskets). Standard turnaround is 48–72 hours unless Same-Day Rush is selected. Liability limit is $100 per bag. Payment is collected upon drop-off confirmation.
+      
+      <!-- HUGE PSA CALLOUT -->
+      <div class="p-3.5 rounded-xl bg-red-950/60 border-2 border-red-500 text-red-200 text-xs mb-3 font-semibold leading-relaxed">
+        <p class="text-red-400 font-black text-sm uppercase tracking-wide mb-1">⚠️ HUGE PSA - ZERO TOLERANCE PEST POLICY:</p>
+        Customers MUST ensure that there are NO bed bugs, roaches, fleas, lice, ticks, or ANY other insects, larvae, or infestations in their clothes, bedding, or bags. Sour Apple VIP does NOT take or treat anything with insects or pests. If discovered, the order will be <strong>CANCELED IMMEDIATELY AND IS STRICTLY NON-REFUNDABLE</strong>.
       </div>
-      <label class="flex items-start gap-2 text-xs mb-3 cursor-pointer">
+
+      <!-- Full Scrollable 12-Section Legal Waiver -->
+      <h2 class="text-sm font-black uppercase tracking-wider accent-apple mb-1">
+        Laundry Service Liability Waiver & Customer Acknowledgment
+      </h2>
+      <p class="text-[10px] text-zinc-400 mb-2">PLEASE READ CAREFULLY BEFORE SUBMITTING YOUR ORDER</p>
+      
+      <div class="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 mb-4 max-h-48 overflow-y-auto space-y-2 leading-relaxed">
+        <p><strong>Laundry Service Agreement, Assumption of Risk, Release of Liability & Customer Acknowledgment</strong></p>
+        <p>By checking the acknowledgment box and submitting this booking, I certify that I have read, understand, and voluntarily agree to the following terms and conditions provided by L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services ("Sour Apple VIP Laundry Services").</p>
+        
+        <p><strong>1. Acceptance of Terms:</strong> By placing an order through the Sour Apple VIP Laundry Services app, I acknowledge that I have carefully read this agreement and voluntarily accept all terms, conditions, policies, and limitations described below.</p>
+        
+        <p><strong>2. Customer Responsibilities:</strong> I understand that I am responsible for checking all clothing pockets before submitting my laundry and removing all valuables, including but not limited to cash, cards, jewelry, electronics, keys, pens, cosmetics, medications, and any other personal belongings. I am responsible for providing accurate special washing instructions through the app and identifying delicate items before service. Sour Apple VIP Laundry Services is not responsible for damage or loss resulting from items left inside clothing or laundry bags.</p>
+        
+        <p><strong>3. Commercial Laundry Equipment:</strong> I understand that my laundry will be cleaned using commercial-grade washing machines and dryers. While Sour Apple VIP Laundry Services will use reasonable care when handling my laundry, commercial laundering may contribute to pre-existing issues including weak fabric, loose stitching, color bleeding, shrinkage, fabric wear, manufacturer defects, or existing damage beyond the control of L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services.</p>
+        
+        <p><strong>4. Care Labels and Garment Condition:</strong> I understand that I am responsible for ensuring that all garments submitted are suitable for machine washing. Sour Apple VIP Laundry Services is not responsible for damage resulting from missing, inaccurate, faded, or unreadable care labels, manufacturer defects, weak seams, loose buttons, decorative embellishments, fabric deterioration, or normal wear and tear.</p>
+        
+        <p><strong>5. No Guarantee of Stain or Odor Removal:</strong> I understand that Sour Apple VIP Laundry Services will make every reasonable effort to clean my laundry; however, stain removal, odor removal, whitening, brightening, sanitization, and fabric restoration are not guaranteed.</p>
+        
+        <p><strong>6. Limitation of Liability:</strong> I agree that L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services shall not be held liable for lost, missing, damaged, faded, shrunk, stretched, stained, torn, or otherwise altered items, including missing socks, color bleeding, fabric shrinkage, pre-existing garment damage, items left in pockets, or normal wear and tear.</p>
+        
+        <p><strong>7. Health and Safety Policy - Zero Tolerance for Pests:</strong> Sour Apple VIP Laundry Services maintains a strict Zero-Tolerance Pest Policy. By submitting this order, I certify that my laundry, bedding, linens, and bags are free from bed bugs, cockroaches, fleas, lice, mites, ants, rodents, pest eggs, larvae, maggots, or biohazard contamination. If discovered, my order will be canceled immediately and any payment made is NON-REFUNDABLE.</p>
+        
+        <p><strong>8. High-Value Items:</strong> I understand that I should not submit designer clothing, luxury handbags, wedding gowns, antique textiles, heirlooms, or sentimental items unless I voluntarily accept all risks.</p>
+        
+        <p><strong>9. Right to Refuse Service:</strong> L'Oreal Venturini Camelo reserves the right to decline or cancel service for any order that presents a health, safety, sanitation, or legal concern.</p>
+        
+        <p><strong>10. Pickup Policy:</strong> Customers are responsible for picking up completed laundry promptly after being notified that their order is ready.</p>
+        
+        <p><strong>11. Release of Liability:</strong> To the fullest extent permitted by applicable law, I voluntarily release, waive, and hold harmless L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services, its owner, and agents from any claims, damages, losses, or liabilities arising out of or relating to the handling, washing, drying, folding, storage, pickup, or delivery of my laundry.</p>
+        
+        <p><strong>12. Customer Certification:</strong> By checking the box below, I certify that I have read and understand this entire agreement; I certify that my laundry is free of bed bugs, insects, and pests; I understand that pest-contaminated orders are canceled immediately and are NON-REFUNDABLE; and I voluntarily release L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services from liability as described above.</p>
+      </div>
+
+      <label class="flex items-start gap-2.5 text-xs mb-3 cursor-pointer">
         <input type="checkbox" id="check-agreed" class="w-4 h-4 mt-0.5 accent-lime-400" required>
-        <span class="text-zinc-200 font-bold">I agree to the Sour Apple Service Agreement & closed-bag policy.</span>
+        <span class="text-zinc-200 font-bold">
+          I have read, understand, and voluntarily agree to the Laundry Service Agreement, Assumption of Risk, Release of Liability, and Customer Acknowledgment for this booking.
+        </span>
       </label>
-      <input type="text" id="sig-name" placeholder="Type Full Legal Name (Signature)" class="w-full h-10 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs" required>
+
+      <input type="text" id="sig-name" placeholder="Type Full Legal Name (Digital Signature)" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs" required>
     </div>
 
     <!-- Submit Button -->
@@ -493,6 +513,12 @@ async def serve_homepage():
     <button onclick="location.reload()" class="px-6 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm">Book Another Order</button>
   </div>
 
+  <!-- Footer with Direct Admin Link -->
+  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600">
+    <p>© 2026 Sour Apple VIP Laundry Services · South Utica, NY</p>
+    <a href="/admin" class="mt-2 inline-block text-zinc-500 hover:text-zinc-300 underline text-[11px]">Admin Portal Login →</a>
+  </div>
+
   <script>
     let customerType = 'NON_STUDENT';
     let mvccRole = 'Student';
@@ -501,7 +527,7 @@ async def serve_homepage():
     let basePrice = 30;
     let bagPhotoBase64 = null;
 
-    function setCustomerType(type) {
+    function setCustomerType(type) {{
       customerType = type;
       const btnNon = document.getElementById('btn-non-student');
       const btnMvcc = document.getElementById('btn-mvcc');
@@ -509,131 +535,339 @@ async def serve_homepage():
       const notice = document.getElementById('location-notice');
       const locInput = document.getElementById('cust-location');
 
-      if (type === 'NON_STUDENT') {
+      if (type === 'NON_STUDENT') {{
         btnNon.className = "p-3 rounded-xl border text-center transition-all bg-apple text-black font-black text-sm";
         btnMvcc.className = "p-3 rounded-xl border border-zinc-800 text-center transition-all bg-zinc-900 text-zinc-300 font-black text-sm";
         mvccBox.classList.add('hidden');
         notice.innerHTML = "📍 <strong>South Utica Drop-Off:</strong> Open to everyone! Bring your laundry to our South Utica location, and pick it up fresh and folded. <em>(Standard turnaround 48–72 hours).</em>";
-        locInput.placeholder = "Your Street Address / Town (e.g. 123 Elm St, South Utica)";
+        locInput.placeholder = "Your Street Address / Area (e.g. 123 Elm St, South Utica)";
         updatePrices(20, 30, 40);
-      } else {
+      }} else {{
         btnMvcc.className = "p-3 rounded-xl border text-center transition-all bg-apple text-black font-black text-sm";
         btnNon.className = "p-3 rounded-xl border border-zinc-800 text-center transition-all bg-zinc-900 text-zinc-300 font-black text-sm";
         mvccBox.classList.remove('hidden');
         notice.innerHTML = "🎓 <strong>MVCC Scheduled Curbside:</strong> We pick up and deliver curbside in designated campus parking areas twice weekly! (No building entry).";
-        locInput.placeholder = "Dorm / Residence Hall & Room # (e.g. North Hall 204)";
+        locInput.placeholder = "Dorm & Room # (e.g. North Hall 204)";
         updatePrices(10, 20, 30);
-      }
+      }}
       recalcTotal();
-    }
+    }}
 
-    function setMvccRole(role) {
+    function setMvccRole(role) {{
       mvccRole = role;
       document.getElementById('btn-role-student').className = role === 'Student' ? "py-2 rounded-lg text-xs font-bold bg-apple text-black" : "py-2 rounded-lg text-xs font-bold text-zinc-400";
       document.getElementById('btn-role-faculty').className = role === 'Faculty' ? "py-2 rounded-lg text-xs font-bold bg-apple text-black" : "py-2 rounded-lg text-xs font-bold text-zinc-400";
       document.getElementById('cust-location').placeholder = role === 'Student' ? "Dorm & Room # (e.g. North Hall 204)" : "Campus Building & Office # (e.g. Payne Hall 102)";
-    }
+    }}
 
-    function updatePrices(sm, md, lg) {
+    function updatePrices(sm, md, lg) {{
       document.getElementById('price-small').innerText = '$' + sm;
       document.getElementById('price-medium').innerText = '$' + md;
       document.getElementById('price-large').innerText = '$' + lg;
       if (bagSize === 'small') basePrice = sm;
       if (bagSize === 'medium') basePrice = md;
       if (bagSize === 'large') basePrice = lg;
-    }
+    }}
 
-    function selectSize(size, publicP, studentP) {
+    function selectSize(size, publicP, studentP) {{
       bagSize = size;
       basePrice = (customerType === 'NON_STUDENT') ? publicP : studentP;
-      ['small', 'medium', 'large'].forEach(s => {
+      ['small', 'medium', 'large'].forEach(s => {{
         document.getElementById('size-' + s).className = (s === size) ? "p-3 rounded-xl border border-lime-400 bg-lime-400/10 cursor-pointer flex justify-between items-center" : "p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center";
-      });
+      }});
       recalcTotal();
-    }
+    }}
 
-    function changeQty(delta) {
+    function changeQty(delta) {{
       bagQty = Math.max(1, bagQty + delta);
       document.getElementById('bag-qty').innerText = bagQty;
       recalcTotal();
-    }
+    }}
 
-    function recalcTotal() {
+    function recalcTotal() {{
       let total = basePrice * bagQty;
       if (document.getElementById('check-rush').checked) total += 20;
       if (document.getElementById('check-bedding').checked) total += 25;
       document.getElementById('total-display').innerText = '$' + total.toFixed(2);
       return total;
-    }
+    }}
 
-    function previewPhoto(event) {
+    function previewPhoto(event) {{
       const file = event.target.files[0];
-      if (file) {
+      if (file) {{
         const reader = new FileReader();
-        reader.onloadend = () => {
+        reader.onloadend = () => {{
           bagPhotoBase64 = reader.result;
           document.getElementById('photo-preview').src = reader.result;
           document.getElementById('photo-preview-box').classList.remove('hidden');
-        };
+        }};
         reader.readAsDataURL(file);
-      }
-    }
+      }}
+    }}
 
-    async function submitBooking() {
+    async function submitBooking() {{
       const name = document.getElementById('cust-name').value.trim();
       const phone = document.getElementById('cust-phone').value.trim();
       const location = document.getElementById('cust-location').value.trim();
       const agreed = document.getElementById('check-agreed').checked;
       const sig = document.getElementById('sig-name').value.trim();
 
-      if (!name || !phone || !location) {
+      if (!name || !phone || !location) {{
         alert('Please fill out your name, phone, and address/dorm.');
         return;
-      }
-      if (!agreed || !sig) {
-        alert('Please accept the service agreement and type your signature.');
+      }}
+      if (!agreed || !sig) {{
+        alert('Please check the acknowledgment box and type your legal signature.');
         return;
-      }
+      }}
 
       const btn = document.getElementById('submit-btn');
       btn.innerText = 'Submitting...';
       btn.disabled = true;
 
-      try {
-        const res = await fetch('/api/orders', {
+      try {{
+        const res = await fetch('/api/orders', {{
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
             service_type: bagSize.toUpperCase() + ' BAG',
             customer_type: customerType === 'NON_STUDENT' ? 'Neighborhood Resident' : 'College Student',
             college: customerType === 'MVCC' ? 'MVCC' : '',
             dorm: location,
+            phone: phone,
             bags: bagQty,
             rush: document.getElementById('check-rush').checked,
             bedding_addon: document.getElementById('check-bedding').checked,
             bag_price_each: basePrice,
             bag_image_base64: bagPhotoBase64,
-            image_review_requested: Boolean(bagPhotoBase64),
             signature_name: sig,
             contract_agreed: true
-          })
-        });
+          }})
+        }});
         const order = await res.json();
-        if (res.ok) {
+        if (res.ok) {{
           document.getElementById('booking-app').classList.add('hidden');
           document.getElementById('success-code').innerText = order.code;
           document.getElementById('success-screen').classList.remove('hidden');
-        } else {
+        }} else {{
           alert('Error: ' + (order.detail || 'Could not submit booking'));
           btn.innerText = 'Book Service';
           btn.disabled = false;
-        }
-      } catch (err) {
+        }}
+      }} catch (err) {{
         alert('Network error. Please check your connection.');
         btn.innerText = 'Book Service';
         btn.disabled = false;
-      }
-    }
+      }}
+    }}
+  </script>
+</body>
+</html>
+    """
+
+# =============================== ADMIN PORTAL (REVIEW PHOTOS & APPROVE) ===============================
+@app.get("/admin", response_class=HTMLResponse)
+async def serve_admin_portal():
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sour Apple VIP Admin Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+    .accent-apple {{ color: #B0FF00; }}
+    .bg-apple {{ background-color: #B0FF00; }}
+  </style>
+</head>
+<body class="min-h-screen p-4 max-w-lg mx-auto">
+  
+  <div class="flex items-center justify-between py-4 mb-6 border-b border-zinc-800">
+    <div>
+      <h1 class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">ADMIN</span></h1>
+      <p class="text-xs text-zinc-400">Bag Photo Review & Order Approvals</p>
+    </div>
+    <button onclick="logoutAdmin()" id="btn-logout" class="hidden text-xs font-bold text-red-400 underline">Log Out</button>
+  </div>
+
+  <!-- Admin Login Screen -->
+  <div id="admin-login-box" class="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl my-8">
+    <h2 class="text-lg font-black accent-apple mb-4">Admin Sign In</h2>
+    <div class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-zinc-400 mb-1">Admin Email</label>
+        <input type="email" id="admin-email" value="natture1st@gmail.com" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-zinc-400 mb-1">Password</label>
+        <input type="password" id="admin-password" placeholder="Enter your Admin password" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      </div>
+      <button onclick="loginAdmin()" id="btn-login" class="w-full h-12 rounded-xl bg-apple text-black font-black text-sm uppercase tracking-wider active:scale-95 transition-all">
+        Sign In to Dashboard
+      </button>
+      <p id="login-err" class="text-xs text-red-400 font-bold text-center hidden"></p>
+    </div>
+  </div>
+
+  <!-- Admin Dashboard -->
+  <div id="admin-dashboard" class="hidden space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-black uppercase tracking-wider text-amber-400">Incoming Orders</h2>
+      <button onclick="loadOrders()" class="text-xs font-bold text-lime-400 underline">↻ Refresh Orders</button>
+    </div>
+
+    <div id="orders-list" class="space-y-4">
+      <p class="text-sm text-zinc-500 text-center py-8">Loading orders...</p>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('sa_admin_token');
+
+    if (token) {{
+      showDashboard();
+    }}
+
+    async function loginAdmin() {{
+      const email = document.getElementById('admin-email').value.trim();
+      const password = document.getElementById('admin-password').value.trim();
+      const err = document.getElementById('login-err');
+      err.classList.add('hidden');
+
+      try {{
+        const res = await fetch('/api/auth/login', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ email, password }})
+        }});
+        const data = await res.json();
+        if (res.ok && data.user.role === 'ADMIN') {{
+          token = data.access_token;
+          localStorage.setItem('sa_admin_token', token);
+          showDashboard();
+        }} else {{
+          err.innerText = data.detail || 'Access denied. Must be an Admin.';
+          err.classList.remove('hidden');
+        }}
+      }} catch (e) {{
+        err.innerText = 'Could not connect to server.';
+        err.classList.remove('hidden');
+      }}
+    }}
+
+    function showDashboard() {{
+      document.getElementById('admin-login-box').classList.add('hidden');
+      document.getElementById('admin-dashboard').classList.remove('hidden');
+      document.getElementById('btn-logout').classList.remove('hidden');
+      loadOrders();
+    }}
+
+    function logoutAdmin() {{
+      localStorage.removeItem('sa_admin_token');
+      location.reload();
+    }}
+
+    async function loadOrders() {{
+      const container = document.getElementById('orders-list');
+      try {{
+        const res = await fetch('/api/admin/orders');
+        const orders = await res.json();
+        
+        if (!orders || orders.length === 0) {{
+          container.innerHTML = '<p class="text-sm text-zinc-500 text-center py-8">No orders in database yet.</p>';
+          return;
+        }}
+
+        container.innerHTML = orders.map(o => `
+          <div class="p-4 rounded-2xl bg-zinc-900 border ${{o.status === 'Pending Admin Approval' ? 'border-amber-400' : 'border-zinc-800'}} space-y-3">
+            <div class="flex justify-between items-start">
+              <div>
+                <span class="text-xs font-black px-2 py-0.5 rounded ${{o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}}">${{o.status}}</span>
+                <h3 class="font-black text-lg text-white mt-1">${{o.code}}</h3>
+              </div>
+              <span class="text-xl font-black accent-apple">$${{Number(o.price || 0).toFixed(2)}}</span>
+            </div>
+
+            <!-- Customer Details -->
+            <div class="text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+              <p><strong>Customer:</strong> ${{o.customer_name || 'Anonymous'}}</p>
+              <p><strong>Phone:</strong> <a href="tel:${{o.phone}}" class="text-lime-400 underline font-bold">${{o.phone || 'None provided'}}</a></p>
+              <p><strong>Type:</strong> ${{o.customer_type}} ${{o.college ? '(' + o.college + ')' : ''}}</p>
+              <p><strong>Location:</strong> ${{o.dorm || 'South Utica'}}</p>
+              <p><strong>Pickup Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
+              ${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
+              <p class="text-zinc-400 text-[10px] mt-1">Signed by: ${{o.signature_name}} at ${{o.signed_at || 'booking'}}</p>
+            </div>
+
+            <!-- Bag Verification Photo Preview -->
+            ${{o.bag_image_base64 ? `
+              <div>
+                <p class="text-xs font-bold text-zinc-400 mb-1">📸 Customer Bag Photo:</p>
+                <div class="rounded-xl overflow-hidden border border-zinc-700 max-h-64">
+                  <img src="${{o.bag_image_base64}}" alt="Customer Bag" class="w-full object-cover">
+                </div>
+              </div>
+            ` : '<p class="text-xs text-zinc-500 italic">No bag photo uploaded.</p>'}}
+
+            <!-- Admin Actions -->
+            ${{o.status === 'Pending Admin Approval' ? `
+              <div class="pt-2 border-t border-zinc-800 space-y-2">
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-zinc-400">Adjust Price ($):</label>
+                  <input type="number" id="price-${{o.id}}" value="${{o.price}}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button onclick="approveOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
+                    ✓ Approve Bag Photo
+                  </button>
+                  <button onclick="rejectOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+            ` : `
+              <p class="text-xs text-lime-400 font-bold">✓ Approved</p>
+            `}}
+          </div>
+        `).join('');
+      }} catch (e) {{
+        container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">Failed to load orders.</p>';
+      }}
+    }}
+
+    async function approveOrder(id) {{
+      const priceInput = document.getElementById('price-' + id);
+      const newPrice = priceInput ? parseFloat(priceInput.value) : null;
+
+      try {{
+        await fetch('/api/admin/orders/' + id + '/approve', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ price: newPrice, admin_note: "Bag approved by admin" }})
+        }});
+        loadOrders();
+      }} catch (e) {{
+        alert('Could not approve order');
+      }}
+    }}
+
+    async function rejectOrder(id) {{
+      const reason = prompt("Enter rejection reason (customer will see this):", "Bag does not meet closure policy or size discrepancy.");
+      if (reason === null) return;
+
+      try {{
+        await fetch('/api/admin/orders/' + id + '/reject', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ reason }})
+        }});
+        loadOrders();
+      }} catch (e) {{
+        alert('Could not reject order');
+      }}
+    }}
   </script>
 </body>
 </html>
@@ -642,17 +876,16 @@ async def serve_homepage():
 @app.on_event("startup")
 async def seed():
     await db.users.create_index("email", unique=True)
-    admin_email = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
-    if not await db.users.find_one({"email": admin_email}):
+    if not await db.users.find_one({"email": ADMIN_EMAIL}):
         await db.users.insert_one({
             "id": new_id(),
             "name": "Sour Apple Admin",
-            "email": admin_email,
-            "password": hash_pw(os.environ.get("ADMIN_PASSWORD", "AdminPass123!")),
+            "email": ADMIN_EMAIL,
+            "password": hash_pw(ADMIN_PASSWORD),
             "role": "ADMIN",
             "created_at": now_iso()
         })
-        logger.info("Seeded admin account")
+        logger.info(f"Seeded admin account for {ADMIN_EMAIL}")
 
 @app.on_event("shutdown")
 async def shutdown():
