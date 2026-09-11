@@ -1,6 +1,6 @@
 """
-Sour Apple VIP Laundry Services — Production Server & Web Portal
-FastAPI + MongoDB + Customer Booking Form + Admin Review Portal
+Sour Apple VIP Laundry Services — All-in-One Production Engine
+FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker
 """
 
 import os
@@ -37,7 +37,7 @@ JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "43200"))
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminPass123!")
 
-# Public GitHub Asset URLs for 100% Reliable Loading
+# Public GitHub Asset URLs for 100% Reliable CDN Loading
 GITHUB_ASSET_BASE = "https://raw.githubusercontent.com/LOrealCamelo/Sour_Apple_Laundry/main/frontend/assets/images"
 ICON_URL = f"{GITHUB_ASSET_BASE}/icon.png"
 CROWN_URL = f"{GITHUB_ASSET_BASE}/crown.png"
@@ -61,27 +61,28 @@ class UserLogin(BaseModel):
     password: str
 
 class OrderCreate(BaseModel):
-    services: List[str] = []
-    service_type: Optional[str] = "Standard Load"
+    first_name: str
+    last_name: str
+    email: EmailStr
+    phone: str
+    location: str
+    pickup_date: str
+    pickup_window: str = "Morning (9am - 12pm)"
     customer_type: str = "Neighborhood Resident"
     college: str = ""
     dorm: str = ""
-    directions: str = ""
-    pickup_date: str = ""
-    pickup_window: str = "Morning (9am - 12pm)"
+    service_type: Optional[str] = "Standard Load"
+    services: List[str] = []
     bags: int = 1
     rush: bool = False
     bedding_addon: bool = False
     preferences: List[str] = []
     stain_notes: str = ""
     bag_image_base64: Optional[str] = None
-    image_review_requested: bool = False
-    image_review_email: Optional[str] = "natture1st@gmail.com"
     bag_price_each: Optional[float] = None
     contract_agreed: bool = True
     signature_name: str = ""
     signed_at: Optional[str] = None
-    phone: Optional[str] = ""
 
 class ApproveBody(BaseModel):
     price: Optional[float] = None
@@ -125,20 +126,11 @@ async def create_order(body: OrderCreate):
 
     oid = new_id()
 
-    # Custom Ticket Format: 1stInitial_LastName_MMDDYY (with duplicate collision handling A, B, C...)
-    parts = (body.signature_name or "Customer").strip().split()
-    if len(parts) >= 2:
-        first_init = parts[0][0].upper()
-        last_name = "".join(c for c in parts[-1] if c.isalnum()).upper()
-    elif len(parts) == 1:
-        first_init = parts[0][0].upper()
-        last_name = "".join(c for c in parts[0] if c.isalnum()).upper()
-    else:
-        first_init = "C"
-        last_name = "CUSTOMER"
-
+    # Custom Ticket: 1stInitial_LastName_MMDDYY
+    first_init = (body.first_name.strip()[:1] or "C").upper()
+    last_clean = "".join(c for c in body.last_name.strip() if c.isalnum()).upper() or "CUSTOMER"
     date_part = datetime.now().strftime("%m%d%y")
-    base_code = f"{first_init}_{last_name}_{date_part}"
+    base_code = f"{first_init}_{last_clean}_{date_part}"
     code = base_code
 
     existing = await db.orders.find_one({"code": code})
@@ -149,15 +141,20 @@ async def create_order(body: OrderCreate):
             existing = await db.orders.find_one({"code": code})
             suffix_char += 1
 
+    full_name = f"{body.first_name.strip()} {body.last_name.strip()}"
+
     order = {
         "id": oid,
         "code": code,
-        "customer_name": body.signature_name,
-        "phone": body.phone or "",
+        "customer_name": full_name,
+        "first_name": body.first_name.strip(),
+        "last_name": body.last_name.strip(),
+        "email": body.email.strip().lower(),
+        "phone": body.phone.strip(),
         "customer_type": body.customer_type,
         "college": body.college,
-        "dorm": body.dorm,
-        "directions": body.directions,
+        "dorm": body.dorm or body.location,
+        "location": body.location.strip(),
         "service_type": body.service_type,
         "services": body.services,
         "bags": body.bags,
@@ -170,9 +167,9 @@ async def create_order(body: OrderCreate):
         "price": round(float(price), 2),
         "status": "Pending Admin Approval",
         "payment_status": "Unpaid",
-        "pickup_date": body.pickup_date or datetime.now().strftime("%Y-%m-%d"),
+        "pickup_date": body.pickup_date,
         "pickup_window": body.pickup_window,
-        "signature_name": body.signature_name,
+        "signature_name": body.signature_name or full_name,
         "signed_at": body.signed_at or now_iso(),
         "admin_note": "",
         "created_at": now_iso(),
@@ -182,8 +179,15 @@ async def create_order(body: OrderCreate):
     return order
 
 @api.get("/orders/{order_id}")
-async def get_order(order_id: str):
+async def get_order_by_id(order_id: str):
     order = await db.orders.find_one({"id": order_id}, {"_id": 0})
+    if not order:
+        raise HTTPException(404, "Order not found")
+    return order
+
+@api.get("/orders/lookup/{code}")
+async def get_order_by_code(code: str):
+    order = await db.orders.find_one({"code": code}, {"_id": 0})
     if not order:
         raise HTTPException(404, "Order not found")
     return order
@@ -237,6 +241,123 @@ async def get_manifest():
         ]
     }
 
+# =============================== CUSTOMER ORDER TRACKING & PAYMENT PAGE ===============================
+@app.get("/orders/{code}", response_class=HTMLResponse)
+async def serve_order_status(code: str):
+    order = await db.orders.find_one({"code": code})
+    if not order:
+        return HTMLResponse(f"""
+        <!DOCTYPE html>
+        <html>
+        <head><title>Order Not Found</title><script src="https://cdn.tailwindcss.com"></script></head>
+        <body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-4">
+          <div class="text-center max-w-sm bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
+            <h1 class="text-xl font-black text-amber-400 mb-2">Order Not Found</h1>
+            <p class="text-xs text-zinc-400 mb-4">We could not find an order with code: <span class="text-white font-mono">{code}</span></p>
+            <a href="/" class="px-4 py-2 rounded-xl bg-lime-400 text-black font-black text-xs uppercase">Back to Home</a>
+          </div>
+        </body>
+        </html>
+        """, status_code=404)
+
+    is_approved = order.get("status") == "Approved"
+    price = float(order.get("price", 30.0))
+    customer_name = order.get("customer_name", "Valued Customer")
+    pickup_date = order.get("pickup_date", "Scheduled")
+    pickup_window = order.get("pickup_window", "")
+
+    approval_html = f"""
+    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
+      <h2 class="text-xs font-black uppercase text-amber-400 tracking-wider">Select Contactless Payment</h2>
+      
+      <a href="https://cash.app/$SourAppleLaundry/{int(price)}" target="_blank" class="w-full py-3 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
+        <span>🍏 Pay with Cash App ($SourAppleLaundry)</span>
+        <span>${price:.2f} →</span>
+      </a>
+
+      <a href="https://venmo.com/SourAppleLaundry" target="_blank" class="w-full py-3 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
+        <span>📱 Pay with Venmo (@SourAppleLaundry)</span>
+        <span>${price:.2f} →</span>
+      </a>
+      <p class="text-[11px] text-zinc-400 text-center">Please enter your Order Code <strong>{code}</strong> in the payment note!</p>
+    </div>
+
+    <div class="p-5 rounded-2xl bg-zinc-900 border-2 border-lime-400 space-y-2">
+      <h2 class="text-xs font-black uppercase text-lime-400 tracking-wider">📍 Drop-Off Address & Instructions</h2>
+      <p class="text-sm font-bold text-white">South Utica Location: 6 Meeker Ave, Utica, NY</p>
+      <p class="text-xs text-zinc-300 leading-relaxed">
+        Drop off your closed bag during your window (<strong>{pickup_window}</strong>). Place the bag in the front hallway. Zero contact required!
+      </p>
+    </div>
+    """ if is_approved else f"""
+    <div class="p-5 rounded-2xl bg-zinc-900 border border-amber-400/50 text-center space-y-3">
+      <span class="text-3xl">⏳</span>
+      <h2 class="text-sm font-black uppercase text-amber-400 tracking-wider">Reviewing Your Bag Photo</h2>
+      <p class="text-xs text-zinc-300 leading-relaxed">
+        Your booking has been received! As soon as your bag size is approved by LOreal, your contactless payment buttons and hallway drop-off address will unlock right here.
+      </p>
+      <p class="text-[11px] text-zinc-500">This page will automatically refresh every 5 seconds.</p>
+    </div>
+    """
+
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order {code} | Sour Apple VIP Laundry</title>
+  {"" if is_approved else '<meta http-equiv="refresh" content="5">'}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+    .accent-apple {{ color: #B0FF00; }}
+  </style>
+</head>
+<body class="min-h-screen p-4 pb-20 max-w-md mx-auto">
+  <div class="py-6 text-center border-b border-zinc-800 mb-6">
+    <h1 class="text-2xl font-black accent-apple">SOUR APPLE VIP LAUNDRY</h1>
+    <p class="text-xs text-zinc-400 mt-1">Live Order Status & Drop-Off Portal</p>
+  </div>
+
+  <div class="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold uppercase text-zinc-400">Order Code</span>
+      <span class="text-lg font-black text-amber-400">{code}</span>
+    </div>
+    
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold uppercase text-zinc-400">Status</span>
+      <span class="text-xs font-black px-2.5 py-1 rounded-full {'bg-lime-400/20 text-lime-300' if is_approved else 'bg-amber-400/20 text-amber-300'}">
+        {'✓ APPROVED - Ready for Drop-Off' if is_approved else '⏳ Pending Admin Review'}
+      </span>
+    </div>
+
+    <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
+      <span class="text-xs font-bold text-zinc-400">Customer</span>
+      <span class="text-xs font-bold text-white">{customer_name}</span>
+    </div>
+
+    <div class="flex justify-between items-center">
+      <span class="text-xs font-bold text-zinc-400">Drop-Off Window</span>
+      <span class="text-xs font-bold text-white">{pickup_date} ({pickup_window})</span>
+    </div>
+
+    <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
+      <span class="text-sm font-bold text-white">Total Due</span>
+      <span class="text-2xl font-black accent-apple">${price:.2f}</span>
+    </div>
+  </div>
+
+  {approval_html}
+
+  <div class="text-center mt-8">
+    <a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 underline">← Return to Homepage</a>
+  </div>
+</body>
+</html>
+    """
+
 # =============================== CUSTOMER BOOKING PORTAL ===============================
 @app.get("/", response_class=HTMLResponse)
 async def serve_homepage():
@@ -289,7 +410,7 @@ async def serve_homepage():
   </div>
 
   <div id="booking-app">
-    <!-- 1. Who Are You? (Customer Selector) -->
+    <!-- 1. Customer Selector -->
     <div class="mb-5">
       <label class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">Who are you?</label>
       <div class="grid grid-cols-2 gap-2">
@@ -423,18 +544,50 @@ async def serve_homepage():
       <input type="text" id="stain-notes" placeholder="Stain notes or fragile instructions..." class="w-full h-10 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs">
     </div>
 
-    <!-- 6. Schedule Details -->
+    <!-- 6. ALL REQUIRED CUSTOMER DETAILS -->
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5 space-y-3">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">Your Details</h2>
-      <input type="text" id="cust-name" placeholder="Your Full Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      <input type="tel" id="cust-phone" placeholder="Phone Number (315) 555-0100" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      <input type="text" id="cust-location" placeholder="Your Street Address / Area" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      <input type="date" id="cust-date" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      <select id="cust-window" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm">
-        <option value="Morning (9am - 12pm)">Morning (9am - 12pm)</option>
-        <option value="Afternoon (12pm - 3pm)">Afternoon (12pm - 3pm)</option>
-        <option value="Evening (3pm - 6pm)">Evening (3pm - 6pm)</option>
-      </select>
+      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">Your Details (All Required)</h2>
+      
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[11px] font-bold text-zinc-400 mb-1">First Name *</label>
+          <input type="text" id="cust-first-name" placeholder="First Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Last Name *</label>
+          <input type="text" id="cust-last-name" placeholder="Last Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Email Address * (For order approval & receipt)</label>
+        <input type="email" id="cust-email" placeholder="name@example.com" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Phone Number * (315-555-0100)</label>
+        <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      </div>
+
+      <div>
+        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Your Street Address / Town *</label>
+        <input type="text" id="cust-location" placeholder="e.g. 123 Elm St, South Utica" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Drop-Off Date *</label>
+          <input type="date" id="cust-date" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Time Window *</label>
+          <select id="cust-window" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
+            <option value="Morning (9am - 12pm)">Morning (9am - 12pm)</option>
+            <option value="Afternoon (12pm - 3pm)">Afternoon (12pm - 3pm)</option>
+            <option value="Evening (3pm - 6pm)">Evening (3pm - 6pm)</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <!-- 7. OFFICIAL LIABILITY WAIVER & HUGE PSA -->
@@ -484,33 +637,20 @@ async def serve_homepage():
       <label class="flex items-start gap-2.5 text-xs mb-3 cursor-pointer">
         <input type="checkbox" id="check-agreed" class="w-4 h-4 mt-0.5 accent-lime-400" required>
         <span class="text-zinc-200 font-bold">
-          I have read, understand, and voluntarily agree to the Laundry Service Agreement, Assumption of Risk, Release of Liability, and Customer Acknowledgment for this booking.
+          I have read, understand, and voluntarily agree to the Laundry Service Agreement, Assumption of Risk, Release of Liability, and Customer Acknowledgment for this booking. *
         </span>
       </label>
 
-      <input type="text" id="sig-name" placeholder="Type Full Legal Name (Digital Signature)" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs" required>
+      <input type="text" id="sig-name" placeholder="Type Full Legal Name (Digital Signature) *" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs" required>
     </div>
 
     <!-- Submit Button -->
     <div class="sticky bottom-4">
       <button type="button" onclick="submitBooking()" id="submit-btn" class="w-full h-14 rounded-2xl bg-apple text-black font-black text-lg uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center justify-between px-6 apple-glow">
-        <span>Book Service</span>
+        <span>Submit Booking</span>
         <span id="total-display" class="text-xl">$30.00</span>
       </button>
     </div>
-  </div>
-
-  <!-- Success Screen -->
-  <div id="success-screen" class="hidden text-center py-12">
-    <span class="text-6xl">🎉</span>
-    <h1 class="text-2xl font-black accent-apple mt-4 mb-2">Request Submitted!</h1>
-    <p class="text-sm text-zinc-300 mb-4">Your order is pending confirmation. Show this tracking code when dropping off:</p>
-    <div class="p-4 rounded-2xl bg-zinc-900 border-2 border-amber-400 mb-6 max-w-xs mx-auto">
-      <p class="text-xs text-zinc-400 font-bold uppercase">Order Tracking Code</p>
-      <p id="success-code" class="text-3xl font-black text-amber-400 mt-1"></p>
-    </div>
-    <p class="text-xs text-zinc-400 mb-6">We will notify you at your phone number with drop-off confirmation!</p>
-    <button onclick="location.reload()" class="px-6 py-3 rounded-xl bg-zinc-800 text-white font-bold text-sm">Book Another Order</button>
   </div>
 
   <!-- Footer with Direct Admin Link -->
@@ -526,6 +666,9 @@ async def serve_homepage():
     let bagQty = 1;
     let basePrice = 30;
     let bagPhotoBase64 = null;
+
+    // Set today as default date
+    document.getElementById('cust-date').value = new Date().toISOString().split('T')[0];
 
     function setCustomerType(type) {{
       customerType = type;
@@ -606,18 +749,22 @@ async def serve_homepage():
     }}
 
     async function submitBooking() {{
-      const name = document.getElementById('cust-name').value.trim();
+      const firstName = document.getElementById('cust-first-name').value.trim();
+      const lastName = document.getElementById('cust-last-name').value.trim();
+      const email = document.getElementById('cust-email').value.trim();
       const phone = document.getElementById('cust-phone').value.trim();
       const location = document.getElementById('cust-location').value.trim();
+      const date = document.getElementById('cust-date').value.trim();
+      const windowVal = document.getElementById('cust-window').value;
       const agreed = document.getElementById('check-agreed').checked;
       const sig = document.getElementById('sig-name').value.trim();
 
-      if (!name || !phone || !location) {{
-        alert('Please fill out your name, phone, and address/dorm.');
+      if (!firstName || !lastName || !email || !phone || !location || !date) {{
+        alert('Please fill out all required fields (First Name, Last Name, Email, Phone, Address, Date).');
         return;
       }}
       if (!agreed || !sig) {{
-        alert('Please check the acknowledgment box and type your legal signature.');
+        alert('Please check the acknowledgment box and type your signature.');
         return;
       }}
 
@@ -630,11 +777,17 @@ async def serve_homepage():
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
           body: JSON.stringify({{
+            first_name: firstName,
+            last_name: lastName,
+            email: email,
+            phone: phone,
+            location: location,
+            pickup_date: date,
+            pickup_window: windowVal,
             service_type: bagSize.toUpperCase() + ' BAG',
             customer_type: customerType === 'NON_STUDENT' ? 'Neighborhood Resident' : 'College Student',
             college: customerType === 'MVCC' ? 'MVCC' : '',
             dorm: location,
-            phone: phone,
             bags: bagQty,
             rush: document.getElementById('check-rush').checked,
             bedding_addon: document.getElementById('check-bedding').checked,
@@ -645,18 +798,17 @@ async def serve_homepage():
           }})
         }});
         const order = await res.json();
-        if (res.ok) {{
-          document.getElementById('booking-app').classList.add('hidden');
-          document.getElementById('success-code').innerText = order.code;
-          document.getElementById('success-screen').classList.remove('hidden');
+        if (res.ok && order.code) {{
+          // Immediately redirect to their live order tracker & payment page!
+          window.location.href = '/orders/' + order.code;
         }} else {{
           alert('Error: ' + (order.detail || 'Could not submit booking'));
-          btn.innerText = 'Book Service';
+          btn.innerText = 'Submit Booking';
           btn.disabled = false;
         }}
       }} catch (err) {{
         alert('Network error. Please check your connection.');
-        btn.innerText = 'Book Service';
+        btn.innerText = 'Submit Booking';
         btn.disabled = false;
       }}
     }}
@@ -665,7 +817,7 @@ async def serve_homepage():
 </html>
     """
 
-# =============================== ADMIN PORTAL (REVIEW PHOTOS & APPROVE) ===============================
+# =============================== ADMIN PORTAL (DESKTOP & MOBILE) ===============================
 @app.get("/admin", response_class=HTMLResponse)
 async def serve_admin_portal():
     return f"""
@@ -682,12 +834,12 @@ async def serve_admin_portal():
     .bg-apple {{ background-color: #B0FF00; }}
   </style>
 </head>
-<body class="min-h-screen p-4 max-w-lg mx-auto">
+<body class="min-h-screen p-4 max-w-xl mx-auto">
   
   <div class="flex items-center justify-between py-4 mb-6 border-b border-zinc-800">
     <div>
       <h1 class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">ADMIN</span></h1>
-      <p class="text-xs text-zinc-400">Bag Photo Review & Order Approvals</p>
+      <p class="text-xs text-zinc-400">Order Approvals & Customer Notification</p>
     </div>
     <button onclick="logoutAdmin()" id="btn-logout" class="hidden text-xs font-bold text-red-400 underline">Log Out</button>
   </div>
@@ -762,6 +914,7 @@ async def serve_admin_portal():
       document.getElementById('admin-dashboard').classList.remove('hidden');
       document.getElementById('btn-logout').classList.remove('hidden');
       loadOrders();
+      setInterval(loadOrders, 15000);
     }}
 
     function logoutAdmin() {{
@@ -793,15 +946,15 @@ async def serve_admin_portal():
             <!-- Customer Details -->
             <div class="text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
               <p><strong>Customer:</strong> ${{o.customer_name || 'Anonymous'}}</p>
+              <p><strong>Email:</strong> <a href="mailto:${{o.email}}" class="text-sky-400 underline">${{o.email || 'None provided'}}</a></p>
               <p><strong>Phone:</strong> <a href="tel:${{o.phone}}" class="text-lime-400 underline font-bold">${{o.phone || 'None provided'}}</a></p>
               <p><strong>Type:</strong> ${{o.customer_type}} ${{o.college ? '(' + o.college + ')' : ''}}</p>
-              <p><strong>Location:</strong> ${{o.dorm || 'South Utica'}}</p>
-              <p><strong>Pickup Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
+              <p><strong>Location:</strong> ${{o.location || o.dorm || 'South Utica'}}</p>
+              <p><strong>Drop-Off Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
               ${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
-              <p class="text-zinc-400 text-[10px] mt-1">Signed by: ${{o.signature_name}} at ${{o.signed_at || 'booking'}}</p>
             </div>
 
-            <!-- Bag Verification Photo Preview -->
+            <!-- Customer Bag Photo -->
             ${{o.bag_image_base64 ? `
               <div>
                 <p class="text-xs font-bold text-zinc-400 mb-1">📸 Customer Bag Photo:</p>
@@ -811,30 +964,55 @@ async def serve_admin_portal():
               </div>
             ` : '<p class="text-xs text-zinc-500 italic">No bag photo uploaded.</p>'}}
 
-            <!-- Admin Actions -->
-            ${{o.status === 'Pending Admin Approval' ? `
-              <div class="pt-2 border-t border-zinc-800 space-y-2">
-                <div class="flex items-center gap-2">
+            <!-- Desktop & Mobile Customer Contact Actions -->
+            <div class="pt-2 border-t border-zinc-800 space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <!-- 1-Click Desktop Gmail Draft -->
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${{o.email || ''}}&su=${{encodeURIComponent('Sour Apple VIP Laundry - Order ' + o.code + ' Approved!')}}&body=${{encodeURIComponent('Hi ' + (o.customer_name || 'Customer') + ',\\n\\nGreat news! Your laundry order (' + o.code + ') has been APPROVED.\\n\\nTotal Due: $' + Number(o.price).toFixed(2) + '\\n\\nPlease view your order, complete payment, and get your South Utica hallway drop-off instructions here:\\nhttps://sourapplelaundry.com/orders/' + o.code + '\\n\\nThank you,\\nSour Apple VIP Laundry Services')}}" 
+                   target="_blank"
+                   class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 text-center">
+                  📧 Open in Gmail
+                </a>
+
+                <!-- 1-Click Copy Link -->
+                <button onclick="copyLink('${{o.code}}', '${{o.customer_name}}', '${{o.price}}')" 
+                        class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider">
+                  📋 Copy Link
+                </button>
+              </div>
+
+              <!-- Price Adjustment & Approval Buttons -->
+              ${{o.status === 'Pending Admin Approval' ? `
+                <div class="flex items-center gap-2 pt-1">
                   <label class="text-xs text-zinc-400">Adjust Price ($):</label>
                   <input type="number" id="price-${{o.id}}" value="${{o.price}}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-2 gap-2 pt-1">
                   <button onclick="approveOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
-                    ✓ Approve Bag Photo
+                    ✓ Approve Order
                   </button>
                   <button onclick="rejectOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
                     ✕ Reject
                   </button>
                 </div>
-              </div>
-            ` : `
-              <p class="text-xs text-lime-400 font-bold">✓ Approved</p>
-            `}}
+              ` : `
+                <div class="flex items-center justify-between pt-1">
+                  <p class="text-xs text-lime-400 font-bold">✓ Approved & Ready for Drop-Off</p>
+                  <a href="/orders/${{o.code}}" target="_blank" class="text-xs text-zinc-400 underline">View Live Order Page →</a>
+                </div>
+              `}}
+            </div>
           </div>
         `).join('');
       }} catch (e) {{
         container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">Failed to load orders.</p>';
       }}
+    }}
+
+    function copyLink(code, name, price) {{
+      const link = 'https://sourapplelaundry.com/orders/' + code;
+      navigator.clipboard.writeText(link);
+      alert('Copied link: ' + link);
     }}
 
     async function approveOrder(id) {{
@@ -845,7 +1023,7 @@ async def serve_admin_portal():
         await fetch('/api/admin/orders/' + id + '/approve', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ price: newPrice, admin_note: "Bag approved by admin" }})
+          body: JSON.stringify({{ price: newPrice, admin_note: "Approved by admin" }})
         }});
         loadOrders();
       }} catch (e) {{
@@ -854,7 +1032,7 @@ async def serve_admin_portal():
     }}
 
     async function rejectOrder(id) {{
-      const reason = prompt("Enter rejection reason (customer will see this):", "Bag does not meet closure policy or size discrepancy.");
+      const reason = prompt("Enter rejection reason:", "Bag closure policy discrepancy.");
       if (reason === null) return;
 
       try {{
