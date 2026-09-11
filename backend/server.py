@@ -1,6 +1,6 @@
 """
 Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Email Alerts
+FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + Email Alerts
 """
 
 import os
@@ -15,7 +15,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 from fastapi import FastAPI, APIRouter, HTTPException, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -41,6 +41,9 @@ JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "43200"))
 ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminPass123!")
 
+# Stripe Settings
+STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
+
 # Email Alert Settings (Google App Password)
 SMTP_USER = os.environ.get("SMTP_USER", "natture1st@gmail.com")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
@@ -64,15 +67,16 @@ def now_iso() -> str:
 def new_id() -> str:
     return str(uuid.uuid4())
 
+# Send booking email alert to Admin (LOreal)
 def send_booking_email_alert(order: dict):
     if not SMTP_PASSWORD:
-        logger.info("SMTP_PASSWORD not set in environment. Skipping email alert.")
+        logger.info("SMTP_PASSWORD not configured. Skipping admin alert email.")
         return
     try:
         msg = MIMEMultipart()
         msg["From"] = SMTP_USER
         msg["To"] = ADMIN_EMAIL
-        msg["Subject"] = f"🍏 New Laundry Order Alert: {order['code']} (${order['price']:.2f})"
+        msg["Subject"] = f"🍏 New Laundry Order: {order['code']} (${order['price']:.2f})"
         
         body_text = f"""Hello LOreal,
 
@@ -96,9 +100,41 @@ https://sourapplelaundry.com/admin
             server.starttls()
             server.login(SMTP_USER, SMTP_PASSWORD)
             server.sendmail(SMTP_USER, [ADMIN_EMAIL], msg.as_string())
-        logger.info(f"Successfully sent email notification to {ADMIN_EMAIL} for order {order['code']}")
+        logger.info(f"Email alert sent to {ADMIN_EMAIL} for order {order['code']}")
     except Exception as e:
-        logger.error(f"Failed to send email alert: {e}")
+        logger.error(f"Failed to send admin email alert: {e}")
+
+# Send automatic approval email to the Customer
+def send_customer_approval_email(order: dict):
+    if not SMTP_PASSWORD or not order.get("email"):
+        return
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SMTP_USER
+        msg["To"] = order["email"]
+        msg["Subject"] = f"🍏 Sour Apple VIP Laundry: Order {order['code']} APPROVED!"
+        
+        body_text = f"""Hi {order.get('customer_name', 'Valued Customer')},
+
+Great news! Your laundry order ({order['code']}) has been reviewed and APPROVED by LOreal!
+
+• Total Due: ${order.get('price', 30.0):.2f}
+• Scheduled Drop-Off Window: {order.get('pickup_date', '')} ({order.get('pickup_window', '')})
+
+Click the link below to select your contactless payment (Credit Card / Cash App / Venmo) and view your South Utica hallway drop-off instructions:
+https://sourapplelaundry.com/orders/{order['code']}
+
+Thank you for choosing Sour Apple VIP Laundry Services!
+Call/Text: (315) 791-7389 | Email: natture1st@gmail.com
+"""
+        msg.attach(MIMEText(body_text, "plain"))
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.sendmail(SMTP_USER, [order["email"]], msg.as_string())
+        logger.info(f"Customer approval email sent to {order['email']}")
+    except Exception as e:
+        logger.error(f"Failed to send customer approval email: {e}")
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -170,7 +206,7 @@ async def create_order(body: OrderCreate):
 
     oid = new_id()
 
-    # Custom Ticket: 1stInitial_LastName_MMDDYY
+    # Custom Sequential Ticket: 1stInitial_LastName_MMDDYY
     first_init = (body.first_name.strip()[:1] or "C").upper()
     last_clean = "".join(c for c in body.last_name.strip() if c.isalnum()).upper() or "CUSTOMER"
     date_part = datetime.now().strftime("%m%d%y")
@@ -221,7 +257,7 @@ async def create_order(body: OrderCreate):
     await db.orders.insert_one(order)
     order.pop("_id", None)
 
-    # Send automatic email alert to natture1st@gmail.com
+    # Automatically notify LOreal by email
     asyncio.create_task(asyncio.to_thread(send_booking_email_alert, order))
 
     return order
@@ -252,6 +288,12 @@ async def approve_order(order_id: str, body: Optional[ApproveBody] = None):
     if body and body.admin_note:
         updates["admin_note"] = body.admin_note
     await db.orders.update_one({"id": order_id}, {"$set": updates})
+
+    # Fetch updated order and automatically email customer the approval link
+    order = await db.orders.find_one({"id": order_id})
+    if order:
+        asyncio.create_task(asyncio.to_thread(send_customer_approval_email, order))
+
     return {"ok": True}
 
 @api.post("/admin/orders/{order_id}/reject")
@@ -259,6 +301,45 @@ async def reject_order(order_id: str, body: Optional[RejectBody] = None):
     reason = body.reason if body else "Declined"
     await db.orders.update_one({"id": order_id}, {"$set": {"status": "Rejected", "admin_note": reason}})
     return {"ok": True}
+
+# =============================== STRIPE CHECKOUT ROUTE ===============================
+@app.get("/payments/stripe/checkout/{code}")
+async def stripe_checkout(code: str):
+    order = await db.orders.find_one({"code": code})
+    if not order:
+        raise HTTPException(404, "Order not found")
+    
+    stripe_key = os.environ.get("STRIPE_API_KEY", "")
+    if not stripe_key:
+        raise HTTPException(400, "Stripe API Key not configured in Render environment.")
+
+    import stripe
+    stripe.api_key = stripe_key
+
+    try:
+        session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            mode="payment",
+            customer_email=order.get("email"),
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {
+                        "name": f"Sour Apple VIP Laundry - Order {order['code']}",
+                        "description": f"{order.get('service_type', 'Laundry Service')} ({order.get('bags', 1)} Bag)"
+                    },
+                    "unit_amount": int(round(float(order["price"]) * 100))
+                },
+                "quantity": 1,
+            }],
+            success_url=f"https://sourapplelaundry.com/orders/{order['code']}?paid=1",
+            cancel_url=f"https://sourapplelaundry.com/orders/{order['code']}",
+            metadata={"order_code": order["code"], "order_id": order["id"]},
+        )
+        return RedirectResponse(url=session.url, status_code=303)
+    except Exception as e:
+        logger.error(f"Stripe error: {e}")
+        raise HTTPException(500, f"Stripe Checkout error: {str(e)}")
 
 app.include_router(api)
 app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -291,7 +372,7 @@ async def get_manifest():
 
 # =============================== CUSTOMER ORDER TRACKING & PAYMENT PAGE ===============================
 @app.get("/orders/{code}", response_class=HTMLResponse)
-async def serve_order_status(code: str):
+async def serve_order_status(code: str, paid: Optional[str] = None):
     order = await db.orders.find_one({"code": code})
     if not order:
         return HTMLResponse(f"""
@@ -308,45 +389,75 @@ async def serve_order_status(code: str):
         </html>
         """, status_code=404)
 
+    # Handle returning from successful Stripe payment
+    if paid == "1" or order.get("payment_status") == "Paid":
+        if order.get("payment_status") != "Paid":
+            await db.orders.update_one({"code": code}, {"$set": {"payment_status": "Paid"}})
+            order["payment_status"] = "Paid"
+
+    is_paid = order.get("payment_status") == "Paid"
     is_approved = order.get("status") == "Approved"
     price = float(order.get("price", 30.0))
     customer_name = order.get("customer_name", "Valued Customer")
     pickup_date = order.get("pickup_date", "Scheduled")
     pickup_window = order.get("pickup_window", "")
 
-    approval_html = f"""
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
-      <h2 class="text-xs font-black uppercase text-amber-400 tracking-wider">Select Contactless Payment</h2>
-      
-      <a href="https://cash.app/$SourAppleLaundry/{int(price)}" target="_blank" class="w-full py-3 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
-        <span>🍏 Pay with Cash App ($SourAppleLaundry)</span>
-        <span>${price:.2f} →</span>
-      </a>
+    if is_paid:
+        payment_section = """
+        <div class="p-4 rounded-2xl bg-lime-950/40 border-2 border-lime-400 text-center mb-5">
+          <span class="text-2xl">🎉</span>
+          <h2 class="text-sm font-black text-lime-300 uppercase tracking-wide mt-1">PAYMENT COMPLETE!</h2>
+          <p class="text-xs text-zinc-300 mt-1">Thank you! Your payment was received. See drop-off instructions below.</p>
+        </div>
+        """
+    else:
+        payment_section = f"""
+        <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
+          <h2 class="text-xs font-black uppercase text-amber-400 tracking-wider">Select Contactless Payment</h2>
+          
+          <!-- Stripe Credit / Debit Card -->
+          <a href="/payments/stripe/checkout/{code}" class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
+            <span class="flex items-center gap-2">💳 Pay with Credit / Debit Card (Stripe)</span>
+            <span>${price:.2f} →</span>
+          </a>
 
-      <a href="https://venmo.com/SourAppleLaundry" target="_blank" class="w-full py-3 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
-        <span>📱 Pay with Venmo (@SourAppleLaundry)</span>
-        <span>${price:.2f} →</span>
-      </a>
-      <p class="text-[11px] text-zinc-400 text-center">Please enter your Order Code <strong>{code}</strong> in the payment note!</p>
-    </div>
+          <!-- Cash App -->
+          <a href="https://cash.app/$SourAppleLaundry/{int(price)}" target="_blank" class="w-full py-3.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
+            <span>🍏 Pay with Cash App ($SourAppleLaundry)</span>
+            <span>${price:.2f} →</span>
+          </a>
 
-    <div class="p-5 rounded-2xl bg-zinc-900 border-2 border-lime-400 space-y-2">
-      <h2 class="text-xs font-black uppercase text-lime-400 tracking-wider">📍 Drop-Off Address & Instructions</h2>
-      <p class="text-sm font-bold text-white">South Utica Location: 6 Meeker Ave, Utica, NY</p>
-      <p class="text-xs text-zinc-300 leading-relaxed">
-        Drop off your closed bag during your window (<strong>{pickup_window}</strong>). Place the bag in the front hallway. Zero contact required!
-      </p>
-    </div>
-    """ if is_approved else f"""
-    <div class="p-5 rounded-2xl bg-zinc-900 border border-amber-400/50 text-center space-y-3">
-      <span class="text-3xl">⏳</span>
-      <h2 class="text-sm font-black uppercase text-amber-400 tracking-wider">Reviewing Your Bag Photo</h2>
-      <p class="text-xs text-zinc-300 leading-relaxed">
-        Your booking has been received! As soon as your bag size is approved by LOreal, your contactless payment buttons and hallway drop-off address will unlock right here.
-      </p>
-      <p class="text-[11px] text-zinc-500">This page will automatically refresh every 5 seconds.</p>
-    </div>
-    """
+          <!-- Venmo -->
+          <a href="https://venmo.com/SourAppleLaundry" target="_blank" class="w-full py-3.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
+            <span>📱 Pay with Venmo (@SourAppleLaundry)</span>
+            <span>${price:.2f} →</span>
+          </a>
+          <p class="text-[11px] text-zinc-400 text-center">If using Cash App or Venmo, enter your Order Code <strong>{code}</strong> in the note!</p>
+        </div>
+        """
+
+    if is_approved:
+        approval_html = f"""
+        {payment_section}
+        <div class="p-5 rounded-2xl bg-zinc-900 border-2 border-lime-400 space-y-2">
+          <h2 class="text-xs font-black uppercase text-lime-400 tracking-wider">📍 Drop-Off Address & Instructions</h2>
+          <p class="text-sm font-bold text-white">South Utica Location: 6 Meeker Ave, Utica, NY</p>
+          <p class="text-xs text-zinc-300 leading-relaxed">
+            Drop off your closed bag during your window (<strong>{pickup_window}</strong>). Place the bag in the front hallway. Zero contact required!
+          </p>
+        </div>
+        """
+    else:
+        approval_html = f"""
+        <div class="p-5 rounded-2xl bg-zinc-900 border border-amber-400/50 text-center space-y-3">
+          <span class="text-3xl">⏳</span>
+          <h2 class="text-sm font-black uppercase text-amber-400 tracking-wider">Reviewing Your Bag Photo</h2>
+          <p class="text-xs text-zinc-300 leading-relaxed">
+            Your booking has been received! As soon as your bag size is approved by LOreal, your contactless payment buttons and hallway drop-off address will unlock right here.
+          </p>
+          <p class="text-[11px] text-zinc-500">This page will automatically refresh every 5 seconds.</p>
+        </div>
+        """
 
     return f"""
 <!DOCTYPE html>
