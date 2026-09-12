@@ -1,6 +1,6 @@
 """
 Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + MVCC Verification
+FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + MVCC Verification + Privacy Policy
 """
 
 import os
@@ -391,6 +391,140 @@ async def get_manifest():
         ]
     }
 
+# =============================== PRIVACY POLICY (STRIPE COMPLIANT) ===============================
+@app.get("/privacy", response_class=HTMLResponse)
+@app.get("/privacy-policy", response_class=HTMLResponse)
+async def serve_privacy_policy():
+    return f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy | Sour Apple VIP Laundry Services</title>
+  <link rel="icon" type="image/png" href="{FAVICON_URL}">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {{ background-color: #0A0A0F; color: #E4E4E7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+    .accent-apple {{ color: #B0FF00; }}
+  </style>
+</head>
+<body class="min-h-screen p-4 sm:p-8 max-w-3xl mx-auto">
+  <div class="py-6 border-b border-zinc-800 mb-8">
+    <a href="/" class="text-xs font-bold text-lime-400 hover:underline">← Back to Sour Apple VIP Laundry</a>
+    <h1 class="text-3xl font-black text-white mt-3 accent-apple">Privacy Policy</h1>
+    <p class="text-xs text-zinc-400 mt-1">Effective Date: September 11, 2026 · Last Updated: September 11, 2026</p>
+  </div>
+
+  <div class="space-y-8 text-sm leading-relaxed text-zinc-300">
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">1. Overview & Commitment</h2>
+      <p>
+        Sour Apple VIP Laundry Services ("we," "us," or "our"), operated by L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services, provides wash and fold laundry services to residential customers in South Utica, NY, and scheduled curbside services to students, faculty, and staff of Mohawk Valley Community College (MVCC). We value your trust and are dedicated to protecting your privacy and securing your personal information.
+      </p>
+      <p class="mt-2">
+        This Privacy Policy describes what information we collect when you visit our website (<strong>sourapplelaundry.com</strong>), place a laundry booking, upload verification images, or interact with our services, how we use that information, the third parties to whom it may be disclosed, and our security practices to safeguard it.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">2. Information We Collect</h2>
+      <p>We collect information directly from you when you book an order or interact with our web application:</p>
+      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
+        <li><strong>Contact Information:</strong> First name, last name, email address, phone number, and physical street address or campus pickup location.</li>
+        <li><strong>Service & Order Details:</strong> Laundry bag size, quantity of bags, selected turnaround speed (standard or rush), add-on preferences (e.g., bedding/comforter wash), detergent/temperature preferences, and stain treatment notes.</li>
+        <li><strong>Affiliation & Verification Data:</strong> For customers requesting discounted MVCC campus rates, we collect institutional affiliation details (Student, Teacher, or Staff/Faculty), department or subject taught, dormitory room or commuter lot, and customer-provided verification materials (a photograph of an MVCC student or employee ID card or an MVCC ID / M-Number).</li>
+        <li><strong>Bag Verification Photos:</strong> Photographs of closed laundry bags submitted by customers during checkout to verify bag closure and volume.</li>
+        <li><strong>Marketing & Promotional Preferences:</strong> Records of whether you opted in to receive promotional coupons, VIP discounts, or giveaways, and your chosen communication channel (Email or SMS).</li>
+        <li><strong>Payment Transaction Metadata:</strong> Payment status (e.g., Paid, Unpaid), order reference code, and transaction identification numbers provided by payment gateways. <em>We do not store full credit card numbers, CVVs, or bank login credentials on our servers.</em></li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">3. How We Use Your Information</h2>
+      <p>We use the collected information strictly for legitimate operational and business purposes:</p>
+      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
+        <li>To schedule, process, clean, fold, and return your laundry orders.</li>
+        <li>To communicate essential updates regarding your booking, including order review, bag size approval, drop-off reminders, readiness notifications, and payment receipts.</li>
+        <li>To verify eligibility for MVCC institutional discount rates.</li>
+        <li>To enforce our Service Agreement, Zero-Tolerance Pest Policy, and health/safety standards.</li>
+        <li>To send promotional discounts, seasonal coupons, and giveaway announcements if and only if you have voluntarily opted in.</li>
+        <li>To process transactions and prevent fraudulent activity.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">4. Parties to Whom Information is Disclosed</h2>
+      <p>
+        <strong>We do not sell, rent, trade, or lease your personal information to third-party data brokers or marketing firms.</strong> We disclose information only to trusted third-party service providers who assist us in operating our business under strict confidentiality agreements:
+      </p>
+      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
+        <li><strong>Payment Processors (Stripe, Cash App, Venmo):</strong> When you choose to pay via credit or debit card, payment data is transmitted directly to <strong>Stripe, Inc.</strong> Stripe processes your payment details in accordance with their <a href="https://stripe.com/privacy" target="_blank" class="text-lime-400 underline">Privacy Policy</a> and strict PCI-DSS Level 1 compliance standards. If you select Cash App or Venmo, payments are handled on their respective platforms.</li>
+        <li><strong>Cloud Infrastructure & Database Hosting:</strong> Our web application is hosted on <strong>Render</strong>, and application data is securely stored on <strong>MongoDB Atlas</strong> cloud databases with enterprise-grade encryption.</li>
+        <li><strong>Email Transmission Providers:</strong> Automated service notifications and receipts are sent via authenticated Google Workspace / Gmail SMTP servers.</li>
+        <li><strong>Legal & Regulatory Compliance:</strong> We may disclose information if required by applicable law, governmental regulation, court order, subpoena, or to protect the safety, rights, and property of Sour Apple VIP Laundry Services, our customers, or the public.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">5. Method of Disclosure & Data Transmission</h2>
+      <p>
+        Information transmitted between your web browser and our servers is encrypted using Transport Layer Security (TLS/HTTPS). When you initiate payment via Stripe, your payment information is entered into a secure checkout session hosted by Stripe and never passes unencrypted through or remains stored on our local servers.
+      </p>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">6. Security Practices in Place to Safeguard Information</h2>
+      <p>
+        We implement rigorous technical, organizational, and administrative safeguards designed to protect personal information from unauthorized access, loss, misuse, alteration, or disclosure:
+      </p>
+      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
+        <li><strong>HTTPS Encryption:</strong> All website traffic, API endpoints, and data transfers are protected with end-to-end SSL/TLS 1.2+ encryption.</li>
+        <li><strong>Payment Tokenization:</strong> All credit and debit card transactions are tokenized and processed by Stripe. We never view, collect, or store raw card numbers, CVVs, or magnetic stripe data.</li>
+        <li><strong>Restricted Administrative Access:</strong> Access to customer orders, phone numbers, and verification photos is strictly limited to authorized administrative personnel via multi-character hashed password authentication and encrypted JWT authorization tokens.</li>
+        <li><strong>Data Minimization:</strong> We only collect the minimal information necessary to fulfill your laundry service and verify campus affiliation.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">7. Your Choices & Rights</h2>
+      <p>
+        You have rights regarding your personal information:
+      </p>
+      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
+        <li><strong>Promotional Communications:</strong> You may unsubscribe or opt out of promotional emails or text messages at any time by replying "STOP" or contacting us directly at <a href="mailto:natture1st@gmail.com" class="text-lime-400 underline">natture1st@gmail.com</a>.</li>
+        <li><strong>Review & Deletion:</strong> You may request access to, correction of, or deletion of your personal booking history and verification images by contacting us with your order code and contact details.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2 class="text-lg font-black text-white mb-2">8. Children's Privacy</h2>
+      <p>
+        Our services are directed toward adults and college students capable of entering into binding contracts. We do not knowingly solicit or collect personal information from individuals under 18 years of age.
+      </p>
+    </section>
+
+    <section class="border-t border-zinc-800 pt-6">
+      <h2 class="text-lg font-black text-white mb-2">9. Contact Information</h2>
+      <p>If you have any questions, concerns, or requests regarding this Privacy Policy or our data handling practices, please contact us at:</p>
+      <div class="mt-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 space-y-1">
+        <p class="font-bold text-white text-sm">Sour Apple VIP Laundry Services</p>
+        <p>Attn: L'Oreal Venturini Camelo</p>
+        <p>South Utica, NY 13502</p>
+        <p>Email: <a href="mailto:natture1st@gmail.com" class="text-lime-400 underline">natture1st@gmail.com</a></p>
+        <p>Phone / Text: <a href="tel:3157917389" class="text-lime-400 underline">(315) 791-7389</a></p>
+        <p>Website: <a href="https://sourapplelaundry.com" class="text-sky-400 underline">https://sourapplelaundry.com</a></p>
+      </div>
+    </section>
+  </div>
+
+  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600">
+    <p>© 2026 Sour Apple VIP Laundry Services · All Rights Reserved</p>
+  </div>
+</body>
+</html>
+"""
+
 # =============================== CUSTOMER ORDER TRACKING & PAYMENT PAGE ===============================
 @app.get("/orders/{code}", response_class=HTMLResponse)
 async def serve_order_status(code: str, paid: Optional[str] = None):
@@ -567,7 +701,8 @@ async def serve_order_status(code: str, paid: Optional[str] = None):
 
   {approval_html}
 
-  <div class="text-center mt-8">
+  <div class="text-center mt-8 space-y-2">
+    <a href="/privacy" class="text-xs text-zinc-500 hover:text-zinc-300 underline mr-3">Privacy Policy</a>
     <a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 underline">← Return to Homepage</a>
   </div>
 
@@ -941,10 +1076,14 @@ async def serve_homepage():
     </div>
   </div>
 
-  <!-- Footer with Direct Admin Link -->
-  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600">
+  <!-- Footer with Direct Admin Link & Privacy Policy -->
+  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600 space-y-2">
     <p>© 2026 Sour Apple VIP Laundry Services · South Utica, NY</p>
-    <a href="/admin" class="mt-2 inline-block text-zinc-500 hover:text-zinc-300 underline text-[11px]">Admin Portal Login →</a>
+    <div class="flex items-center justify-center gap-4 text-[11px]">
+      <a href="/privacy" class="text-zinc-500 hover:text-zinc-300 underline">Privacy Policy</a>
+      <span class="text-zinc-700">•</span>
+      <a href="/admin" class="text-zinc-500 hover:text-zinc-300 underline">Admin Portal Login →</a>
+    </div>
   </div>
 
   <script>
@@ -1433,7 +1572,6 @@ async def serve_admin_portal():
         await fetch('/api/admin/orders/' + id + '/approve', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ price: newPrice, admin_note: "Approved by/json' }},
           body: JSON.stringify({{ price: newPrice, admin_note: "Approved by admin" }})
         }});
         loadOrders();
