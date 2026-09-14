@@ -67,18 +67,40 @@ def now_iso() -> str:
 def new_id() -> str:
     return str(uuid.uuid4())
 
-# Send booking email alert to Admin (LOreal)
-def send_booking_email_alert(order: dict):
-    if not SMTP_PASSWORD:
-        logger.info("SMTP_PASSWORD not configured. Skipping admin alert email.")
-        return
+# Robust Email Dispatcher (Supports SSL Port 465 and STARTTLS Port 587)
+def _send_smtp_email(to_email: str, subject: str, body_text: str) -> bool:
+    clean_pw = (SMTP_PASSWORD or "").strip().replace(" ", "")
+    if not clean_pw:
+        logger.warning("SMTP_PASSWORD is empty in Render environment variables. Skipping email notification.")
+        return False
     try:
         msg = MIMEMultipart()
         msg["From"] = SMTP_USER
-        msg["To"] = ADMIN_EMAIL
-        msg["Subject"] = f"🍏 New Laundry Order: {order['code']} (${order['price']:.2f})"
-        
-        body_text = f"""Hello LOreal,
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body_text, "plain"))
+
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
+                server.login(SMTP_USER, clean_pw)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            logger.info(f"Email successfully sent to {to_email} via SSL (465)")
+            return True
+        except Exception as e_ssl:
+            logger.warning(f"SSL (465) attempt failed ({e_ssl}), trying STARTTLS (587)...")
+            with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+                server.starttls()
+                server.login(SMTP_USER, clean_pw)
+                server.sendmail(SMTP_USER, [to_email], msg.as_string())
+            logger.info(f"Email successfully sent to {to_email} via STARTTLS (587)")
+            return True
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+        return False
+
+# Send booking email alert to Admin (LOreal)
+def send_booking_email_alert(order: dict):
+    body_text = f"""Hello LOreal,
 
 A new laundry order was just submitted on your website!
 
@@ -97,26 +119,13 @@ https://sourapplelaundry.com/admin
 
 — Sour Apple VIP Laundry System
 """
-        msg.attach(MIMEText(body_text, "plain"))
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_USER, [ADMIN_EMAIL], msg.as_string())
-        logger.info(f"Email alert sent to {ADMIN_EMAIL} for order {order['code']}")
-    except Exception as e:
-        logger.error(f"Failed to send admin email alert: {e}")
+    _send_smtp_email(ADMIN_EMAIL, f"🍏 New Laundry Order: {order['code']} (${order['price']:.2f})", body_text)
 
 # Send automatic approval email to Customer
 def send_customer_approval_email(order: dict):
-    if not SMTP_PASSWORD or not order.get("email"):
+    if not order.get("email"):
         return
-    try:
-        msg = MIMEMultipart()
-        msg["From"] = SMTP_USER
-        msg["To"] = order["email"]
-        msg["Subject"] = f"🍏 Sour Apple VIP Laundry: Order {order['code']} APPROVED!"
-        
-        body_text = f"""Hi {order.get('customer_name', 'Valued Customer')},
+    body_text = f"""Hi {order.get('customer_name', 'Valued Customer')},
 
 Great news! Your laundry order ({order['code']}) has been reviewed and APPROVED by LOreal!
 
@@ -129,14 +138,7 @@ https://sourapplelaundry.com/orders/{order['code']}
 Thank you for choosing Sour Apple VIP Laundry Services!
 Call/Text: (315) 791-7389 | Email: natture1st@gmail.com
 """
-        msg.attach(MIMEText(body_text, "plain"))
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASSWORD)
-            server.sendmail(SMTP_USER, [order["email"]], msg.as_string())
-        logger.info(f"Customer approval email sent to {order['email']}")
-    except Exception as e:
-        logger.error(f"Failed to send customer approval email: {e}")
+    _send_smtp_email(order["email"], f"🍏 Sour Apple VIP Laundry: Order {order['code']} APPROVED!", body_text)
 
 class UserLogin(BaseModel):
     email: str
@@ -150,14 +152,14 @@ class OrderCreate(BaseModel):
     location: str
     pickup_date: str
     pickup_window: str = "Morning (9am - 12pm)"
-    customer_type: str = "Community Member"  # "Community Member" or "MVCC Affiliated"
-    mvcc_role: Optional[str] = ""            # "Student", "Teacher", "Staff or Faculty"
-    mvcc_subject: Optional[str] = ""         # For Teachers
-    mvcc_dept_or_title: Optional[str] = ""   # For Staff/Faculty
+    customer_type: str = "Community Member"
+    mvcc_role: Optional[str] = ""
+    mvcc_subject: Optional[str] = ""
+    mvcc_dept_or_title: Optional[str] = ""
     mvcc_id_photo_base64: Optional[str] = None
     mvcc_id_number: Optional[str] = ""
     marketing_opt_in: bool = False
-    marketing_preference: Optional[str] = "Email"  # "Email" or "Text (SMS)"
+    marketing_preference: Optional[str] = "Email"
     service_type: Optional[str] = "Standard Load"
     services: List[str] = []
     bags: int = 1
@@ -213,7 +215,6 @@ async def create_order(body: OrderCreate):
 
     oid = new_id()
 
-    # Custom Sequential Ticket: 1stInitial_LastName_MMDDYY
     first_init = (body.first_name.strip()[:1] or "C").upper()
     last_clean = "".join(c for c in body.last_name.strip() if c.isalnum()).upper() or "CUSTOMER"
     date_part = datetime.now().strftime("%m%d%y")
@@ -222,7 +223,7 @@ async def create_order(body: OrderCreate):
 
     existing = await db.orders.find_one({"code": code})
     if existing:
-        suffix_char = 65  # 'A'
+        suffix_char = 65
         while existing and suffix_char <= 90:
             code = f"{base_code}{chr(suffix_char)}"
             existing = await db.orders.find_one({"code": code})
@@ -269,7 +270,6 @@ async def create_order(body: OrderCreate):
     await db.orders.insert_one(order)
     order.pop("_id", None)
 
-    # Automatically notify LOreal by email
     asyncio.create_task(asyncio.to_thread(send_booking_email_alert, order))
 
     return order
@@ -836,7 +836,6 @@ async def serve_homepage():
     <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
       <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
       
-      <!-- Size Chart Image Forced 50% Centered via GitHub CDN -->
       <div style="text-align: center; margin: 0 auto 1rem auto;">
         <img 
           src="{BAG_SIZES_URL}" 
@@ -845,7 +844,6 @@ async def serve_homepage():
         >
       </div>
 
-      <!-- No Open Baskets Policy -->
       <div class="p-3 rounded-xl bg-red-950/30 border border-red-800/60 text-red-300 text-xs mb-4">
         <strong>🚫 STRICT CLOSURE POLICY:</strong> All laundry must be in a bag with a secure closure (drawstring, Velcro, zipper, or snaps). <strong>Open plastic baskets with no lids are NOT accepted.</strong>
       </div>
@@ -874,7 +872,6 @@ async def serve_homepage():
         </div>
       </div>
 
-      <!-- Quantity Counter -->
       <div class="flex justify-between items-center mt-4 pt-3 border-t border-zinc-800">
         <span class="text-xs font-bold text-white">Number of Bags:</span>
         <div class="flex items-center gap-3">
@@ -1016,13 +1013,11 @@ async def serve_homepage():
     <!-- 8. OFFICIAL LIABILITY WAIVER & HUGE PSA -->
     <div class="p-4 rounded-2xl bg-zinc-900 border-2 border-lime-400 mb-6">
       
-      <!-- HUGE PSA CALLOUT -->
       <div class="p-3.5 rounded-xl bg-red-950/60 border-2 border-red-500 text-red-200 text-xs mb-3 font-semibold leading-relaxed">
         <p class="text-red-400 font-black text-sm uppercase tracking-wide mb-1">⚠️ HUGE PSA - ZERO TOLERANCE PEST POLICY:</p>
         Customers MUST ensure that there are NO bed bugs, roaches, fleas, lice, ticks, or ANY other insects, larvae, or infestations in their clothes, bedding, or bags. Sour Apple VIP does NOT take or treat anything with insects or pests. If discovered, the order will be <strong>CANCELED IMMEDIATELY AND IS STRICTLY NON-REFUNDABLE</strong>.
       </div>
 
-      <!-- Full Scrollable 12-Section Legal Waiver -->
       <h2 class="text-sm font-black uppercase tracking-wider accent-apple mb-1">
         Laundry Service Liability Waiver & Customer Acknowledgment
       </h2>
@@ -1082,538 +1077,4 @@ async def serve_homepage():
     <div class="flex items-center justify-center gap-4 text-[11px]">
       <a href="/privacy" class="text-zinc-500 hover:text-zinc-300 underline">Privacy Policy</a>
       <span class="text-zinc-700">•</span>
-      <a href="/admin" class="text-zinc-500 hover:text-zinc-300 underline">Admin Portal Login →</a>
-    </div>
-  </div>
-
-  <script>
-    let affiliationType = 'COMMUNITY'; // 'COMMUNITY' or 'MVCC'
-    let mvccRole = 'Student';          // 'Student', 'Teacher', 'Staff or Faculty'
-    let marketingOptIn = true;
-    let bagSize = 'medium';
-    let bagQty = 1;
-    let basePrice = 30;
-    let bagPhotoBase64 = null;
-    let mvccIdPhotoBase64 = null;
-
-    // Set today as default date
-    document.getElementById('cust-date').value = new Date().toISOString().split('T')[0];
-
-    function setAffiliation(type) {{
-      affiliationType = type;
-      const btnCommunity = document.getElementById('btn-community');
-      const btnMvcc = document.getElementById('btn-mvcc');
-      const mvccBox = document.getElementById('mvcc-details-box');
-      const notice = document.getElementById('location-notice');
-      const locInput = document.getElementById('cust-location');
-
-      if (type === 'COMMUNITY') {{
-        btnCommunity.className = "p-3.5 rounded-xl border text-left transition-all bg-apple text-black font-black";
-        btnMvcc.className = "p-3.5 rounded-xl border border-zinc-800 text-left transition-all bg-zinc-900 text-zinc-300";
-        mvccBox.classList.add('hidden');
-        notice.innerHTML = "📍 <strong>South Utica Drop-Off:</strong> Open to everyone! Bring your laundry to our South Utica location, and pick it up fresh and folded. <em>(Standard turnaround 48–72 hours).</em>";
-        locInput.placeholder = "Your Street Address / Area (e.g. 123 Elm St, South Utica)";
-        updatePrices(20, 30, 40);
-      }} else {{
-        btnMvcc.className = "p-3.5 rounded-xl border border-lime-400 text-left transition-all bg-lime-950/40 text-white font-black";
-        btnCommunity.className = "p-3.5 rounded-xl border border-zinc-800 text-left transition-all bg-zinc-900 text-zinc-300";
-        mvccBox.classList.remove('hidden');
-        notice.innerHTML = "🎓 <strong>MVCC Scheduled Curbside:</strong> We pick up and deliver curbside in designated campus parking areas twice weekly! (No building entry).";
-        locInput.placeholder = "MVCC Campus Building / Residence Hall or Lot";
-        updatePrices(10, 20, 30);
-      }}
-      recalcTotal();
-    }}
-
-    function setMvccRole(role) {{
-      mvccRole = role;
-      const btnStu = document.getElementById('btn-role-student');
-      const btnTeach = document.getElementById('btn-role-teacher');
-      const btnStaff = document.getElementById('btn-role-staff');
-      const label = document.getElementById('mvcc-role-input-label');
-      const input = document.getElementById('mvcc-role-input');
-
-      btnStu.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-      btnTeach.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-      btnStaff.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-
-      if (role === 'Student') {{
-        btnStu.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "Dorm / Residence Hall & Room # *";
-        input.placeholder = "e.g. North Hall 204 or Commuter Lot A";
-      }} else if (role === 'Teacher') {{
-        btnTeach.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "What subject/courses do you teach? *";
-        input.placeholder = "e.g. Computer Science, Nursing, Mathematics...";
-      }} else {{
-        btnStaff.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "What department or job title? *";
-        input.placeholder = "e.g. Financial Aid, Admissions, Facilities...";
-      }}
-    }}
-
-    function setMarketingOptIn(val) {{
-      marketingOptIn = val;
-      const btnYes = document.getElementById('btn-promo-yes');
-      const btnNo = document.getElementById('btn-promo-no');
-      const prefBox = document.getElementById('promo-pref-box');
-
-      if (val) {{
-        btnYes.className = "py-2.5 px-3 rounded-xl border text-xs font-black transition-all bg-apple text-black";
-        btnNo.className = "py-2.5 px-3 rounded-xl border border-zinc-800 text-xs font-bold transition-all bg-zinc-950 text-zinc-400";
-        prefBox.classList.remove('hidden');
-      }} else {{
-        btnNo.className = "py-2.5 px-3 rounded-xl border text-xs font-black transition-all bg-zinc-700 text-white";
-        btnYes.className = "py-2.5 px-3 rounded-xl border border-zinc-800 text-xs font-bold transition-all bg-zinc-950 text-zinc-400";
-        prefBox.classList.add('hidden');
-      }}
-    }}
-
-    function updatePrices(sm, md, lg) {{
-      document.getElementById('price-small').innerText = '$' + sm;
-      document.getElementById('price-medium').innerText = '$' + md;
-      document.getElementById('price-large').innerText = '$' + lg;
-      if (bagSize === 'small') basePrice = sm;
-      if (bagSize === 'medium') basePrice = md;
-      if (bagSize === 'large') basePrice = lg;
-    }}
-
-    function selectSize(size, publicP, studentP) {{
-      bagSize = size;
-      basePrice = (affiliationType === 'COMMUNITY') ? publicP : studentP;
-      ['small', 'medium', 'large'].forEach(s => {{
-        document.getElementById('size-' + s).className = (s === size) ? "p-3 rounded-xl border border-lime-400 bg-lime-400/10 cursor-pointer flex justify-between items-center" : "p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center";
-      }});
-      recalcTotal();
-    }}
-
-    function changeQty(delta) {{
-      bagQty = Math.max(1, bagQty + delta);
-      document.getElementById('bag-qty').innerText = bagQty;
-      recalcTotal();
-    }}
-
-    function recalcTotal() {{
-      let total = basePrice * bagQty;
-      if (document.getElementById('check-rush').checked) total += 20;
-      if (document.getElementById('check-bedding').checked) total += 25;
-      document.getElementById('total-display').innerText = '$' + total.toFixed(2);
-      return total;
-    }}
-
-    function previewPhoto(event) {{
-      const file = event.target.files[0];
-      if (file) {{
-        const reader = new FileReader();
-        reader.onloadend = () => {{
-          bagPhotoBase64 = reader.result;
-          document.getElementById('photo-preview').src = reader.result;
-          document.getElementById('photo-preview-box').classList.remove('hidden');
-        }};
-        reader.readAsDataURL(file);
-      }}
-    }}
-
-    function previewMvccId(event) {{
-      const file = event.target.files[0];
-      if (file) {{
-        const reader = new FileReader();
-        reader.onloadend = () => {{
-          mvccIdPhotoBase64 = reader.result;
-          document.getElementById('mvcc-id-preview').src = reader.result;
-          document.getElementById('mvcc-id-preview-box').classList.remove('hidden');
-        }};
-        reader.readAsDataURL(file);
-      }}
-    }}
-
-    async function submitBooking() {{
-      const firstName = document.getElementById('cust-first-name').value.trim();
-      const lastName = document.getElementById('cust-last-name').value.trim();
-      const email = document.getElementById('cust-email').value.trim();
-      const phone = document.getElementById('cust-phone').value.trim();
-      const location = document.getElementById('cust-location').value.trim();
-      const date = document.getElementById('cust-date').value.trim();
-      const windowVal = document.getElementById('cust-window').value;
-      const agreed = document.getElementById('check-agreed').checked;
-      const sig = document.getElementById('sig-name').value.trim();
-
-      if (!firstName || !lastName || !email || !phone || !location || !date) {{
-        alert('Please fill out all required personal details (First Name, Last Name, Email, Phone, Address, Date).');
-        return;
-      }}
-      if (!agreed || !sig) {{
-        alert('Please check the acknowledgment box and type your legal signature.');
-        return;
-      }}
-
-      let mvccRoleVal = "";
-      let mvccSubjectVal = "";
-      let mvccDeptVal = "";
-      let mvccIdNumVal = "";
-
-      if (affiliationType === 'MVCC') {{
-        const roleDetail = document.getElementById('mvcc-role-input').value.trim();
-        mvccIdNumVal = document.getElementById('mvcc-id-number').value.trim();
-
-        if (!roleDetail) {{
-          alert('Please enter your MVCC role detail (' + (mvccRole === 'Teacher' ? 'Subject you teach' : (mvccRole === 'Staff or Faculty' ? 'Department / Job Title' : 'Dorm or Room #')) + ').');
-          return;
-        }}
-
-        // Verify that either an ID photo or an ID number was provided
-        if (!mvccIdPhotoBase64 && !mvccIdNumVal) {{
-          alert('MVCC Verification Required: Please upload a photo of your MVCC ID card or enter your MVCC ID / M-Number to qualify for discounted campus rates.');
-          return;
-        }}
-
-        mvccRoleVal = mvccRole;
-        if (mvccRole === 'Teacher') mvccSubjectVal = roleDetail;
-        else if (mvccRole === 'Staff or Faculty') mvccDeptVal = roleDetail;
-      }}
-
-      const promoPrefRadio = document.querySelector('input[name="promo-pref"]:checked');
-      const promoPref = promoPrefRadio ? promoPrefRadio.value : 'Email';
-
-      const btn = document.getElementById('submit-btn');
-      btn.innerText = 'Submitting...';
-      btn.disabled = true;
-
-      try {{
-        const res = await fetch('/api/orders', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{
-            first_name: firstName,
-            last_name: lastName,
-            email: email,
-            phone: phone,
-            location: location,
-            pickup_date: date,
-            pickup_window: windowVal,
-            customer_type: affiliationType === 'MVCC' ? 'MVCC Affiliated' : 'Community Member',
-            mvcc_role: mvccRoleVal,
-            mvcc_subject: mvccSubjectVal,
-            mvcc_dept_or_title: mvccDeptVal,
-            mvcc_id_photo_base64: mvccIdPhotoBase64,
-            mvcc_id_number: mvccIdNumVal,
-            marketing_opt_in: marketingOptIn,
-            marketing_preference: promoPref,
-            service_type: bagSize.toUpperCase() + ' BAG',
-            bags: bagQty,
-            rush: document.getElementById('check-rush').checked,
-            bedding_addon: document.getElementById('check-bedding').checked,
-            bag_price_each: basePrice,
-            bag_image_base64: bagPhotoBase64,
-            signature_name: sig,
-            contract_agreed: true
-          }})
-        }});
-        const order = await res.json();
-        if (res.ok && order.code) {{
-          window.location.href = '/orders/' + order.code;
-        }} else {{
-          alert('Error: ' + (order.detail || 'Could not submit booking'));
-          btn.innerText = 'Submit Booking';
-          btn.disabled = false;
-        }}
-      }} catch (err) {{
-        alert('Network error. Please check your connection.');
-        btn.innerText = 'Submit Booking';
-        btn.disabled = false;
-      }}
-    }}
-  </script>
-</body>
-</html>
-    """
-
-# =============================== ADMIN PORTAL (DESKTOP & MOBILE) ===============================
-@app.get("/admin", response_class=HTMLResponse)
-async def serve_admin_portal():
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sour Apple VIP Admin Portal</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    .accent-apple {{ color: #B0FF00; }}
-    .bg-apple {{ background-color: #B0FF00; }}
-  </style>
-</head>
-<body class="min-h-screen p-4 max-w-xl mx-auto">
-  
-  <div class="flex items-center justify-between py-4 mb-6 border-b border-zinc-800">
-    <div>
-      <h1 class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">ADMIN</span></h1>
-      <p class="text-xs text-zinc-400">Order Approvals, Verification & Payments</p>
-    </div>
-    <button onclick="logoutAdmin()" id="btn-logout" class="hidden text-xs font-bold text-red-400 underline">Log Out</button>
-  </div>
-
-  <!-- Admin Login Screen -->
-  <div id="admin-login-box" class="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl my-8">
-    <h2 class="text-lg font-black accent-apple mb-4">Admin Sign In</h2>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-xs font-bold text-zinc-400 mb-1">Admin Email</label>
-        <input type="email" id="admin-email" value="natture1st@gmail.com" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-zinc-400 mb-1">Password</label>
-        <input type="password" id="admin-password" placeholder="Enter your Admin password" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-      <button onclick="loginAdmin()" id="btn-login" class="w-full h-12 rounded-xl bg-apple text-black font-black text-sm uppercase tracking-wider active:scale-95 transition-all">
-        Sign In to Dashboard
-      </button>
-      <p id="login-err" class="text-xs text-red-400 font-bold text-center hidden"></p>
-    </div>
-  </div>
-
-  <!-- Admin Dashboard -->
-  <div id="admin-dashboard" class="hidden space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-black uppercase tracking-wider text-amber-400">Incoming Orders</h2>
-      <button onclick="loadOrders()" class="text-xs font-bold text-lime-400 underline">↻ Refresh Orders</button>
-    </div>
-
-    <div id="orders-list" class="space-y-4">
-      <p class="text-sm text-zinc-500 text-center py-8">Loading orders...</p>
-    </div>
-  </div>
-
-  <script>
-    let token = localStorage.getItem('sa_admin_token');
-
-    if (token) {{
-      showDashboard();
-    }}
-
-    async function loginAdmin() {{
-      const email = document.getElementById('admin-email').value.trim();
-      const password = document.getElementById('admin-password').value.trim();
-      const err = document.getElementById('login-err');
-      err.classList.add('hidden');
-
-      try {{
-        const res = await fetch('/api/auth/login', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ email, password }})
-        }});
-        const data = await res.json();
-        if (res.ok && data.user.role === 'ADMIN') {{
-          token = data.access_token;
-          localStorage.setItem('sa_admin_token', token);
-          showDashboard();
-        }} else {{
-          err.innerText = data.detail || 'Access denied. Must be an Admin.';
-          err.classList.remove('hidden');
-        }}
-      }} catch (e) {{
-        err.innerText = 'Could not connect to server.';
-        err.classList.remove('hidden');
-      }}
-    }}
-
-    function showDashboard() {{
-      document.getElementById('admin-login-box').classList.add('hidden');
-      document.getElementById('admin-dashboard').classList.remove('hidden');
-      document.getElementById('btn-logout').classList.remove('hidden');
-      loadOrders();
-      setInterval(loadOrders, 15000);
-    }}
-
-    function logoutAdmin() {{
-      localStorage.removeItem('sa_admin_token');
-      location.reload();
-    }}
-
-    async function loadOrders() {{
-      const container = document.getElementById('orders-list');
-      try {{
-        const res = await fetch('/api/admin/orders');
-        const orders = await res.json();
-        
-        if (!orders || orders.length === 0) {{
-          container.innerHTML = '<p class="text-sm text-zinc-500 text-center py-8">No orders in database yet.</p>';
-          return;
-        }}
-
-        container.innerHTML = orders.map(o => `
-          <div class="p-4 rounded-2xl bg-zinc-900 border ${{o.status === 'Pending Admin Approval' ? 'border-amber-400' : 'border-zinc-800'}} space-y-3">
-            <div class="flex justify-between items-start">
-              <div>
-                <span class="text-xs font-black px-2 py-0.5 rounded ${{o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}}">${{o.status}}</span>
-                <span class="text-xs font-black px-2 py-0.5 rounded ml-1.5 ${{o.payment_status === 'Paid' ? 'bg-lime-400 text-black' : (o.payment_status === 'Verifying Payment' ? 'bg-amber-400/30 text-amber-300' : 'bg-zinc-800 text-zinc-400')}}">
-                  ${{o.payment_status === 'Paid' ? 'PAID ✓' : (o.payment_status === 'Verifying Payment' ? 'VERIFYING ⏳' : 'UNPAID')}}
-                </span>
-                <h3 class="font-black text-lg text-white mt-1">${{o.code}}</h3>
-              </div>
-              <span class="text-xl font-black accent-apple">$${{Number(o.price || 0).toFixed(2)}}</span>
-            </div>
-
-            <!-- Customer Details & Affiliation -->
-            <div class="text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-              <p><strong>Customer:</strong> ${{o.customer_name || 'Anonymous'}}</p>
-              <p><strong>Affiliation:</strong> <span class="font-bold text-lime-400">${{o.customer_type || 'Community Member'}}</span> ${{o.mvcc_role ? `(${o.mvcc_role})` : ''}}</p>
-              ${{o.mvcc_subject ? `<p><strong>🍎 Subject Taught:</strong> ${o.mvcc_subject}</p>` : ''}}
-              ${{o.mvcc_dept_or_title ? `<p><strong>💼 Dept / Title:</strong> ${o.mvcc_dept_or_title}</p>` : ''}}
-              ${{o.mvcc_id_number ? `<p><strong>🎓 MVCC ID #:</strong> <span class="font-mono text-amber-300">${o.mvcc_id_number}</span></p>` : ''}}
-              <p><strong>Email:</strong> <a href="mailto:${{o.email}}" class="text-sky-400 underline">${{o.email || 'None provided'}}</a></p>
-              <p><strong>Phone:</strong> <a href="tel:${{o.phone}}" class="text-lime-400 underline font-bold">${{o.phone || 'None provided'}}</a></p>
-              <p><strong>Location:</strong> ${{o.location || 'South Utica'}}</p>
-              <p><strong>Drop-Off Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
-              <p><strong>🎁 VIP Giveaways Opt-In:</strong> <span class="${{o.marketing_opt_in ? 'text-lime-400 font-bold' : 'text-zinc-500'}}">${{o.marketing_opt_in ? 'YES (' + (o.marketing_preference || 'Email') + ')' : 'NO'}}</span></p>
-              ${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
-            </div>
-
-            <!-- Photos: Bag and MVCC ID -->
-            <div class="grid grid-cols-2 gap-2">
-              <!-- Bag Photo -->
-              ${{o.bag_image_base64 ? `
-                <div>
-                  <p class="text-[11px] font-bold text-zinc-400 mb-1">📸 Bag Photo:</p>
-                  <div class="rounded-xl overflow-hidden border border-zinc-700 max-h-48">
-                    <img src="${{o.bag_image_base64}}" alt="Customer Bag" class="w-full object-cover">
-                  </div>
-                </div>
-              ` : '<p class="text-xs text-zinc-500 italic py-2">No bag photo uploaded.</p>'}}
-
-              <!-- MVCC ID Photo -->
-              ${{o.mvcc_id_photo_base64 ? `
-                <div>
-                  <p class="text-[11px] font-bold text-amber-400 mb-1">🎓 MVCC ID Card Photo:</p>
-                  <div class="rounded-xl overflow-hidden border-2 border-amber-400 max-h-48">
-                    <img src="${{o.mvcc_id_photo_base64}}" alt="MVCC ID Card" class="w-full object-cover">
-                  </div>
-                </div>
-              ` : (o.customer_type === 'MVCC Affiliated' && !o.mvcc_id_number ? '<p class="text-xs text-red-400 italic py-2">⚠️ No MVCC ID provided!</p>' : '')}}
-            </div>
-
-            <!-- Admin Actions -->
-            <div class="pt-2 border-t border-zinc-800 space-y-2">
-              <div class="grid grid-cols-2 gap-2">
-                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${{o.email || ''}}&su=${{encodeURIComponent('Sour Apple VIP Laundry - Order ' + o.code + ' Approved!')}}&body=${{encodeURIComponent('Hi ' + (o.customer_name || 'Customer') + ',\\n\\nGreat news! Your laundry order (' + o.code + ') has been APPROVED.\\n\\nTotal Due: $' + Number(o.price).toFixed(2) + '\\n\\nPlease view your order, complete payment, and get your drop-off instructions here:\\nhttps://sourapplelaundry.com/orders/' + o.code + '\\n\\nThank you,\\nSour Apple VIP Laundry Services')}}" 
-                   target="_blank"
-                   class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 text-center">
-                  📧 Open in Gmail
-                </a>
-
-                <button onclick="copyLink('${{o.code}}')" 
-                        class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider">
-                  📋 Copy Link
-                </button>
-              </div>
-
-              <!-- Payment Action Button -->
-              ${{o.payment_status !== 'Paid' ? `
-                <button onclick="markPaid('${{o.id}}')" class="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-xs uppercase tracking-wider active:scale-95 shadow-lg">
-                  💵 Mark Paid (Cash App / Venmo Received)
-                </button>
-              ` : `
-                <div class="p-2 rounded-lg bg-lime-950/40 border border-lime-500 text-center">
-                  <span class="text-xs font-black text-lime-400">✓ PAYMENT CONFIRMED (PAID)</span>
-                </div>
-              `}}
-
-              <!-- Approval Buttons -->
-              ${{o.status === 'Pending Admin Approval' ? `
-                <div class="flex items-center gap-2 pt-1">
-                  <label class="text-xs text-zinc-400">Adjust Price ($):</label>
-                  <input type="number" id="price-${{o.id}}" value="${{o.price}}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
-                </div>
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                  <button onclick="approveOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
-                    ✓ Approve Order
-                  </button>
-                  <button onclick="rejectOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
-                    ✕ Reject
-                  </button>
-                </div>
-              ` : `
-                <div class="flex items-center justify-between pt-1">
-                  <p class="text-xs text-lime-400 font-bold">✓ Approved & Ready for Drop-Off</p>
-                  <a href="/orders/${{o.code}}" target="_blank" class="text-xs text-zinc-400 underline">View Live Order Page →</a>
-                </div>
-              `}}
-            </div>
-          </div>
-        `).join('');
-      }} catch (e) {{
-        container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">Failed to load orders.</p>';
-      }}
-    }}
-
-    function copyLink(code) {{
-      const link = 'https://sourapplelaundry.com/orders/' + code;
-      navigator.clipboard.writeText(link);
-      alert('Copied link: ' + link);
-    }}
-
-    async function markPaid(id) {{
-      try {{
-        await fetch('/api/admin/orders/' + id + '/mark_paid', {{ method: 'POST' }});
-        loadOrders();
-      }} catch (e) {{
-        alert('Could not update payment status');
-      }}
-    }}
-
-    async function approveOrder(id) {{
-      const priceInput = document.getElementById('price-' + id);
-      const newPrice = priceInput ? parseFloat(priceInput.value) : null;
-
-      try {{
-        await fetch('/api/admin/orders/' + id + '/approve', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ price: newPrice, admin_note: "Approved by admin" }})
-        }});
-        loadOrders();
-      }} catch (e) {{
-        alert('Could not approve order');
-      }}
-    }}
-
-    async function rejectOrder(id) {{
-      const reason = prompt("Enter rejection reason:", "Verification or bag policy discrepancy.");
-      if (reason === null) return;
-
-      try {{
-        await fetch('/api/admin/orders/' + id + '/reject', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ reason }})
-        }});
-        loadOrders();
-      }} catch (e) {{
-        alert('Could not reject order');
-      }}
-    }}
-  </script>
-</body>
-</html>
-    """
-
-@app.on_event("startup")
-async def seed():
-    await db.users.create_index("email", unique=True)
-    if not await db.users.find_one({"email": ADMIN_EMAIL}):
-        await db.users.insert_one({
-            "id": new_id(),
-            "name": "Sour Apple Admin",
-            "email": ADMIN_EMAIL,
-            "password": hash_pw(ADMIN_PASSWORD),
-            "role": "ADMIN",
-            "created_at": now_iso()
-        })
-        logger.info(f"Seeded admin account for {ADMIN_EMAIL}")
-
-@app.on_event("shutdown")
-async def shutdown():
-    client.close()
+      <a href="/admin"
