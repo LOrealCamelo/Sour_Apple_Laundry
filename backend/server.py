@@ -1322,10 +1322,7 @@ async def serve_homepage():
     """
 
 # =============================== ADMIN PORTAL (DESKTOP & MOBILE) ===============================
-@app.get("/admin", response_class=HTMLResponse)
-async def serve_admin_portal():
-    return f"""
-<!DOCTYPE html>
+ADMIN_HTML = r"""<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -1333,9 +1330,9 @@ async def serve_admin_portal():
   <title>Sour Apple VIP Admin Portal</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    .accent-apple {{ color: #B0FF00; }}
-    .bg-apple {{ background-color: #B0FF00; }}
+    body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    .accent-apple { color: #B0FF00; }
+    .bg-apple { background-color: #B0FF00; }
   </style>
 </head>
 <body class="min-h-screen p-4 max-w-xl mx-auto">
@@ -1371,7 +1368,7 @@ async def serve_admin_portal():
   <div id="admin-dashboard" class="hidden space-y-4">
     <div class="flex items-center justify-between">
       <h2 class="text-sm font-black uppercase tracking-wider text-amber-400">Incoming Orders</h2>
-      <button onclick="loadOrders()" class="text-xs font-bold text-lime-400 underline">↻ Refresh Orders</button>
+      <button onclick="loadOrders()" class="text-xs font-bold text-lime-400 underline">&#x21bb; Refresh Orders</button>
     </div>
 
     <div id="orders-list" class="space-y-4">
@@ -1382,216 +1379,239 @@ async def serve_admin_portal():
   <script>
     let token = localStorage.getItem('sa_admin_token');
 
-    if (token) {{
+    if (token) {
       showDashboard();
-    }}
+    }
 
-    async function loginAdmin() {{
+    async function loginAdmin() {
       const email = document.getElementById('admin-email').value.trim();
       const password = document.getElementById('admin-password').value.trim();
       const err = document.getElementById('login-err');
       err.classList.add('hidden');
 
-      try {{
-        const res = await fetch('/api/auth/login', {{
+      try {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ email, password }})
-        }});
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
         const data = await res.json();
-        if (res.ok && data.user.role === 'ADMIN') {{
+        if (res.ok && data.user && data.user.role === 'ADMIN') {
           token = data.access_token;
           localStorage.setItem('sa_admin_token', token);
           showDashboard();
-        }} else {{
+        } else {
           err.innerText = data.detail || 'Access denied. Must be an Admin.';
           err.classList.remove('hidden');
-        }}
-      }} catch (e) {{
+        }
+      } catch (e) {
         err.innerText = 'Could not connect to server.';
         err.classList.remove('hidden');
-      }}
-    }}
+      }
+    }
 
-    function showDashboard() {{
+    function showDashboard() {
       document.getElementById('admin-login-box').classList.add('hidden');
       document.getElementById('admin-dashboard').classList.remove('hidden');
       document.getElementById('btn-logout').classList.remove('hidden');
       loadOrders();
       setInterval(loadOrders, 15000);
-    }}
+    }
 
-    function logoutAdmin() {{
+    function logoutAdmin() {
       localStorage.removeItem('sa_admin_token');
       location.reload();
-    }}
+    }
 
-    async function loadOrders() {{
+    async function loadOrders() {
       const container = document.getElementById('orders-list');
-      try {{
+      try {
         const res = await fetch('/api/admin/orders');
         const orders = await res.json();
         
-        if (!orders || orders.length === 0) {{
+        if (!orders || orders.length === 0) {
           container.innerHTML = '<p class="text-sm text-zinc-500 text-center py-8">No orders in database yet.</p>';
           return;
-        }}
+        }
 
         container.innerHTML = orders.map(o => `
-          <div class="p-4 rounded-2xl bg-zinc-900 border ${{o.status === 'Pending Admin Approval' ? 'border-amber-400' : 'border-zinc-800'}} space-y-3">
+          <div class="p-4 rounded-2xl bg-zinc-900 border ${o.status === 'Pending Admin Approval' ? 'border-amber-400' : 'border-zinc-800'} space-y-3">
             <div class="flex justify-between items-start">
               <div>
-                <span class="text-xs font-black px-2 py-0.5 rounded ${{o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}}">${{o.status}}</span>
-                <span class="text-xs font-black px-2 py-0.5 rounded ml-1.5 ${{o.payment_status === 'Paid' ? 'bg-lime-400 text-black' : (o.payment_status === 'Verifying Payment' ? 'bg-amber-400/30 text-amber-300' : 'bg-zinc-800 text-zinc-400')}}">
-                  ${{o.payment_status === 'Paid' ? 'PAID ✓' : (o.payment_status === 'Verifying Payment' ? 'VERIFYING ⏳' : 'UNPAID')}}
+                <span class="text-xs font-black px-2 py-0.5 rounded ${o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}">${o.status}</span>
+                <span class="text-xs font-black px-2 py-0.5 rounded ml-1.5 ${o.payment_status === 'Paid' ? 'bg-lime-400 text-black' : (o.payment_status === 'Verifying Payment' ? 'bg-amber-400/30 text-amber-300' : 'bg-zinc-800 text-zinc-400')}">
+                  ${o.payment_status === 'Paid' ? 'PAID ✓' : (o.payment_status === 'Verifying Payment' ? 'VERIFYING ⏳' : 'UNPAID')}
                 </span>
-                <h3 class="font-black text-lg text-white mt-1">${{o.code}}</h3>
+                <h3 class="font-black text-lg text-white mt-1">${o.code}</h3>
               </div>
-              <span class="text-xl font-black accent-apple">$${{Number(o.price || 0).toFixed(2)}}</span>
+              <span class="text-xl font-black accent-apple">$${Number(o.price || 0).toFixed(2)}</span>
             </div>
 
             <!-- Customer Details & Affiliation -->
             <div class="text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-              <p><strong>Customer:</strong> ${{o.customer_name || 'Anonymous'}}</p>
-              <p><strong>Affiliation:</strong> <span class="font-bold text-lime-400">${{o.customer_type || 'Community Member'}}</span> ${{o.mvcc_role ? '(' + o.mvcc_role + ')' : ''}}</p>
-              ${{o.mvcc_subject ? '<p><strong>🍎 Subject Taught:</strong> ' + o.mvcc_subject + '</p>' : ''}}
-              ${{o.mvcc_dept_or_title ? '<p><strong>💼 Dept / Title:</strong> ' + o.mvcc_dept_or_title + '</p>' : ''}}
-              ${{o.mvcc_id_number ? '<p><strong>🎓 MVCC ID #:</strong> <span class=\"font-mono text-amber-300\">' + o.mvcc_id_number + '</span></p>' : ''}}
-              <p><strong>Email:</strong> <a href="mailto:${{o.email}}" class="text-sky-400 underline">${{o.email || 'None provided'}}</a></p>
-              <p><strong>Phone:</strong> <a href="tel:${{o.phone}}" class="text-lime-400 underline font-bold">${{o.phone || 'None provided'}}</a></p>
-              <p><strong>Location:</strong> ${{o.location || 'South Utica'}}</p>
-              <p><strong>Drop-Off Date:</strong> ${{o.pickup_date}} (${{o.pickup_window}})</p>
-              <p><strong>🎁 VIP Giveaways Opt-In:</strong> <span class="${{o.marketing_opt_in ? 'text-lime-400 font-bold' : 'text-zinc-500'}}">${{o.marketing_opt_in ? 'YES (' + (o.marketing_preference || 'Email') + ')' : 'NO'}}</span></p>
-              ${{o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${{o.stain_notes}}</p>` : ''}}
+              <p><strong>Customer:</strong> ${o.customer_name || 'Anonymous'}</p>
+              <p><strong>Affiliation:</strong> <span class="font-bold text-lime-400">${o.customer_type || 'Community Member'}</span> ${o.mvcc_role ? '(' + o.mvcc_role + ')' : ''}</p>
+              ${o.mvcc_subject ? '<p><strong>🍎 Subject Taught:</strong> ' + o.mvcc_subject + '</p>' : ''}
+              ${o.mvcc_dept_or_title ? '<p><strong>💼 Dept / Title:</strong> ' + o.mvcc_dept_or_title + '</p>' : ''}
+              ${o.mvcc_id_number ? '<p><strong>🎓 MVCC ID #:</strong> <span class="font-mono text-amber-300">' + o.mvcc_id_number + '</span></p>' : ''}
+              <p><strong>Email:</strong> <a href="mailto:${o.email}" class="text-sky-400 underline">${o.email || 'None provided'}</a></p>
+              <p><strong>Phone:</strong> <a href="tel:${o.phone}" class="text-lime-400 underline font-bold">${o.phone || 'None provided'}</a></p>
+              <p><strong>Location:</strong> ${o.location || 'South Utica'}</p>
+              <p><strong>Drop-Off Date:</strong> ${o.pickup_date} (${o.pickup_window})</p>
+              <p><strong>🎁 VIP Giveaways Opt-In:</strong> <span class="${o.marketing_opt_in ? 'text-lime-400 font-bold' : 'text-zinc-500'}">${o.marketing_opt_in ? 'YES (' + (o.marketing_preference || 'Email') + ')' : 'NO'}</span></p>
+              ${o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${o.stain_notes}</p>` : ''}
             </div>
 
             <!-- Photos: Bag and MVCC ID -->
             <div class="grid grid-cols-2 gap-2">
               <!-- Bag Photo -->
-              ${{o.bag_image_base64 ? `
+              ${o.bag_image_base64 ? `
                 <div>
                   <p class="text-[11px] font-bold text-zinc-400 mb-1">📸 Bag Photo:</p>
                   <div class="rounded-xl overflow-hidden border border-zinc-700 max-h-48">
-                    <img src="${{o.bag_image_base64}}" alt="Customer Bag" class="w-full object-cover">
+                    <img src="${o.bag_image_base64}" alt="Customer Bag" class="w-full object-cover">
                   </div>
                 </div>
-              ` : '<p class="text-xs text-zinc-500 italic py-2">No bag photo uploaded.</p>'}}
+              ` : '<p class="text-xs text-zinc-500 italic py-2">No bag photo uploaded.</p>'}
 
               <!-- MVCC ID Photo -->
-              ${{o.mvcc_id_photo_base64 ? `
+              ${o.mvcc_id_photo_base64 ? `
                 <div>
                   <p class="text-[11px] font-bold text-amber-400 mb-1">🎓 MVCC ID Card Photo:</p>
                   <div class="rounded-xl overflow-hidden border-2 border-amber-400 max-h-48">
-                    <img src="${{o.mvcc_id_photo_base64}}" alt="MVCC ID Card" class="w-full object-cover">
+                    <img src="${o.mvcc_id_photo_base64}" alt="MVCC ID Card" class="w-full object-cover">
                   </div>
                 </div>
-              ` : (o.customer_type === 'MVCC Affiliated' && !o.mvcc_id_number ? '<p class="text-xs text-red-400 italic py-2">⚠️ No MVCC ID provided!</p>' : '')}}
+              ` : (o.customer_type === 'MVCC Affiliated' && !o.mvcc_id_number ? '<p class="text-xs text-red-400 italic py-2">⚠️ No MVCC ID provided!</p>' : '')}
             </div>
 
             <!-- Admin Actions -->
             <div class="pt-2 border-t border-zinc-800 space-y-2">
               <div class="grid grid-cols-2 gap-2">
-                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=${{o.email || ''}}&su=${{encodeURIComponent('Sour Apple VIP Laundry - Order ' + o.code + ' Approved!')}}&body=${{encodeURIComponent('Hi ' + (o.customer_name || 'Customer') + ',\\n\\nGreat news! Your laundry order (' + o.code + ') has been APPROVED.\\n\\nTotal Due: $' + Number(o.price).toFixed(2) + '\\n\\nPlease view your order, complete payment, and get your drop-off instructions here:\\nhttps://sourapplelaundry.com/orders/' + o.code + '\\n\\nThank you,\\nSour Apple VIP Laundry Services')}}" 
-                   target="_blank"
+                <button type="button" onclick="openApprovalGmail('${encodeURIComponent(o.email || '')}', '${encodeURIComponent(o.code || '')}', '${encodeURIComponent(o.customer_name || 'Customer')}', ${Number(o.price || 0)})" 
                    class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 text-center">
                   📧 Open in Gmail
-                </a>
+                </button>
 
-                <button onclick="copyLink('${{o.code}}')" 
+                <button onclick="copyLink('${o.code}')" 
                         class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider">
                   📋 Copy Link
                 </button>
               </div>
 
               <!-- Payment Action Button -->
-              ${{o.payment_status !== 'Paid' ? `
-                <button onclick="markPaid('${{o.id}}')" class="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-xs uppercase tracking-wider active:scale-95 shadow-lg">
+              ${o.payment_status !== 'Paid' ? `
+                <button onclick="markPaid('${o.id}')" class="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-xs uppercase tracking-wider active:scale-95 shadow-lg">
                   💵 Mark Paid (Cash App / Venmo Received)
                 </button>
               ` : `
                 <div class="p-2 rounded-lg bg-lime-950/40 border border-lime-500 text-center">
                   <span class="text-xs font-black text-lime-400">✓ PAYMENT CONFIRMED (PAID)</span>
                 </div>
-              `}}
+              `}
 
               <!-- Approval Buttons -->
-              ${{o.status === 'Pending Admin Approval' ? `
+              ${o.status === 'Pending Admin Approval' ? `
                 <div class="flex items-center gap-2 pt-1">
                   <label class="text-xs text-zinc-400">Adjust Price ($):</label>
-                  <input type="number" id="price-${{o.id}}" value="${{o.price}}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
+                  <input type="number" id="price-${o.id}" value="${o.price}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
                 </div>
                 <div class="grid grid-cols-2 gap-2 pt-1">
-                  <button onclick="approveOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
+                  <button onclick="approveOrder('${o.id}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
                     ✓ Approve Order
                   </button>
-                  <button onclick="rejectOrder('${{o.id}}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
+                  <button onclick="rejectOrder('${o.id}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
                     ✕ Reject
                   </button>
                 </div>
               ` : `
                 <div class="flex items-center justify-between pt-1">
                   <p class="text-xs text-lime-400 font-bold">✓ Approved & Ready for Drop-Off</p>
-                  <a href="/orders/${{o.code}}" target="_blank" class="text-xs text-zinc-400 underline">View Live Order Page →</a>
+                  <a href="/orders/${o.code}" target="_blank" class="text-xs text-zinc-400 underline">View Live Order Page →</a>
                 </div>
-              `}}
+              `}
             </div>
           </div>
         `).join('');
-      }} catch (e) {{
+      } catch (e) {
         container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">Failed to load orders.</p>';
-      }}
-    }}
+      }
+    }
 
-    function copyLink(code) {{
+    function openApprovalGmail(encEmail, encCode, encName, price) {
+      const email = decodeURIComponent(encEmail);
+      const code = decodeURIComponent(encCode);
+      const name = decodeURIComponent(encName);
+      const subject = encodeURIComponent('Sour Apple VIP Laundry - Order ' + code + ' Approved!');
+      const body = encodeURIComponent(
+        'Hi ' + name + ',\n\n' +
+        'Great news! Your laundry order (' + code + ') has been APPROVED.\n\n' +
+        'Total Due: $' + Number(price).toFixed(2) + '\n\n' +
+        'Please view your order, complete payment, and get your drop-off instructions here:\n' +
+        'https://sourapplelaundry.com/orders/' + code + '\n\n' +
+        'Thank you,\nSour Apple VIP Laundry Services'
+      );
+      window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email) + '&su=' + subject + '&body=' + body, '_blank');
+    }
+
+    function copyLink(code) {
       const link = 'https://sourapplelaundry.com/orders/' + code;
       navigator.clipboard.writeText(link);
       alert('Copied link: ' + link);
-    }}
+    }
 
-    async function markPaid(id) {{
-      try {{
-        await fetch('/api/admin/orders/' + id + '/mark_paid', {{ method: 'POST' }});
+    async function markPaid(id) {
+      try {
+        await fetch('/api/admin/orders/' + id + '/mark_paid', { method: 'POST' });
         loadOrders();
-      }} catch (e) {{
+      } catch (e) {
         alert('Could not update payment status');
-      }}
-    }}
+      }
+    }
 
-    async function approveOrder(id) {{
+    async function approveOrder(id) {
       const priceInput = document.getElementById('price-' + id);
       const newPrice = priceInput ? parseFloat(priceInput.value) : null;
 
-      try {{
-        await fetch('/api/admin/orders/' + id + '/approve', {{
+      try {
+        await fetch('/api/admin/orders/' + id + '/approve', {
           method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ price: newPrice, admin_note: "Approved by admin" }})
-        }});
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ price: newPrice, admin_note: "Approved by admin" })
+        });
         loadOrders();
-      }} catch (e) {{
+      } catch (e) {
         alert('Could not approve order');
-      }}
-    }}
+      }
+    }
 
-    async function rejectOrder(id) {{
+    async function rejectOrder(id) {
       const reason = prompt("Enter rejection reason:", "Verification or bag policy discrepancy.");
       if (reason === null) return;
 
-      try {{
-        await fetch('/api/admin/orders/' + id + '/reject', {{
+      try {
+        await fetch('/api/admin/orders/' + id + '/reject', {
           method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ reason }})
-        }});
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason })
+        });
         loadOrders();
-      }} catch (e) {{
+      } catch (e) { },
+          body: JSON.stringify({ reason })
+        });
+        loadOrders();
+      } catch (e) {
         alert('Could not reject order');
-      }}
-    }}
+      }
+    }
   </script>
 </body>
 </html>
-    """
+"""
+
+@app.get("/admin", response_class=HTMLResponse)
+async def serve_admin_portal():
+    return ADMIN_HTML
 
 @app.on_event("startup")
 async def seed():
