@@ -1,3 +1,4 @@
+# Exact mockup layout (Hero, S/M/L bags, MVCC banner, Nav)
 import React, { useState } from 'react';
 import smallBagImg from './assets/sm_pink_Sour Apple.jpg';
 import mediumBagImg from './assets/med_pink_Sour Apple.jpg';
