@@ -1,1 +1,1 @@
-# Browser localStorage handler
+// Browser localStorage handler
