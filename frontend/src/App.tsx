@@ -1,43 +1,52 @@
-// Root application router & modal manager
-import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import React, { useState } from 'react';
+import { HomeScreen } from './components/HomeScreen';
+import { BookingModal } from './components/BookingModal';
+import { OrdersModal } from './components/OrdersModal';
+import { PaymentModal } from './components/PaymentModal';
 
-// Screens
-import Welcome from "../app/index";
-import Login from "../app/login";
-import Register from "../app/register";
-import Schedule from "../app/(student)/schedule";
-import Orders from "../app/(student)/orders";
-import Profile from "../app/(student)/profile";
-import OrderTracking from "../app/order/[id]";
-import AdminRequests from "../app/(admin)/index";
-import AdminOrderDetail from "../app/admin-order/[id]";
+export const App: React.FC = () => {
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [ordersOpen, setOrdersOpen] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [selectedBagSize, setSelectedBagSize] = useState<string | undefined>();
+  const [activeOrder, setActiveOrder] = useState<any>(null);
 
-export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Welcome & Auth */}
-          <Route path="/" element={<Welcome />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <div className="bg-slate-100 min-h-screen">
+      <HomeScreen 
+        onOpenBooking={(size) => { setSelectedBagSize(size); setBookingOpen(true); }}
+        onOpenOrders={() => setOrdersOpen(true)}
+        onOpenPayment={() => setPaymentOpen(true)}
+        onOpenContract={() => alert("Sour Apple VIP Service Terms: 48-72h turnaround, bag closure required, $100 per bag standard liability limit.")}
+      />
 
-          {/* Customer Booking & Orders */}
-          <Route path="/schedule" element={<Schedule />} />
-          <Route path="/orders" element={<Orders />} />
-          <Route path="/order/:id" element={<OrderTracking />} />
-          <Route path="/profile" element={<Profile />} />
+      {bookingOpen && (
+        <BookingModal 
+          initialBagSize={selectedBagSize}
+          onClose={() => setBookingOpen(false)}
+          onSuccess={(order) => {
+            setBookingOpen(false);
+            setActiveOrder(order);
+            setOrdersOpen(true);
+          }}
+        />
+      )}
 
-          {/* Admin Dashboard */}
-          <Route path="/admin" element={<AdminRequests />} />
-          <Route path="/admin-order/:id" element={<AdminOrderDetail />} />
+      {ordersOpen && (
+        <OrdersModal 
+          activeOrder={activeOrder}
+          onClose={() => setOrdersOpen(false)}
+          onOpenPayment={() => { setOrdersOpen(false); setPaymentOpen(true); }}
+        />
+      )}
 
-          {/* Catch-all fallback */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+      {paymentOpen && (
+        <PaymentModal 
+          onClose={() => setPaymentOpen(false)}
+        />
+      )}
+    </div>
   );
-}
+};
+
+export default App;
