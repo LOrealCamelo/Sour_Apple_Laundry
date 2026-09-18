@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sour Apple Wash & Fold VIP Laundry Services</title>
+  
+  <!-- Tailwind CSS via CDN (Zero build tools required) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Caveat:wght@700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .handwriting { font-family: 'Caveat', cursive; }
+  </style>
+</head>
+
+<body class="bg-slate-100 antialiased text-slate-800 selection:bg-emerald-200">
+
+  <!-- Mobile Container (Centered) -->
+  <div class="relative min-h-screen bg-slate-50 max-w-md mx-auto shadow-2xl overflow-x-hidden pb-24 border-x border-slate-200">
+
+    <!-- 1. TOP HEADER & STATUS BAR -->
+    <header class="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-5 pt-3 pb-2">
+      <span class="text-xs font-bold text-slate-800">9:41</span>
+      
+      <div class="flex items-center gap-2">
+        <!-- Avatar Button (Apple Mascot) -->
+        <button onclick="toggleModal('accountModal')" class="w-10 h-10 rounded-full border-2 border-emerald-500 overflow-hidden shadow-md bg-white flex items-center justify-center">
+          <img src="/static/assets/new_logo.png" onerror="this.src='https://images.unsplash.com/photo-1618897996318-5a901fa6ca71?w=100&q=80'" alt="Avatar" class="w-full h-full object-cover object-left scale-150" />
+        </button>
+
+        <!-- Hamburger Menu Button (3 lines) -->
+        <button onclick="toggleDrawer(true)" class="w-10 h-9 bg-white/90 backdrop-blur rounded-full flex items-center justify-center text-slate-800 shadow-md hover:bg-white transition" aria-label="Open Menu">
+          <div class="flex flex-col gap-1 w-4">
+            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
+            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
+            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
+          </div>
+        </button>
+      </div>
+    </header>
+
+    <!-- 2. SLIDE-OUT MENU DRAWER -->
+    <div id="drawerOverlay" class="fixed inset-0 z-50 hidden bg-black/50 backdrop-blur-sm transition-opacity" onclick="toggleDrawer(false)"></div>
+    <aside id="drawerContent" class="fixed top-0 right-0 bottom-0 z-50 w-72 bg-white shadow-2xl p-6 flex flex-col justify-between transform translate-x-full transition-transform duration-300 ease-in-out">
+      <div>
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div>
+            <h3 class="font-bold text-emerald-800 text-base leading-tight">Sour Apple</h3>
+            <p class="text-[10px] text-slate-400">VIP Laundry Services</p>
+          </div>
+          <button onclick="toggleDrawer(false)" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">✕</button>
+        </div>
+
+        <nav class="mt-6 flex flex-col gap-2">
+          <button onclick="toggleDrawer(false); openBookingModal();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>📅</span> Book a Pickup
+          </button>
+          <button onclick="toggleDrawer(false); toggleModal('ordersModal'); loadMyOrders();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>🧺</span> My Orders & Tracking
+          </button>
+          <button onclick="toggleMvccDiscount(); toggleDrawer(false);" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>🎓</span> <span id="drawerMvccLabel">MVCC Student Rates ($10 Off)</span>
+          </button>
+          <button onclick="toggleDrawer(false); toggleModal('paymentModal');" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>💵</span> Pay via Cash App / Venmo
+          </button>
+          <button onclick="toggleDrawer(false); alert('Sour Apple VIP Service Terms:\n• Standard 48-72h turnaround\n• Closed bag required (drawstring/zipper)\n• Max $100 per bag standard liability\n• Unclaimed bags donated after 30 days');" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>📝</span> Service Contract & Terms
+          </button>
+          <a href="/docs" target="_blank" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2 border-b border-slate-50 flex items-center gap-2">
+            <span>⚙️</span> Admin API & Docs
+          </a>
+        </nav>
+      </div>
+
+      <div class="text-xs text-slate-400 text-center pb-2">
+        Sour Apple Wash & Fold • South Utica, NY
+      </div>
+    </aside>
+
+    <!-- 3. HERO BANNER SECTION -->
+    <section class="relative pt-16 px-5 pb-8 bg-gradient-to-b from-emerald-100/70 via-white to-slate-50">
+      <div class="relative z-10 pt-2 flex flex-col items-start">
+        <img src="/static/assets/new_logo.png" onerror="this.onerror=null; this.src='/static/assets/logo.png';" alt="Sour Apple Wash & Fold" class="w-56 h-auto drop-shadow-xl mb-3" />
+
+        <h1 class="text-4xl font-extrabold text-emerald-600 tracking-tight leading-tight italic font-serif">
+          Laundry <br /> Made Easy!
+        </h1>
+
+        <p class="text-xs text-slate-600 mt-2 font-medium">
+          Book, pay, and relax. We'll handle the rest!
+        </p>
+
+        <button onclick="openBookingModal()" class="mt-4 inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-green-500 text-white font-bold px-5 py-2.5 rounded-full shadow-lg shadow-emerald-600/30 hover:scale-[1.02] active:scale-95 transition text-sm">
+          <span>📅</span>
+          <span>Book a Pickup</span>
+          <span>&gt;</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 4. FOUR QUICK-STEP ACTION CARDS -->
+    <section class="px-4 -mt-3 relative z-20">
+      <div class="grid grid-cols-4 gap-2 bg-white/95 backdrop-blur rounded-2xl p-3 shadow-md border border-slate-100">
+        <button onclick="openBookingModal()" class="flex flex-col items-center text-center">
+          <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-base shadow-sm">📅</div>
+          <span class="text-xs font-bold mt-1 text-slate-800">Book</span>
+          <span class="text-[9px] text-slate-400">Choose time</span>
+        </button>
+
+        <button onclick="toggleModal('paymentModal')" class="flex flex-col items-center text-center">
+          <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-base shadow-sm">💳</div>
+          <span class="text-xs font-bold mt-1 text-slate-800">Pay</span>
+          <span class="text-[9px] text-slate-400">Secure & easy</span>
+        </button>
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-base shadow-sm">🧼</div>
+          <span class="text-xs font-bold mt-1 text-slate-800">We Wash</span>
+          <span class="text-[9px] text-slate-400">Fresh & clean</span>
+        </div>
+
+        <div class="flex flex-col items-center text-center">
+          <div class="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-base shadow-sm">👕</div>
+          <span class="text-xs font-bold mt-1 text-slate-800">We Fold</span>
+          <span class="text-[9px] text-slate-400">Ready for you</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. "OUR SERVICES" & 3 SIZED BAGS -->
+    <section class="px-4 mt-6">
+      <div class="inline-block bg-emerald-600 text-white font-bold italic text-sm px-4 py-1 rounded-r-full shadow-sm mb-4">
+        Our Services
+      </div>
+
+      <div class="grid grid-cols-3 gap-2.5 items-end">
+        <!-- Small Bag (S) -->
+        <div onclick="openBookingModal('Small')" class="bg-white rounded-2xl p-2.5 shadow-md border border-slate-100 flex flex-col items-center cursor-pointer hover:border-emerald-300 transition">
+          <div class="h-24 flex items-center justify-center">
+            <img src="/static/assets/sm_pink_Sour Apple.jpg" onerror="this.src='/static/assets/sm_pink_Sour Apple.png'" alt="Small Bag" class="max-h-20 w-auto object-contain drop-shadow-md" />
+          </div>
+          <span class="text-xs font-bold text-slate-800 mt-2">Small Bag</span>
+          <span id="priceSmall" class="text-base font-extrabold text-emerald-600">$20</span>
+          <span class="text-[9px] text-slate-400">(approx. 1 load)</span>
+        </div>
+
+        <!-- Medium Bag (M) -->
+        <div onclick="openBookingModal('Medium')" class="bg-white rounded-2xl p-2.5 shadow-md border border-slate-100 flex flex-col items-center cursor-pointer hover:border-emerald-300 transition">
+          <div class="h-28 flex items-center justify-center">
+            <img src="/static/assets/med_pink_Sour Apple.jpg" onerror="this.src='/static/assets/med_pink_Sour Apple.png'" alt="Medium Bag" class="max-h-28 w-auto object-contain drop-shadow-md" />
+          </div>
+          <span class="text-xs font-bold text-slate-800 mt-2">Medium Bag</span>
+          <span id="priceMedium" class="text-base font-extrabold text-emerald-600">$30</span>
+          <span class="text-[9px] text-slate-400">(approx. 1.5 loads)</span>
+        </div>
+
+        <!-- Large Bag (L) -->
+        <div onclick="openBookingModal('Large')" class="bg-white rounded-2xl p-2.5 shadow-md border border-slate-100 flex flex-col items-center cursor-pointer hover:border-emerald-300 transition">
+          <div class="h-36 flex items-center justify-center">
+            <img src="/static/assets/lg_pink_Sour Apple.jpg" onerror="this.src='/static/assets/lg_pink_Sour Apple.png'" alt="Large Bag" class="max-h-36 w-auto object-contain drop-shadow-md" />
+          </div>
+          <span class="text-xs font-bold text-slate-800 mt-2">Large Bag</span>
+          <span id="priceLarge" class="text-base font-extrabold text-emerald-600">$40</span>
+          <span class="text-[9px] text-slate-400">(approx. 2 loads)</span>
+        </div>
+      </div>
+
+      <!-- 6. MVCC PRICING BANNER -->
+      <div onclick="toggleMvccDiscount()" class="mt-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl p-3 flex items-center justify-between cursor-pointer hover:bg-emerald-100/70 transition shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white text-lg shadow-sm">🎓</div>
+          <div>
+            <div class="text-xs font-bold text-slate-900">MVCC Student, Faculty & Staff Pricing &gt;</div>
+            <div id="mvccStatusDesc" class="text-[10px] text-slate-500">Click to activate $10 off per bag!</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-xs font-bold text-emerald-700 italic block handwriting text-base">Support<br />Local! ♡</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. FIXED BOTTOM NAVIGATION -->
+    <nav class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur border-t border-slate-100 px-6 py-2.5 flex items-center justify-between z-40 shadow-lg">
+      <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center text-emerald-600">
+        <span class="text-lg">🏠</span>
+        <span class="text-[10px] font-bold mt-0.5">Home</span>
+        <span class="w-1.5 h-1.5 bg-emerald-600 rounded-full mt-0.5"></span>
+      </button>
+
+      <button onclick="toggleModal('ordersModal'); loadMyOrders();" class="flex flex-col items-center text-slate-400 hover:text-slate-600">
+        <span class="text-lg">📅</span>
+        <span class="text-[10px] font-medium mt-0.5">Bookings</span>
+      </button>
+
+      <button onclick="openBookingModal()" class="flex flex-col items-center text-slate-400 hover:text-slate-600">
+        <span class="text-lg">🏷️</span>
+        <span class="text-[10px] font-medium mt-0.5">Services</span>
+      </button>
+
+      <button onclick="toggleModal('paymentModal')" class="flex flex-col items-center text-slate-400 hover:text-slate-600">
+        <span class="text-lg">💵</span>
+        <span class="text-[10px] font-medium mt-0.5">Pay</span>
+      </button>
+
+      <button onclick="toggleModal('accountModal')" class="flex flex-col items-center text-slate-400 hover:text-slate-600">
+        <span class="text-lg">👤</span>
+        <span class="text-[10px] font-medium mt-0.5">Account</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- BOOKING MODAL -->
+  <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl my-8 relative">
+      <button onclick="toggleModal('bookingModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+
+      <h2 class="text-xl font-bold text-slate-900 mb-1">Book a Pickup</h2>
+      <p class="text-xs text-slate-500 mb-4">Sour Apple Wash & Fold • South Utica & MVCC</p>
+
+      <div id="bookingAlert" class="hidden mb-3 p-2.5 rounded-xl text-xs"></div>
+
+      <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-4">
+        <!-- Customer Type -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Customer Type</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btnMvcc" onclick="setBookingCustomerType('College Student')" class="py-2 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600">
+              🎓 MVCC Student/Staff
+            </button>
+            <button type="button" id="btnLocal" onclick="setBookingCustomerType('Non-Student')" class="py-2 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200">
+              🏡 Local Drop-Off
+            </button>
+          </div>
+        </div>
+
+        <div id="studentLocationField">
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Dorm / Campus Location</label>
+          <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall, Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" required />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
+            <input type="text" id="nameInput" placeholder="Your name" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none" required />
+          </div>
+          <div>
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
+            <input type="tel" id="phoneInput" placeholder="(315) 000-0000" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none" required />
+          </div>
+        </div>
+
+        <!-- Bag Size -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Bag Size</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" onclick="selectBag('Small')" id="btnBagSmall" class="py-2 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600">Small</button>
+            <button type="button" onclick="selectBag('Medium')" id="btnBagMedium" class="py-2 text-xs font-bold rounded-xl border bg-white text-slate-700 border-slate-200">Medium</button>
+            <button type="button" onclick="selectBag('Large')" id="btnBagLarge" class="py-2 text-xs font-bold rounded-xl border bg-white text-slate-700 border-slate-200">Large</button>
+          </div>
+        </div>
+
+        <!-- Add-ons -->
+        <div class="space-y-2 pt-1 border-t border-slate-100">
+          <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
+            <span>⚡ Same-Day Rush (+$20)</span>
+            <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-emerald-600" />
+          </label>
+          <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
+            <span>🛏️ Bedding / Comforter (+$25)</span>
+            <input type="checkbox" id="checkBedding" onchange="calcTotal()" class="rounded text-emerald-600" />
+          </label>
+        </div>
+
+        <!-- Digital Contract -->
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+          <span class="text-[11px] font-bold text-slate-800 block">Digital Service Agreement</span>
+          <p class="text-[10px] text-slate-500 leading-relaxed">
+            Standard 48-72h turnaround. Closed drawstring or zippered bags required. Liability up to $100 per bag. Unclaimed laundry donated after 30 days.
+          </p>
+          <label class="flex items-start gap-2 text-[10px] text-slate-700 cursor-pointer">
+            <input type="checkbox" id="checkContract" class="mt-0.5 text-emerald-600 rounded" required />
+            <span>I accept the Sour Apple VIP Service Agreement.</span>
+          </label>
+          <input type="text" id="signatureInput" placeholder="Type full legal name to sign" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-xl outline-none" required />
+        </div>
+
+        <!-- Total & Submit -->
+        <div class="flex items-center justify-between pt-2">
+          <div>
+            <span class="text-[10px] text-slate-400 uppercase tracking-wider block">Estimated Total</span>
+            <span id="bookingTotalText" class="text-xl font-extrabold text-emerald-600">$10</span>
+          </div>
+
+          <button type="submit" id="btnSubmitBooking" class="bg-emerald-600 text-white font-bold text-xs px-6 py-2.5 rounded-full shadow-lg shadow-emerald-600/30 hover:bg-emerald-700 transition">
+            Confirm Booking &gt;
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- PAYMENT MODAL -->
+  <div id="paymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative text-center">
+      <button onclick="toggleModal('paymentModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+
+      <div class="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl mx-auto mb-2">💵</div>
+      <h3 class="text-lg font-bold text-slate-900">Payment Methods</h3>
+      <p class="text-xs text-slate-500 mb-4">Pay once your order is approved</p>
+
+      <div class="space-y-3 text-left">
+        <div class="p-3 bg-green-50 border border-green-200 rounded-2xl">
+          <span class="text-[11px] font-bold text-green-800 block">Cash App</span>
+          <span class="text-sm font-extrabold text-green-900">$SourAppleLaundry</span>
+        </div>
+
+        <div class="p-3 bg-blue-50 border border-blue-200 rounded-2xl">
+          <span class="text-[11px] font-bold text-blue-800 block">Venmo</span>
+          <span class="text-sm font-extrabold text-blue-900">@SourAppleLaundry</span>
+        </div>
+      </div>
+
+      <button onclick="toggleModal('paymentModal')" class="mt-5 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- ORDERS MODAL -->
+  <div id="ordersModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
+      <button onclick="toggleModal('ordersModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      <h3 class="text-lg font-bold text-slate-900 mb-1">My Bookings</h3>
+      <p class="text-xs text-slate-500 mb-4">Order tracking & status history</p>
+
+      <div id="ordersList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+        <p class="text-xs text-slate-400 text-center py-6">No recent bookings found on this device.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT MODAL -->
+  <div id="accountModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl relative text-center">
+      <button onclick="toggleModal('accountModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+      <div class="w-16 h-16 rounded-full border-2 border-emerald-500 overflow-hidden mx-auto mb-3 shadow-md">
+        <img src="/static/assets/new_logo.png" onerror="this.src='/static/assets/logo.png';" alt="Avatar" class="w-full h-full object-cover object-left scale-150" />
+      </div>
+      <h3 class="text-base font-bold text-slate-900">Sour Apple Customer</h3>
+      <p class="text-xs text-slate-400 mb-4">South Utica, New York</p>
+      
+      <div class="space-y-2">
+        <button onclick="toggleModal('accountModal'); toggleModal('ordersModal');" class="w-full py-2 bg-slate-50 border border-slate-200 text-xs font-bold rounded-xl text-slate-700">View My Orders</button>
+        <a href="/docs" target="_blank" class="block w-full py-2 bg-emerald-50 border border-emerald-200 text-xs font-bold rounded-xl text-emerald-700">Admin API Dashboard</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+  <script>
+    let isMvccActive = false;
+    let selectedBagSize = 'Small';
+    let bookingCustomerType = 'College Student';
+
+    function toggleDrawer(open) {
+      const drawer = document.getElementById('drawerContent');
+      const overlay = document.getElementById('drawerOverlay');
+      if (open) {
+        overlay.classList.remove('hidden');
+        drawer.classList.remove('translate-x-full');
+      } else {
+        drawer.classList.add('translate-x-full');
+        overlay.classList.add('hidden');
+      }
+    }
+
+    function toggleModal(id) {
+      const modal = document.getElementById(id);
+      modal.classList.toggle('hidden');
+    }
+
+    function toggleMvccDiscount() {
+      isMvccActive = !isMvccActive;
+      document.getElementById('priceSmall').textContent = isMvccActive ? '$10' : '$20';
+      document.getElementById('priceMedium').textContent = isMvccActive ? '$20' : '$30';
+      document.getElementById('priceLarge').textContent = isMvccActive ? '$30' : '$40';
+      document.getElementById('mvccStatusDesc').textContent = isMvccActive ? 'Active! $10 off per bag applied.' : 'Click to activate $10 off per bag!';
+      calcTotal();
+    }
+
+    function openBookingModal(bagSize = 'Small') {
+      selectBag(bagSize);
+      calcTotal();
+      document.getElementById('bookingModal').classList.remove('hidden');
+    }
+
+    function selectBag(size) {
+      selectedBagSize = size;
+      ['Small', 'Medium', 'Large'].forEach(s => {
+        const btn = document.getElementById('btnBag' + s);
+        if (s === size) {
+          btn.className = "py-2 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600";
+        } else {
+          btn.className = "py-2 text-xs font-bold rounded-xl border bg-white text-slate-700 border-slate-200";
+        }
+      });
+      calcTotal();
+    }
+
+    function setBookingCustomerType(type) {
+      bookingCustomerType = type;
+      const btnMvcc = document.getElementById('btnMvcc');
+      const btnLocal = document.getElementById('btnLocal');
+      const dormField = document.getElementById('studentLocationField');
+
+      if (type === 'College Student') {
+        btnMvcc.className = "py-2 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600";
+        btnLocal.className = "py-2 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200";
+        dormField.classList.remove('hidden');
+        document.getElementById('dormInput').required = true;
+      } else {
+        btnLocal.className = "py-2 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600";
+        btnMvcc.className = "py-2 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200";
+        dormField.classList.add('hidden');
+        document.getElementById('dormInput').required = false;
+      }
+      calcTotal();
+    }
+
+    function calcTotal() {
+      const isStudent = (bookingCustomerType === 'College Student' || isMvccActive);
+      let base = 20;
+      if (isStudent) {
+        base = selectedBagSize === 'Small' ? 10 : (selectedBagSize === 'Medium' ? 20 : 30);
+      } else {
+        base = selectedBagSize === 'Small' ? 20 : (selectedBagSize === 'Medium' ? 30 : 40);
+      }
+
+      const rush = document.getElementById('checkRush') ? document.getElementById('checkRush').checked : false;
+      const bedding = document.getElementById('checkBedding') ? document.getElementById('checkBedding').checked : false;
+
+      let total = base + (rush ? 20 : 0) + (bedding ? 25 : 0);
+      document.getElementById('bookingTotalText').textContent = '$' + total;
+      return total;
+    }
+
+    async function submitBooking(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitBooking');
+      const alertBox = document.getElementById('bookingAlert');
+      
+      btn.disabled = true;
+      btn.textContent = "Booking...";
+
+      const payload = {
+        customer_type: bookingCustomerType,
+        is_mvcc: bookingCustomerType === 'College Student',
+        college: bookingCustomerType === 'College Student' ? 'MVCC' : '',
+        dorm: document.getElementById('dormInput').value || 'South Utica Local',
+        directions: '',
+        bag_size: selectedBagSize,
+        bags: 1,
+        rush: document.getElementById('checkRush').checked,
+        bedding_addon: document.getElementById('checkBedding').checked,
+        digital_contract_accepted: document.getElementById('checkContract').checked,
+        e_signature: document.getElementById('signatureInput').value,
+        pickup_date: new Date().toISOString().split('T')[0],
+      };
+
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || 'Failed to submit order');
+
+        // Save order locally for user tracking
+        let myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+        myOrders.unshift(data);
+        localStorage.setItem('my_orders', JSON.stringify(myOrders));
+
+        alertBox.className = "mb-3 p-2.5 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 block";
+        alertBox.innerHTML = `✅ <strong>Booking Submitted!</strong> Code: ${data.code}. Alert sent to admin.`;
+
+        setTimeout(() => {
+          toggleModal('bookingModal');
+          toggleModal('ordersModal');
+          loadMyOrders();
+          btn.disabled = false;
+          btn.textContent = "Confirm Booking >";
+          alertBox.classList.add('hidden');
+        }, 1500);
+
+      } catch (err) {
+        alertBox.className = "mb-3 p-2.5 rounded-xl text-xs bg-red-50 text-red-700 border border-red-200 block";
+        alertBox.textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = "Confirm Booking >";
+      }
+    }
+
+    function loadMyOrders() {
+      const container = document.getElementById('ordersList');
+      const myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
+      if (myOrders.length === 0) {
+        container.innerHTML = '<p class="text-xs text-slate-400 text-center py-6">No recent bookings found.</p>';
+        return;
+      }
+
+      container.innerHTML = myOrders.map(o => `
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
+          <div class="flex items-center justify-between font-bold text-slate-800">
+            <span>${o.code}</span>
+            <span class="text-emerald-600 font-extrabold">$${o.total_price}</span>
+          </div>
+          <div class="text-slate-500 text-[11px] mt-1">Status: <span class="text-amber-600 font-semibold">${o.status}</span></div>
+          <div class="text-slate-400 text-[10px] mt-0.5">Bag: ${o.bag_size} • ${o.dorm || 'Local'}</div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
