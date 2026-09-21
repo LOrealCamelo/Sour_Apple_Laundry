@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Sour Apple Wash & Fold VIP Laundry Services</title>
   
+  <!-- FAVICON -->
+  <link rel="icon" type="image/png" href="/static/assets/icon777.png" />
+  <link rel="apple-touch-icon" href="/static/assets/icon777.png" />
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap');
@@ -15,10 +19,22 @@
       border-radius: 9999px;
       transform: rotate(-1.5deg);
     }
+    /* Smooth custom scrollbar for digital contract */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 8px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #10b981;
+      border-radius: 8px;
+    }
   </style>
 </head>
 
-<body class="bg-[#eef8f2] antialiased text-slate-800 min-h-screen flex flex-col pb-20">
+<body class="bg-[#eef8f2] antialiased text-slate-800 min-h-screen flex flex-col pb-20 select-none sm:select-auto">
 
   <!-- ==================== TOP NAVIGATION BAR ==================== -->
   <header class="w-full bg-white/95 backdrop-blur border-b border-emerald-100 sticky top-0 z-40 shadow-sm">
@@ -86,8 +102,8 @@
           </button>
         </div>
 
-        <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#ff66c4] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
-          <span>🎓</span> MVCC Students & faculty RATES
+        <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
+          <span>🎓</span> MVCC HAWKS VIP RATES ($10 Off)
         </button>
 
         <button onclick="toggleDrawer(false); openBookingStep1();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
@@ -97,7 +113,7 @@
           <span>🧺</span> My Bookings & Tracking
         </button>
         <button onclick="toggleDrawer(false); toggleModal('paymentModal');" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
-          <span>💳</span> Payment Options (Stripe/Card)
+          <span>💳</span> Payment Options (Card / Cash App / Venmo)
         </button>
         <a href="/docs" target="_blank" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
           <span>⚙️</span> Admin API Dashboard
@@ -117,7 +133,7 @@
       <!-- ==================== 1. HERO ARTWORK & OVERLAY BUTTONS ==================== -->
       <section class="relative w-full overflow-hidden bg-white shadow-sm sm:rounded-b-3xl">
         
-        <!-- Artwork Image extending full-width -->
+        <!-- Full-width hero graphic -->
         <img 
           src="/static/assets/hero_art3.png" 
           onerror="this.onerror=null; this.src='/static/assets/hero_art2.png';" 
@@ -125,7 +141,7 @@
           class="w-full h-auto object-contain block select-none"
         />
 
-        <!-- 4 BUTTONS: Moved up onto the gray brick wall between 'Our Services' and the washing machine -->
+        <!-- 4 BUTTONS: Positioned directly on the gray brick wall between 'Our Services' and the washing machine -->
         <div class="absolute left-[31%] top-[27.5%] w-[45%] grid grid-cols-4 gap-1 z-20">
           <button onclick="openBookingStep1()" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
             <span class="text-[10px] sm:text-xs">📅</span>
@@ -148,11 +164,11 @@
           </button>
         </div>
 
-        <!-- BOOKING BUTTON: Moved all the way up right above the washing machines -->
+        <!-- BOOKING BUTTON: Moved up right above the washing machines -->
         <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-[#ff66c4] hover:bg-[#ff66c4] text-black font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-black-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-emerald-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
             <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -161,17 +177,108 @@
         </div>
 
       </section>
+
+      <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
+      <section class="px-3 pt-3 pb-2 w-full">
+        <div class="grid grid-cols-4 gap-2">
+          
+          <!-- Card 1: Book -->
+          <button onclick="openBookingStep1()" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition active:scale-95">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              📅
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">Book</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Choose time</span>
+          </button>
+
+          <!-- Card 2: Pay -->
+          <button onclick="toggleModal('paymentModal')" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition active:scale-95">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              💳
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">Pay</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Secure & easy</span>
+          </button>
+
+          <!-- Card 3: We Wash -->
+          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              🧼
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">We Wash</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Fresh & clean</span>
+          </div>
+
+          <!-- Card 4: We Fold -->
+          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              👕
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">We Fold</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Ready for you</span>
+          </div>
+
+        </div>
+      </section>
+
       <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
       <section id="servicesSection" class="px-3 py-2 w-full">
         
-         <!-- MVCC Student & Staff Pricing Banner Button -->
+        <!-- Brush Ribbon Title -->
+        <div class="inline-block px-4 py-1 brush-ribbon text-white font-extrabold text-sm shadow-sm mb-2.5">
+          Our Services
+        </div>
+
+        <!-- Sizing & Bags White Container -->
+        <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
+          
+          <!-- 3 Bags Row -->
+          <div class="grid grid-cols-3 gap-2 text-center items-end pb-3 border-b border-slate-100">
+            
+            <!-- Small Bag (Green) -->
+            <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
+              <div class="w-14 h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-2xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-emerald-800 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Small Bag</span>
+              <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
+              <span class="text-[9px] text-slate-400">(approx. 18" x 27")</span>
+            </div>
+
+            <!-- Medium Bag (Navy Blue) -->
+            <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
+              <div class="w-16 h-20 rounded-2xl bg-blue-500/10 border-2 border-blue-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-3xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-blue-900 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Medium Bag</span>
+              <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
+              <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
+            </div>
+
+            <!-- Large Bag (Pink) -->
+            <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
+              <div class="w-18 h-24 rounded-2xl bg-pink-500/10 border-2 border-pink-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-3xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-pink-700 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Large Bag</span>
+              <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
+              <span class="text-[9px] text-slate-400">(approx. 30" x 40")</span>
+            </div>
+
+          </div>
+
+          <!-- MVCC Student & Staff Pricing Banner Button (Clickable Toggle) -->
           <button 
             id="btnMvccToggle"
+            type="button"
             onclick="toggleMvccPricing()" 
-            class="w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#d5f5e3] border border-pink-200 flex items-center justify-between transition text-left"
+            class="w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border-2 border-emerald-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 relative z-30"
           >
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-[#ff66c4] text-black flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
                 🎓
               </div>
               <div>
@@ -179,7 +286,7 @@
                   MVCC Student, Faculty & Staff Pricing &gt;
                 </span>
                 <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
-                  Show your MVCC ID and get exclusive rates!
+                  Show your MVCC ID and get exclusive $10 off rates!
                 </span>
               </div>
             </div>
@@ -190,82 +297,8 @@
             </div>
           </button>
 
-      <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
-     
-
-          <!-- Card 2: Pay -->
-          <button onclick="toggleModal('paymentModal')" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              💳
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">Pay</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Secure & easy</span>
-          </button>
-
-          
         </div>
       </section>
-
-      
-
-        </div>
-      </section>
-
-        <!-- Sizing & Bags White Container -->
-        <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
-          
-          <!-- 3 Bags Row -->
-          <div class="grid grid-cols-3 gap-2 text-center items-end pb-3 border-b border-slate-100">
-            
-            <!-- Small Bag (Green) -->
-            <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group">
-              <div class="w-14 h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <img 
-                src="/static/assets/bag_small.png" 
-                onerror="this.onerror=null; this.src='/static/assets/sm_pink_Sour Apple.jpg';" 
-                alt="Small Bag" 
-                class="max-h-24 w-auto object-contain group-hover:scale-105 transition" 
-              />
-              </div>
-              <span class="text-xs font-bold text-slate-800">Small Bag</span>
-              <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
-              <span class="text-[9px] text-slate-400">(approx. 18" x 27")</span>
-            </div>
-
-            <!-- Medium Bag (Navy Blue) -->
-            <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group">
-              <div class="w-16 h-20 rounded-2xl bg-blue-500/10 border-2 border-blue-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <img 
-                src="/static/assets/bag_medium.png" 
-                onerror="this.onerror=null; this.src='/static/assets/med_pink_Sour Apple.jpg';" 
-                alt="Medium Bag" 
-                class="max-h-28 w-auto object-contain group-hover:scale-105 transition" 
-              />
-            </div>
-            <span class="text-xs font-bold text-slate-800">Medium Bag</span>
-            <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
-            <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
-          </div>
-
-            <!-- Large Bag (Pink) -->
-            <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group">
-              <div class="w-18 h-24 rounded-2xl bg-pink-500/10 border-2 border-pink-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <img 
-                src="/static/assets/bag_large.png" 
-                onerror="this.onerror=null; this.src='/static/assets/lg_pink_Sour Apple.jpg';" 
-                alt="Large Bag" 
-                class="max-h-36 w-auto object-contain group-hover:scale-105 transition" 
-              />
-              
-              </div>
-              <span class="text-xs font-bold text-slate-800">Large Bag</span>
-              <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
-              <span class="text-[9px] text-slate-400">(approx. 30" x 40")</span>
-            </div>
-
-          </div>
-
-         
 
     </div>
   </main>
@@ -333,7 +366,7 @@
         <!-- MVCC Student Option -->
         <button 
           onclick="handleStatusSelected('College Student')" 
-          class="w-full p-4 rounded-2xl border-2 border-[#ff66c4] bg-pink-50/80 hover:bg-pink-100/80 flex items-center justify-between transition shadow-sm group"
+          class="w-full p-4 rounded-2xl border-2 border-[#00703C] bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-between transition shadow-sm group"
         >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🎓</span>
@@ -431,15 +464,15 @@
     </div>
   </div>
 
-  <!-- ==================== STEP 3: ORDER BOOKING MODAL (BAG SIZES & DETAILS) ==================== -->
+  <!-- ==================== STEP 3: ORDER BOOKING MODAL (BAG SIZES, DETERGENT, TEMP, PHOTO & SCROLLABLE CONTRACT) ==================== -->
   <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-    <div class="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl my-8 relative">
+    <div class="bg-white w-full max-w-lg rounded-3xl p-5 sm:p-7 shadow-2xl my-8 relative max-h-[92vh] overflow-y-auto custom-scrollbar">
       <button onclick="toggleModal('bookingModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
         <div>
-          <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Book your VIP Laundry Service</h2>
-          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-ff66c4-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+          <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Book VIP Laundry Service</h2>
+          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
             🎓 MVCC Student & Faculty Rate ($10 Off)
           </span>
         </div>
@@ -449,81 +482,167 @@
 
       <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-4">
         
-        <!-- THE 3 BAGS & 3 PRICES -->
+        <!-- BAG SIZE SELECTION -->
         <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-2">Select Your Bag Size</label>
-          <div class="grid grid-cols-3 gap-2.5">
+          <label class="text-xs font-semibold text-slate-700 block mb-1.5">1. Select Bag Size</label>
+          <div class="grid grid-cols-3 gap-2">
             <!-- Small -->
-            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-3 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm">
-              <span class="text-xs font-bold text-slate-800">Small Bag</span>
-              <span id="bookingPriceSmall" class="text-lg font-black text-emerald-600 my-0.5">$10</span>
-              <span class="text-[10px] text-slate-400">18" x 27"</span>
+            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-2.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm">
+              <span class="text-xs font-bold text-slate-800">Small</span>
+              <span id="bookingPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$10</span>
+              <span class="text-[9px] text-slate-400">18" x 27"</span>
             </button>
 
             <!-- Medium -->
-            <button type="button" onclick="selectBag('Medium')" id="cardBagMedium" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
-              <span class="text-xs font-bold text-slate-800">Medium Bag</span>
-              <span id="bookingPriceMedium" class="text-lg font-black text-emerald-600 my-0.5">$20</span>
-              <span class="text-[10px] text-slate-400">24" x 32"</span>
+            <button type="button" onclick="selectBag('Medium')" id="cardBagMedium" class="p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
+              <span class="text-xs font-bold text-slate-800">Medium</span>
+              <span id="bookingPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$20</span>
+              <span class="text-[9px] text-slate-400">24" x 32"</span>
             </button>
 
             <!-- Large -->
-            <button type="button" onclick="selectBag('Large')" id="cardBagLarge" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
-              <span class="text-xs font-bold text-slate-800">Large Bag</span>
-              <span id="bookingPriceLarge" class="text-lg font-black text-emerald-600 my-0.5">$30</span>
-              <span class="text-[10px] text-slate-400">30" x 40"</span>
+            <button type="button" onclick="selectBag('Large')" id="cardBagLarge" class="p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
+              <span class="text-xs font-bold text-slate-800">Large</span>
+              <span id="bookingPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$30</span>
+              <span class="text-[9px] text-slate-400">30" x 40"</span>
             </button>
           </div>
         </div>
 
+        <!-- 2. IN-APP BAG PHOTO FEATURE -->
+        <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+              <span>📸</span> Bag Photo Verification
+            </span>
+            <span class="text-[10px] text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded-full">Required</span>
+          </div>
+          <p class="text-[10px] text-slate-500 mb-2 leading-tight">
+            Bag must have a <strong>drawstring, zipper, Velcro, or snaps</strong>. No open laundry baskets.
+          </p>
+
+          <input type="file" accept="image/*" capture="environment" id="bagPhotoInput" onchange="previewBagPhoto(event)" class="hidden" />
+          
+          <div id="photoPlaceholderContainer">
+            <button 
+              type="button" 
+              onclick="document.getElementById('bagPhotoInput').click()" 
+              class="w-full py-2.5 px-3 bg-white border-2 border-dashed border-emerald-400 hover:bg-emerald-50/50 rounded-xl text-xs font-bold text-emerald-700 flex items-center justify-center gap-2 transition"
+            >
+              <span>📷</span> Take Photo or Upload Bag Picture
+            </button>
+          </div>
+
+          <!-- Uploaded Preview -->
+          <div id="photoPreviewContainer" class="hidden mt-2 flex items-center justify-between bg-white p-2 rounded-xl border border-emerald-200">
+            <div class="flex items-center gap-2.5">
+              <img id="bagPhotoPreview" src="" alt="Bag Preview" class="w-12 h-12 object-cover rounded-lg border border-slate-200" />
+              <div class="text-left">
+                <span class="text-xs font-bold text-emerald-900 block">Bag Photo Attached!</span>
+                <span class="text-[10px] text-slate-400">Ready for admin verification</span>
+              </div>
+            </div>
+            <button type="button" onclick="removeBagPhoto()" class="text-[10px] text-red-600 hover:text-red-800 font-bold px-2 py-1 bg-red-50 rounded-lg">
+              Remove
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. DETERGENT PREFERENCE -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">2. Detergent Preference</label>
+          <div class="grid grid-cols-3 gap-1.5 text-center">
+            <button type="button" onclick="selectDetergent('Standard')" id="btnDetStandard" class="p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/70 text-[11px] font-bold text-slate-800 transition">
+              🌸 VIP Scented Formula
+            </button>
+            <button type="button" onclick="selectDetergent('FragranceFree')" id="btnDetFragranceFree" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
+              🌿 Fragrance-Free (Free & Clear)
+            </button>
+            <button type="button" onclick="selectDetergent('CustomerProvided')" id="btnDetCustomerProvided" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
+              🧴 My Own Detergent
+            </button>
+          </div>
+          <p id="detNote" class="text-[10px] text-emerald-700 mt-1 font-medium">Standard formula includes premium scented detergent, OxiClean, scent boosters, and softener.</p>
+        </div>
+
+        <!-- 4. WATER TEMPERATURE SELECTION -->
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">3. Wash Temperature</label>
+          <div class="grid grid-cols-3 gap-1.5 text-center">
+            <button type="button" onclick="selectTemp('Cold')" id="btnTempCold" class="p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/70 text-[11px] font-bold text-slate-800 transition">
+              ❄️ Cold (Default)
+            </button>
+            <button type="button" onclick="selectTemp('Warm')" id="btnTempWarm" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
+              🌡️ Warm
+            </button>
+            <button type="button" onclick="selectTemp('Hot')" id="btnTempHot" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
+              🔥 Hot
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-400 mt-0.5 block">Cold wash protects fabric color & prevents shrinkage.</span>
+        </div>
+
+        <!-- Campus Dorm or Drop-off address -->
         <div id="dormFieldContainer">
-          <label class="text-xs font-semibold text-slate-700 block mb-1">Dorm / Campus Location</label>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Campus Building / Dorm Location</label>
           <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
         </div>
 
-        <div class="grid grid-cols-2 gap-2.5">
+        <div class="grid grid-cols-2 gap-2">
           <div>
-            <label class="text-xs font-semibold text-slate-700 block mb-1">Contact Name</label>
-            <input type="text" id="nameInput" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Customer Name</label>
+            <input type="text" id="nameInput" class="w-full text-xs p-2 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
           </div>
           <div>
             <label class="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
-            <input type="tel" id="phoneInput" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
+            <input type="tel" id="phoneInput" class="w-full text-xs p-2 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
           </div>
         </div>
 
         <!-- Add-ons -->
-        <div class="space-y-2 pt-1 border-t border-slate-100">
+        <div class="space-y-1.5 pt-1 border-t border-slate-100">
           <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
-            <span>⚡ Same-Day Rush (+$20)</span>
-            <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-emerald-600" />
+            <span>⚡ Same-Day Rush (+$20) <span class="text-[10px] text-slate-400">(Before 10am drop-off)</span></span>
+            <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-emerald-600 w-4 h-4" />
           </label>
           <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
-            <span>🛏️ Bedding / Comforter (+$25)</span>
-            <input type="checkbox" id="checkBedding" onchange="calcTotal()" class="rounded text-emerald-600" />
+            <span>🛏️ Bedding / Bulky Comforter (+$25)</span>
+            <input type="checkbox" id="checkBedding" onchange="calcTotal()" class="rounded text-emerald-600 w-4 h-4" />
           </label>
         </div>
 
-        <!-- Digital Contract -->
-        <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
-          <span class="text-[11px] font-bold text-slate-800 block">Digital Service Agreement</span>
-          <p class="text-[10px] text-slate-500 leading-relaxed">
-            Standard 48-72h turnaround. Closed drawstring/zippered bags required. Max $100 per bag standard liability. Unclaimed laundry donated after 30 days.
-          </p>
-          <label class="flex items-start gap-2 text-[10px] text-slate-700 cursor-pointer">
-            <input type="checkbox" id="checkContract" class="mt-0.5 text-emerald-600 rounded" required />
-            <span>I accept the Sour Apple VIP Service Agreement.</span>
+        <!-- 5. EMBEDDED SCROLLABLE CONTRACT WITH ALL VIP TERMS -->
+        <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-slate-900">VIP Service Agreement</span>
+            <span class="text-[9px] text-slate-400">Scroll to read all terms</span>
+          </div>
+
+          <!-- SCROLLABLE CONTAINER -->
+          <div class="max-h-36 overflow-y-auto p-3 bg-white border border-slate-200 rounded-xl text-[10px] text-slate-600 leading-relaxed space-y-2 shadow-inner custom-scrollbar select-text">
+            <p><strong>1. Scope of VIP Services:</strong> Sour Apple Wash & Fold VIP Laundry Services provides premier wash, dry, and fold care. Customers agree to place laundry in bags meeting our strict closure rules.</p>
+            <p><strong>2. Strict Bag Closure Policy:</strong> All laundry MUST be contained in closed bags fastened with drawstrings, zippers, Velcro, or snaps. Open baskets, unlidded hampers, and loose piles are strictly rejected for sanitation and transport safety.</p>
+            <p><strong>3. Turnaround & Curbside Delivery:</strong> Standard processing is 48 to 72 hours. Same-day rush (drop-off before 10:00 AM, ready after 5:00 PM) is subject to availability. Campus pickups for MVCC students, staff, and faculty will occur at verified curbside dorm checkpoints.</p>
+            <p><strong>4. Wash Care & Pocket Check:</strong> We follow your selected water temperature (Cold, Warm, Hot) and detergent choice (Standard VIP, Fragrance-Free, or Customer-Provided). Customers MUST inspect all pockets and remove pens, markers, coins, cosmetics, and sharp objects prior to drop-off. We are not responsible for damage caused by items left in pockets or natural fabric wear/dye-bleeding.</p>
+            <p><strong>5. Limitation of Liability:</strong> In the rare event of verified loss or processing damage, Sour Apple’s liability is strictly limited to a maximum of <strong>$100.00 per bag</strong>. High-value, delicate dry-clean-only garments, or irreplaceable sentimental items should not be submitted.</p>
+            <p><strong>6. Unclaimed Laundry & 30-Day Charity Donation:</strong> Orders not retrieved within 30 calendar days from the scheduled completion date will be deemed abandoned and donated to local Utica community charities.</p>
+            <p><strong>7. Electronic Signature:</strong> Checking the agreement box and typing your legal name below constitutes a legally binding electronic signature under the federal ESIGN Act and NY Electronic Signatures and Records Act.</p>
+          </div>
+
+          <label class="flex items-start gap-2 text-[11px] text-slate-800 cursor-pointer pt-1 font-semibold">
+            <input type="checkbox" id="checkContract" class="mt-0.5 text-emerald-600 rounded w-4 h-4" required />
+            <span>I have read, understood, and accept the Sour Apple VIP Service Agreement.</span>
           </label>
-          <input type="text" id="signatureInput" placeholder="Type full legal name to sign" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl outline-none" required />
+          <input type="text" id="signatureInput" placeholder="Type your full legal name to e-sign" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
         </div>
 
         <div class="flex items-center justify-between pt-2">
           <div>
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Estimated Total</span>
+            <span class="text-[9px] text-slate-400 uppercase tracking-wider block font-bold">Estimated Total</span>
             <span id="bookingTotalText" class="text-2xl font-black text-emerald-600">$10</span>
           </div>
 
-          <button type="submit" id="btnSubmitBooking" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-7 py-3 rounded-full shadow-lg shadow-emerald-600/30 transition">
+          <button type="submit" id="btnSubmitBooking" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-full shadow-lg shadow-emerald-600/30 transition">
             Confirm Booking &gt;
           </button>
         </div>
@@ -531,61 +650,85 @@
     </div>
   </div>
 
-  <!-- ==================== 5. PAYMENT MODAL ==================== -->
+  <!-- ==================== 4. PAYMENT MODAL WITH WORKING LINKS ==================== -->
   <div id="paymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
       <button onclick="toggleModal('paymentModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
       <div class="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl mx-auto mb-2">💳</div>
       <h3 class="text-lg font-bold text-slate-900">Secure Payment Options</h3>
-      <p class="text-xs text-slate-500 mb-4">Choose your preferred payment method</p>
+      <p class="text-xs text-slate-500 mb-4">Choose your preferred payment method below</p>
 
       <div class="space-y-3 text-left">
-        <!-- Stripe -->
-        <div class="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl">
+        <!-- 1. Stripe Credit Card / Apple Pay -->
+        <div class="p-4 bg-emerald-50/80 border-2 border-emerald-400 rounded-2xl">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs font-bold text-emerald-950">Credit / Debit Card / Apple Pay</span>
-            <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">Instant</span>
+            <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">Stripe Secure</span>
           </div>
-          <p class="text-[11px] text-slate-600 mb-2">Powered securely by Stripe</p>
-          <button onclick="launchStripePayment()" id="btnStripePay" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow">
+          <p class="text-[11px] text-slate-600 mb-2.5">Instant confirmation with invoice receipt.</p>
+          <button onclick="launchStripePayment()" id="btnStripePay" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow">
             Pay with Card or Apple Pay &gt;
           </button>
         </div>
 
-        <!-- Cash App -->
-        <div class="p-3.5 bg-green-50 border border-green-200 rounded-2xl flex items-center justify-between">
-          <div>
-            <span class="text-xs font-bold text-green-900 block">Cash App</span>
-            <span class="text-sm font-extrabold text-green-800">$SourAppleLaundry</span>
+        <!-- 2. Cash App (Clickable Link in New Tab) -->
+        <a 
+          href="https://cash.app/$SourAppleLaundry" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="block p-3.5 bg-green-50/90 border border-green-300 hover:bg-green-100 rounded-2xl transition group"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-full bg-green-500 text-white font-black text-sm flex items-center justify-center">$</span>
+              <div>
+                <span class="text-xs font-bold text-green-950 block">Cash App</span>
+                <span class="text-sm font-extrabold text-green-800">$SourAppleLaundry</span>
+              </div>
+            </div>
+            <span class="text-xs text-green-700 font-bold group-hover:translate-x-1 transition flex items-center gap-1">
+              Open App ↗
+            </span>
           </div>
-          <span class="text-[10px] text-green-700 font-semibold">Direct Handle</span>
-        </div>
+        </a>
 
-        <!-- Venmo -->
-        <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
-          <div>
-            <span class="text-xs font-bold text-blue-900 block">Venmo</span>
-            <span class="text-sm font-extrabold text-blue-800">@SourAppleLaundry</span>
+        <!-- 3. Venmo (Clickable Link in New Tab) -->
+        <a 
+          href="https://account.venmo.com/u/SourAppleLaundry" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="block p-3.5 bg-blue-50/90 border border-blue-300 hover:bg-blue-100 rounded-2xl transition group"
+        >
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 h-8 rounded-full bg-blue-500 text-white font-black text-sm flex items-center justify-center">V</span>
+              <div>
+                <span class="text-xs font-bold text-blue-950 block">Venmo</span>
+                <span class="text-sm font-extrabold text-blue-800">@SourAppleLaundry</span>
+              </div>
+            </div>
+            <span class="text-xs text-blue-700 font-bold group-hover:translate-x-1 transition flex items-center gap-1">
+              Open App ↗
+            </span>
           </div>
-          <span class="text-[10px] text-blue-700 font-semibold">Direct Handle</span>
-        </div>
+        </a>
       </div>
 
       <button onclick="toggleModal('paymentModal')" class="mt-5 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition">
-        Close
+        Done
       </button>
     </div>
   </div>
 
-  <!-- ==================== 6. ORDERS MODAL ==================== -->
+  <!-- ==================== 5. ORDERS MODAL ==================== -->
   <div id="ordersModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
       <button onclick="toggleModal('ordersModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
       <h3 class="text-lg font-bold text-slate-900 mb-1">My Bookings</h3>
       <p class="text-xs text-slate-500 mb-4">Order tracking & status history</p>
 
-      <div id="ordersList" class="space-y-3 max-h-80 overflow-y-auto pr-1">
+      <div id="ordersList" class="space-y-3 max-h-80 overflow-y-auto pr-1 custom-scrollbar">
         <p class="text-xs text-slate-400 text-center py-6">No recent bookings found.</p>
       </div>
     </div>
@@ -595,6 +738,9 @@
   <script>
     let selectedStatus = 'Non-Student'; // Default standard pricing
     let selectedBagSize = 'Small';
+    let selectedDetergent = 'Standard';
+    let selectedTemp = 'Cold';
+    let bagPhotoBase64 = null;
     let lastBookedOrderId = null;
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -680,7 +826,7 @@
     }
 
     function showNotificationsAlert() {
-      alert("No new notifications. Order updates are sent directly to your registered email!");
+      alert("No new notifications. Order updates are dispatched directly to your registered email!");
     }
 
     // Toggle MVCC Pricing on the banner
@@ -717,11 +863,11 @@
       if (isMvcc) {
         title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
         subtitle.innerHTML = 'Showing exclusive student & staff prices!';
-        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-sm";
+        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer relative z-30";
       } else {
         title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
-        subtitle.innerHTML = 'Show your MVCC ID and get exclusive rates!';
-        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff66c4] border border-pink-200 flex items-center justify-between transition text-left";
+        subtitle.innerHTML = 'Show your MVCC ID and get exclusive $10 off rates!';
+        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border-2 border-emerald-300 flex items-center justify-between transition text-left cursor-pointer relative z-30";
       }
     }
 
@@ -751,6 +897,63 @@
       } else {
         openOrderModalWithUser(user);
       }
+    }
+
+    // Detergent Preference Selector
+    function selectDetergent(type) {
+      selectedDetergent = type;
+      ['Standard', 'FragranceFree', 'CustomerProvided'].forEach(t => {
+        const btn = document.getElementById('btnDet' + t);
+        if (t === type) {
+          btn.className = "p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/80 text-[11px] font-bold text-slate-800 transition";
+        } else {
+          btn.className = "p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition";
+        }
+      });
+
+      const note = document.getElementById('detNote');
+      if (type === 'Standard') {
+        note.textContent = "Standard formula includes premium scented detergent, OxiClean, scent boosters, and softener.";
+      } else if (type === 'FragranceFree') {
+        note.textContent = "Hypoallergenic, dye-free & perfume-free gentle formula.";
+      } else {
+        note.textContent = "Please clearly place your detergent bottle or pods inside your laundry bag.";
+      }
+    }
+
+    // Water Temperature Selector
+    function selectTemp(temp) {
+      selectedTemp = temp;
+      ['Cold', 'Warm', 'Hot'].forEach(t => {
+        const btn = document.getElementById('btnTemp' + t);
+        if (t === temp) {
+          btn.className = "p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/80 text-[11px] font-bold text-slate-800 transition";
+        } else {
+          btn.className = "p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition";
+        }
+      });
+    }
+
+    // In-App Bag Photo Handling
+    function previewBagPhoto(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        bagPhotoBase64 = e.target.result;
+        document.getElementById('bagPhotoPreview').src = bagPhotoBase64;
+        document.getElementById('photoPlaceholderContainer').classList.add('hidden');
+        document.getElementById('photoPreviewContainer').classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeBagPhoto() {
+      bagPhotoBase64 = null;
+      document.getElementById('bagPhotoInput').value = '';
+      document.getElementById('photoPreviewContainer').classList.add('hidden');
+      document.getElementById('photoPlaceholderContainer').classList.remove('hidden');
     }
 
     // Auth Modal Logic
@@ -880,6 +1083,8 @@
       document.getElementById('bookingPriceLarge').textContent = isStudent ? '$30' : '$40';
 
       selectBag(selectedBagSize || 'Small');
+      selectDetergent('Standard');
+      selectTemp('Cold');
       calcTotal();
       document.getElementById('bookingModal').classList.remove('hidden');
     }
@@ -889,9 +1094,9 @@
       ['Small', 'Medium', 'Large'].forEach(s => {
         const card = document.getElementById('cardBag' + s);
         if (s === size) {
-          card.className = "p-3 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm";
+          card.className = "p-2.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm";
         } else {
-          card.className = "p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition";
+          card.className = "p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition";
         }
       });
       calcTotal();
@@ -923,6 +1128,12 @@
         return;
       }
 
+      if (!bagPhotoBase64) {
+        alert("Please attach a photo of your closed laundry bag before submitting.");
+        document.getElementById('bagPhotoInput').click();
+        return;
+      }
+
       const btn = document.getElementById('btnSubmitBooking');
       const alertBox = document.getElementById('bookingAlert');
       btn.disabled = true;
@@ -939,6 +1150,9 @@
         bags: 1,
         rush: document.getElementById('checkRush').checked,
         bedding_addon: document.getElementById('checkBedding').checked,
+        detergent_preference: selectedDetergent,
+        water_temperature: selectedTemp,
+        bag_photo_url: bagPhotoBase64,
         digital_contract_accepted: document.getElementById('checkContract').checked,
         e_signature: document.getElementById('signatureInput').value,
         pickup_date: new Date().toISOString().split('T')[0],
@@ -964,7 +1178,7 @@
         localStorage.setItem('my_orders', JSON.stringify(myOrders));
 
         alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 block";
-        alertBox.innerHTML = `✅ <strong>Booking Confirmed!</strong> Code: ${data.code}. Alert sent to admin email.`;
+        alertBox.innerHTML = `✅ <strong>Booking Confirmed!</strong> Code: ${data.code}. Alert and bag photo sent to admin email.`;
 
         setTimeout(() => {
           toggleModal('bookingModal');
@@ -985,15 +1199,17 @@
     async function launchStripePayment() {
       const btn = document.getElementById('btnStripePay');
       btn.disabled = true;
-      btn.textContent = "Redirecting to Stripe...";
+      btn.textContent = "Connecting to Stripe Checkout...";
 
       const myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
       const orderId = lastBookedOrderId || (myOrders.length > 0 ? myOrders[0].id : null);
 
       if (!orderId) {
-        alert("Please book your laundry service first to generate your payment checkout.");
+        alert("Please book your laundry service first so your bag size and price can be calculated for card payment.");
         btn.disabled = false;
         btn.textContent = "Pay with Card or Apple Pay >";
+        toggleModal('paymentModal');
+        openBookingStep1();
         return;
       }
 
@@ -1002,7 +1218,7 @@
           method: 'POST'
         });
         const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || 'Stripe payment error');
+        if (!res.ok) throw new Error(data.detail || 'Stripe payment session error');
 
         if (data.checkout_url) {
           window.location.href = data.checkout_url;
@@ -1029,7 +1245,7 @@
             <span class="text-emerald-600 font-extrabold text-sm">$${o.total_price}</span>
           </div>
           <div class="text-slate-500 text-[11px] mt-1">Status: <span class="text-amber-600 font-semibold">${o.status}</span></div>
-          <div class="text-slate-400 text-[10px] mt-0.5">Bag: ${o.bag_size} • ${o.dorm || 'South Utica'}</div>
+          <div class="text-slate-400 text-[10px] mt-0.5">Bag: ${o.bag_size} • Temp: ${o.water_temperature || 'Cold'} • ${o.dorm || 'South Utica'}</div>
         </div>
       `).join('');
     }
