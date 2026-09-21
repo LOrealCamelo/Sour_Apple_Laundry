@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Sour Apple Wash & Fold VIP Laundry Services</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -10,67 +10,60 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Montserrat:wght@800;900&display=swap');
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .collegiate { font-family: 'Montserrat', sans-serif; letter-spacing: 0.05em; }
+    .brush-ribbon {
+      background: #16a34a;
+      border-radius: 9999px;
+      transform: rotate(-1.5deg);
+    }
   </style>
 </head>
 
-<body class="bg-slate-100 antialiased text-slate-800 min-h-screen flex flex-col">
+<body class="bg-[#eef8f2] antialiased text-slate-800 min-h-screen flex flex-col pb-20">
 
   <!-- ==================== TOP NAVIGATION BAR ==================== -->
-  <header class="w-full bg-white/95 backdrop-blur border-b border-slate-200 sticky top-0 z-40 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
+  <header class="w-full bg-white/95 backdrop-blur border-b border-emerald-100 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-md mx-auto sm:max-w-4xl px-4 h-16 flex items-center justify-between">
       
-      <!-- New Logo (icon777.png) -->
-      <div class="flex items-center gap-3 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
+      <!-- Brand & Mascot Logo -->
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <img 
           src="/static/assets/icon777.png" 
           onerror="this.onerror=null; this.src='/static/assets/new_logo.png';" 
           alt="Sour Apple Logo" 
-          class="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-full shadow-sm hover:scale-105 transition" 
+          class="w-10 h-10 object-contain rounded-full shadow-sm" 
         />
         <div>
-          <span class="font-extrabold text-slate-900 text-sm sm:text-lg leading-tight block">Sour Apple</span>
-          <span class="text-[10px] sm:text-xs text-emerald-600 font-bold tracking-wide">Wash & Fold VIP Laundry Services</span>
+          <span class="font-extrabold text-slate-900 text-sm leading-tight block">Sour Apple</span>
+          <span class="text-[10px] text-emerald-600 font-bold tracking-tight">VIP Laundry Services</span>
         </div>
       </div>
 
-      <!-- Desktop Nav with MVCC Collegiate Button & Auth -->
-      <nav class="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-semibold text-slate-600">
-        <!-- Collegiate MVCC Button in Top Menu -->
+      <!-- Right Header Actions (Matching Classic Mobile Mockup) -->
+      <div class="flex items-center gap-2">
+        <!-- Account / Profile Circle Button -->
         <button 
-          onclick="startBookingWithStatus('College Student')" 
-          class="collegiate bg-[#00703C] hover:bg-[#005a30] text-white font-extrabold text-xs px-4 py-2 rounded-full border-2 border-white shadow-md shadow-emerald-950/20 flex items-center gap-2 hover:scale-105 transition uppercase"
+          id="btnHeaderProfile" 
+          onclick="handleProfileButtonClick()" 
+          class="w-9 h-9 rounded-full bg-[#16a34a] hover:bg-[#15803d] text-white flex items-center justify-center shadow-sm transition"
+          title="My Account"
         >
-          <span class="text-base">🎓</span>
-          <span>MVCC Hawks VIP Rates</span>
+          <span class="text-sm">👤</span>
         </button>
 
-        <button onclick="toggleModal('paymentModal')" class="hover:text-emerald-600 transition">Payment Options</button>
-        <button onclick="toggleModal('ordersModal'); loadMyOrders();" class="hover:text-emerald-600 transition">My Bookings</button>
-
-        <!-- Dynamic Auth Button (Sign In / Account) -->
-        <div id="desktopAuthContainer">
-          <button onclick="openAuthModal('signin')" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-full border border-slate-300 transition">
-            <span>👤</span>
-            <span>Sign In / Create Account</span>
-          </button>
-        </div>
-      </nav>
-
-      <!-- Right CTA -->
-      <div class="flex items-center gap-2 sm:gap-3">
-        <button onclick="openBookingStep1()" class="hidden sm:inline-flex bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-full shadow-md shadow-emerald-600/30 transition">
-          Book VIP Service &gt;
-        </button>
-
-        <!-- Mobile Drawer Toggle -->
-        <button onclick="toggleDrawer(true)" class="md:hidden w-10 h-10 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center text-slate-800 transition">
-          <div class="flex flex-col gap-1 w-4">
-            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
-            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
-            <span class="block h-0.5 w-full bg-slate-800 rounded-full"></span>
+        <!-- Hamburger Drawer Button -->
+        <button 
+          onclick="toggleDrawer(true)" 
+          class="w-9 h-9 rounded-full bg-white border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-700 shadow-sm transition"
+          title="Menu"
+        >
+          <div class="flex flex-col gap-1 w-4 items-center">
+            <span class="block h-0.5 w-full bg-slate-700 rounded-full"></span>
+            <span class="block h-0.5 w-full bg-slate-700 rounded-full"></span>
+            <span class="block h-0.5 w-full bg-slate-700 rounded-full"></span>
           </div>
         </button>
       </div>
+
     </div>
   </header>
 
@@ -87,18 +80,18 @@
       </div>
 
       <nav class="mt-6 flex flex-col gap-2">
-        <div id="mobileAuthContainer" class="mb-2">
-          <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-slate-100 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-slate-200">
+        <div id="drawerUserStatus" class="mb-2">
+          <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-emerald-50 text-emerald-800 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-emerald-200">
             <span>👤</span> Sign In / Create Account
           </button>
         </div>
 
-        <button onclick="toggleDrawer(false); startBookingWithStatus('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
+        <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
           <span>🎓</span> MVCC HAWKS VIP RATES
         </button>
 
         <button onclick="toggleDrawer(false); openBookingStep1();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
-          <span>📅</span> Book your VIP Laundry Service
+          <span>📅</span> Book VIP Laundry Service
         </button>
         <button onclick="toggleDrawer(false); toggleModal('ordersModal'); loadMyOrders();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
           <span>🧺</span> My Bookings & Tracking
@@ -117,63 +110,231 @@
     </div>
   </aside>
 
-  <!-- ==================== MAIN STOREFRONT ARTWORK ==================== -->
-  <main class="w-full bg-slate-100 py-4 sm:py-6 flex flex-col items-center flex-grow">
-    <div class="max-w-6xl w-full px-3 sm:px-6 flex justify-center">
+  <!-- ==================== MAIN CONTENT (FULL-BLEED MOBILE LAYOUT) ==================== -->
+  <main class="w-full flex flex-col items-center flex-grow">
+    <div class="w-full max-w-md sm:max-w-xl mx-auto flex flex-col">
       
-      <div class="relative w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-300 bg-white">
+      <!-- ==================== 1. HERO ARTWORK & OVERLAY BUTTONS ==================== -->
+      <section class="relative w-full overflow-hidden bg-white shadow-sm sm:rounded-b-3xl">
         
-        <!-- 100% Full Uncut Artwork -->
+        <!-- Artwork Image extending full-width -->
         <img 
           src="/static/assets/hero_art3.png" 
           onerror="this.onerror=null; this.src='/static/assets/hero_art2.png';" 
-          alt="Sour Apple Wash & Fold VIP Laundry Services" 
+          alt="Sour Apple Wash & Fold" 
           class="w-full h-auto object-contain block select-none"
         />
 
-        <!-- 4 Cards on the grey brick wall right above washing machines -->
-        <div class="absolute left-[30%] top-[33%] w-[48%] grid grid-cols-4 gap-1 sm:gap-2 z-20">
-          <button onclick="openBookingStep1()" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center hover:scale-105 transition">
-            <span class="text-xs sm:text-lg">📅</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Book</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Choose time</span>
+        <!-- 4 BUTTONS: Moved up onto the gray brick wall between 'Our Services' and the washing machine -->
+        <div class="absolute left-[31%] top-[27.5%] w-[45%] grid grid-cols-4 gap-1 z-20">
+          <button onclick="openBookingStep1()" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
+            <span class="text-[10px] sm:text-xs">📅</span>
+            <span class="text-[7px] sm:text-[9px] font-bold text-slate-800 leading-none mt-0.5">Book</span>
           </button>
 
-          <button onclick="toggleModal('paymentModal')" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center hover:scale-105 transition">
-            <span class="text-xs sm:text-lg">💳</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Pay</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Secure & easy</span>
+          <button onclick="toggleModal('paymentModal')" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
+            <span class="text-[10px] sm:text-xs">💳</span>
+            <span class="text-[7px] sm:text-[9px] font-bold text-slate-800 leading-none mt-0.5">Pay</span>
           </button>
 
-          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center">
-            <span class="text-xs sm:text-lg">🧼</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Wash</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Fresh & clean</span>
-          </div>
+          <button onclick="scrollToServices()" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
+            <span class="text-[10px] sm:text-xs">🧼</span>
+            <span class="text-[7px] sm:text-[9px] font-bold text-slate-800 leading-none mt-0.5">We Wash</span>
+          </button>
 
-          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center">
-            <span class="text-xs sm:text-lg">👕</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Fold</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Ready for you</span>
-          </div>
+          <button onclick="scrollToServices()" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
+            <span class="text-[10px] sm:text-xs">👕</span>
+            <span class="text-[7px] sm:text-[9px] font-bold text-slate-800 leading-none mt-0.5">We Fold</span>
+          </button>
         </div>
 
-        <!-- Green VIP Button centered under the washer and dryer -->
-        <div class="absolute left-1/2 -translate-x-1/2 top-[77%] w-[46%] max-w-[380px] z-20">
+        <!-- BOOKING BUTTON: Moved all the way up right above the washing machines -->
+        <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-500 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold text-xs sm:text-sm md:text-base py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-full shadow-2xl shadow-emerald-950/50 border-2 border-emerald-300 flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-emerald-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
-            <span class="text-sm sm:text-lg">📅</span>
+            <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
-            <span class="text-sm sm:text-lg">&gt;</span>
+            <span>&gt;</span>
           </button>
         </div>
 
-      </div>
+      </section>
+
+      <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
+      <section class="px-3 pt-3 pb-2 w-full">
+        <div class="grid grid-cols-4 gap-2">
+          
+          <!-- Card 1: Book -->
+          <button onclick="openBookingStep1()" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              📅
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">Book</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Choose time</span>
+          </button>
+
+          <!-- Card 2: Pay -->
+          <button onclick="toggleModal('paymentModal')" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              💳
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">Pay</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Secure & easy</span>
+          </button>
+
+          <!-- Card 3: We Wash -->
+          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              🧼
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">We Wash</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Fresh & clean</span>
+          </div>
+
+          <!-- Card 4: We Fold -->
+          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
+            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
+              👕
+            </div>
+            <span class="text-xs font-bold text-slate-900 leading-tight">We Fold</span>
+            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Ready for you</span>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
+      <section id="servicesSection" class="px-3 py-2 w-full">
+        
+        <!-- Brush Ribbon Title -->
+        <div class="inline-block px-4 py-1 brush-ribbon text-white font-extrabold text-sm shadow-sm mb-2.5">
+          Our Services
+        </div>
+
+        <!-- Sizing & Bags White Container -->
+        <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
+          
+          <!-- 3 Bags Row -->
+          <div class="grid grid-cols-3 gap-2 text-center items-end pb-3 border-b border-slate-100">
+            
+            <!-- Small Bag (Green) -->
+            <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group">
+              <div class="w-14 h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-2xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-emerald-800 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Small Bag</span>
+              <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
+              <span class="text-[9px] text-slate-400">(approx. 18" x 27")</span>
+            </div>
+
+            <!-- Medium Bag (Navy Blue) -->
+            <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group">
+              <div class="w-16 h-20 rounded-2xl bg-blue-500/10 border-2 border-blue-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-3xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-blue-900 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Medium Bag</span>
+              <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
+              <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
+            </div>
+
+            <!-- Large Bag (Pink) -->
+            <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group">
+              <div class="w-18 h-24 rounded-2xl bg-pink-500/10 border-2 border-pink-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
+                <span class="text-3xl">🍏</span>
+                <span class="absolute top-0.5 text-[8px] font-black text-pink-700 uppercase">Drawstring</span>
+              </div>
+              <span class="text-xs font-bold text-slate-800">Large Bag</span>
+              <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
+              <span class="text-[9px] text-slate-400">(approx. 30" x 40")</span>
+            </div>
+
+          </div>
+
+          <!-- MVCC Student & Staff Pricing Banner Button -->
+          <button 
+            id="btnMvccToggle"
+            onclick="toggleMvccPricing()" 
+            class="w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left"
+          >
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+                🎓
+              </div>
+              <div>
+                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
+                  MVCC Student, Faculty & Staff Pricing &gt;
+                </span>
+                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
+                  Show your MVCC ID and get exclusive rates!
+                </span>
+              </div>
+            </div>
+
+            <div class="text-right flex-shrink-0">
+              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
+            </div>
+          </button>
+
+        </div>
+      </section>
 
     </div>
   </main>
+
+  <!-- ==================== 4. CLASSIC MOBILE BOTTOM NAVIGATION BAR ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-emerald-100 py-1.5 px-4 flex justify-around items-center shadow-lg">
+    
+    <!-- Home -->
+    <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center text-emerald-600">
+      <div class="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-base">
+        🏠
+      </div>
+      <span class="text-[10px] font-bold mt-0.5">Home</span>
+      <span class="w-4 h-0.5 bg-emerald-600 rounded-full mt-0.5"></span>
+    </button>
+
+    <!-- Bookings -->
+    <button onclick="toggleModal('ordersModal'); loadMyOrders();" class="flex flex-col items-center text-slate-500 hover:text-emerald-600">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-base">
+        📅
+      </div>
+      <span class="text-[10px] font-medium mt-0.5">Bookings</span>
+      <span class="w-4 h-0.5 bg-transparent rounded-full mt-0.5"></span>
+    </button>
+
+    <!-- Services -->
+    <button onclick="scrollToServices()" class="flex flex-col items-center text-slate-500 hover:text-emerald-600">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-base">
+        🏷️
+      </div>
+      <span class="text-[10px] font-medium mt-0.5">Services</span>
+      <span class="w-4 h-0.5 bg-transparent rounded-full mt-0.5"></span>
+    </button>
+
+    <!-- Notifications -->
+    <button onclick="showNotificationsAlert()" class="flex flex-col items-center text-slate-500 hover:text-emerald-600">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-base">
+        🔔
+      </div>
+      <span class="text-[10px] font-medium mt-0.5">Notifications</span>
+      <span class="w-4 h-0.5 bg-transparent rounded-full mt-0.5"></span>
+    </button>
+
+    <!-- Account -->
+    <button onclick="handleProfileButtonClick()" class="flex flex-col items-center text-slate-500 hover:text-emerald-600">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-base">
+        👤
+      </div>
+      <span class="text-[10px] font-medium mt-0.5">Account</span>
+      <span class="w-4 h-0.5 bg-transparent rounded-full mt-0.5"></span>
+    </button>
+
+  </nav>
 
   <!-- ==================== STEP 1: CHOOSE STUDENT OR NON-STUDENT MODAL ==================== -->
   <div id="statusModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
@@ -386,7 +547,7 @@
     </div>
   </div>
 
-  <!-- ==================== 4. PAYMENT MODAL ==================== -->
+  <!-- ==================== 5. PAYMENT MODAL ==================== -->
   <div id="paymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
       <button onclick="toggleModal('paymentModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -433,7 +594,7 @@
     </div>
   </div>
 
-  <!-- ==================== 5. ORDERS MODAL ==================== -->
+  <!-- ==================== 6. ORDERS MODAL ==================== -->
   <div id="ordersModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
       <button onclick="toggleModal('ordersModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -448,13 +609,13 @@
 
   <!-- ==================== SCRIPT LOGIC ==================== -->
   <script>
-    let selectedStatus = 'College Student';
+    let selectedStatus = 'Non-Student'; // Default standard pricing
     let selectedBagSize = 'Small';
     let lastBookedOrderId = null;
 
-    // Check Auth on Load
     document.addEventListener('DOMContentLoaded', () => {
       renderAuthUI();
+      updatePricingDisplay();
     });
 
     function getSavedUser() {
@@ -471,37 +632,39 @@
 
     function renderAuthUI() {
       const user = getSavedUser();
-      const desktopContainer = document.getElementById('desktopAuthContainer');
-      const mobileContainer = document.getElementById('mobileAuthContainer');
+      const profileBtn = document.getElementById('btnHeaderProfile');
+      const drawerStatus = document.getElementById('drawerUserStatus');
 
       if (user) {
-        const firstName = user.name.split(' ')[0] || 'Member';
-        const loggedInHtml = `
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-emerald-800">👤 Hi, ${firstName}</span>
-            <button onclick="handleLogout()" class="text-[10px] text-slate-400 hover:text-red-600 underline font-semibold">Sign Out</button>
-          </div>
-        `;
-        if (desktopContainer) desktopContainer.innerHTML = loggedInHtml;
-        if (mobileContainer) mobileContainer.innerHTML = `
-          <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between">
-            <span class="text-xs font-bold text-emerald-900">👤 Hi, ${user.name}</span>
-            <button onclick="handleLogout()" class="text-xs text-red-600 font-bold underline">Sign Out</button>
-          </div>
-        `;
+        const firstName = user.name.split(' ')[0] || 'VIP';
+        if (profileBtn) profileBtn.innerHTML = `<span class="text-xs font-black">${firstName[0]}</span>`;
+        if (drawerStatus) {
+          drawerStatus.innerHTML = `
+            <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-900">👤 Hi, ${user.name}</span>
+              <button onclick="handleLogout()" class="text-xs text-red-600 font-bold underline">Sign Out</button>
+            </div>
+          `;
+        }
       } else {
-        const loggedOutHtml = `
-          <button onclick="openAuthModal('signin')" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-full border border-slate-300 transition">
-            <span>👤</span>
-            <span>Sign In / Create Account</span>
-          </button>
-        `;
-        if (desktopContainer) desktopContainer.innerHTML = loggedOutHtml;
-        if (mobileContainer) mobileContainer.innerHTML = `
-          <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-slate-100 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-slate-200">
-            <span>👤</span> Sign In / Create Account
-          </button>
-        `;
+        if (profileBtn) profileBtn.innerHTML = `<span>👤</span>`;
+        if (drawerStatus) {
+          drawerStatus.innerHTML = `
+            <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-emerald-50 text-emerald-800 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-emerald-200">
+              <span>👤</span> Sign In / Create Account
+            </button>
+          `;
+        }
+      }
+    }
+
+    function handleProfileButtonClick() {
+      const user = getSavedUser();
+      if (user) {
+        toggleModal('ordersModal');
+        loadMyOrders();
+      } else {
+        openAuthModal('signin');
       }
     }
 
@@ -528,27 +691,80 @@
       document.getElementById(id).classList.toggle('hidden');
     }
 
-    // Step 1: Open status choice
-    function openBookingStep1() {
-      document.getElementById('statusModal').classList.remove('hidden');
+    function scrollToServices() {
+      document.getElementById('servicesSection').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function startBookingWithStatus(statusType) {
+    function showNotificationsAlert() {
+      alert("No new notifications. Order updates are sent directly to your registered email!");
+    }
+
+    // Toggle MVCC Pricing on the banner
+    function toggleMvccPricing() {
+      if (selectedStatus === 'College Student') {
+        selectedStatus = 'Non-Student';
+      } else {
+        selectedStatus = 'College Student';
+      }
+      updatePricingDisplay();
+    }
+
+    function setCustomerType(statusType) {
       selectedStatus = statusType;
-      handleStatusSelected(statusType);
+      updatePricingDisplay();
+      openBookingStep1();
     }
 
-    // Step 2: Handle Status Choice & Check Auth
+    function updatePricingDisplay() {
+      const isMvcc = (selectedStatus === 'College Student');
+      
+      const pSmall = isMvcc ? '$10' : '$20';
+      const pMed = isMvcc ? '$20' : '$30';
+      const pLarge = isMvcc ? '$30' : '$40';
+
+      document.getElementById('displayPriceSmall').textContent = pSmall;
+      document.getElementById('displayPriceMedium').textContent = pMed;
+      document.getElementById('displayPriceLarge').textContent = pLarge;
+
+      const title = document.getElementById('mvccToggleTitle');
+      const subtitle = document.getElementById('mvccToggleSubtitle');
+      const banner = document.getElementById('btnMvccToggle');
+
+      if (isMvcc) {
+        title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
+        subtitle.innerHTML = 'Showing exclusive student & staff prices!';
+        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-sm";
+      } else {
+        title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
+        subtitle.innerHTML = 'Show your MVCC ID and get exclusive rates!';
+        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left";
+      }
+    }
+
+    function selectBagAndBook(size) {
+      selectedBagSize = size;
+      openBookingStep1();
+    }
+
+    // Step 1: Open status choice or proceed
+    function openBookingStep1() {
+      const user = getSavedUser();
+      if (!user || !getToken()) {
+        openAuthModal('register');
+      } else {
+        openOrderModalWithUser(user);
+      }
+    }
+
     function handleStatusSelected(statusType) {
       selectedStatus = statusType;
+      updatePricingDisplay();
       document.getElementById('statusModal').classList.add('hidden');
 
       const user = getSavedUser();
       if (!user || !getToken()) {
-        // Not logged in -> Show Auth Modal
         openAuthModal('register');
       } else {
-        // Already logged in -> Open Bag Booking Modal
         openOrderModalWithUser(user);
       }
     }
@@ -556,7 +772,6 @@
     // Auth Modal Logic
     function openAuthModal(defaultTab = 'register') {
       switchAuthTab(defaultTab);
-      // Toggle dorm field based on selected status
       const dormContainer = document.getElementById('regDormContainer');
       if (dormContainer) {
         if (selectedStatus === 'College Student') dormContainer.classList.remove('hidden');
@@ -680,7 +895,7 @@
       document.getElementById('bookingPriceMedium').textContent = isStudent ? '$20' : '$30';
       document.getElementById('bookingPriceLarge').textContent = isStudent ? '$30' : '$40';
 
-      selectBag('Small');
+      selectBag(selectedBagSize || 'Small');
       calcTotal();
       document.getElementById('bookingModal').classList.remove('hidden');
     }
