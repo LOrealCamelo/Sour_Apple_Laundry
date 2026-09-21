@@ -87,7 +87,7 @@
         </div>
 
         <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
-          <span>🎓</span> MVCC HAWKS VIP RATES
+          <span>🎓</span> MVCC Students & faculty RATES
         </button>
 
         <button onclick="toggleDrawer(false); openBookingStep1();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
@@ -152,7 +152,7 @@
         <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-emerald-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-pink-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
             <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -222,8 +222,12 @@
             <!-- Small Bag (Green) -->
             <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group">
               <div class="w-14 h-16 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <span class="text-2xl">🍏</span>
-                <span class="absolute top-0.5 text-[8px] font-black text-emerald-800 uppercase">Drawstring</span>
+                <img 
+                src="/static/assets/bag_small.png" 
+                onerror="this.onerror=null; this.src='/static/assets/sm_pink_Sour Apple.jpg';" 
+                alt="Small Bag" 
+                class="max-h-24 w-auto object-contain group-hover:scale-105 transition" 
+              />
               </div>
               <span class="text-xs font-bold text-slate-800">Small Bag</span>
               <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
@@ -233,19 +237,28 @@
             <!-- Medium Bag (Navy Blue) -->
             <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group">
               <div class="w-16 h-20 rounded-2xl bg-blue-500/10 border-2 border-blue-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <span class="text-3xl">🍏</span>
-                <span class="absolute top-0.5 text-[8px] font-black text-blue-900 uppercase">Drawstring</span>
-              </div>
-              <span class="text-xs font-bold text-slate-800">Medium Bag</span>
-              <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
-              <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
+                <img 
+                src="/static/assets/bag_medium.png" 
+                onerror="this.onerror=null; this.src='/static/assets/med_pink_Sour Apple.jpg';" 
+                alt="Medium Bag" 
+                class="max-h-28 w-auto object-contain group-hover:scale-105 transition" 
+              />
             </div>
+            <span class="text-xs font-bold text-slate-800">Medium Bag</span>
+            <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
+            <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
+          </div>
 
             <!-- Large Bag (Pink) -->
             <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group">
               <div class="w-18 h-24 rounded-2xl bg-pink-500/10 border-2 border-pink-500 flex items-center justify-center shadow-sm group-hover:scale-105 transition mb-1 relative overflow-hidden">
-                <span class="text-3xl">🍏</span>
-                <span class="absolute top-0.5 text-[8px] font-black text-pink-700 uppercase">Drawstring</span>
+                <img 
+                src="/static/assets/bag_large.png" 
+                onerror="this.onerror=null; this.src='/static/assets/lg_pink_Sour Apple.jpg';" 
+                alt="Large Bag" 
+                class="max-h-36 w-auto object-contain group-hover:scale-105 transition" 
+              />
+              
               </div>
               <span class="text-xs font-bold text-slate-800">Large Bag</span>
               <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
