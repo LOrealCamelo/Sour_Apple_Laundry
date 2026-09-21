@@ -28,7 +28,7 @@
       border-radius: 8px;
     }
     .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: #10b981;
+      background: #ff66c4;
       border-radius: 8px;
     }
   </style>
@@ -54,7 +54,7 @@
         </div>
       </div>
 
-      <!-- Right Header Actions (Matching Classic Mobile Mockup) -->
+      <!-- Right Header Actions -->
       <div class="flex items-center gap-2">
         <!-- Account / Profile Circle Button -->
         <button 
@@ -102,7 +102,7 @@
           </button>
         </div>
 
-        <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
+        <button onclick="toggleDrawer(false); setCustomerType('College Student');" class="collegiate w-full text-left bg-[#ff66c4] text-black font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
           <span>🎓</span> MVCC HAWKS VIP RATES ($10 Off)
         </button>
 
@@ -126,11 +126,11 @@
     </div>
   </aside>
 
-  <!-- ==================== MAIN CONTENT (FULL-BLEED MOBILE LAYOUT) ==================== -->
+  <!-- ==================== MAIN CONTENT ==================== -->
   <main class="w-full flex flex-col items-center flex-grow">
     <div class="w-full max-w-md sm:max-w-xl mx-auto flex flex-col">
       
-      <!-- ==================== 1. HERO ARTWORK & OVERLAY BUTTONS ==================== -->
+      <!-- ==================== 1. HERO ARTWORK ==================== -->
       <section class="relative w-full overflow-hidden bg-white shadow-sm sm:rounded-b-3xl">
         
         <!-- Full-width hero graphic -->
@@ -141,7 +141,7 @@
           class="w-full h-auto object-contain block select-none"
         />
 
-        <!-- 4 BUTTONS: Positioned directly on the gray brick wall between 'Our Services' and the washing machine -->
+        <!-- 4 BUTTONS ON GRAPHIC (Above Washing Machines) -->
         <div class="absolute left-[31%] top-[27.5%] w-[45%] grid grid-cols-4 gap-1 z-20">
           <button onclick="openBookingStep1()" class="bg-white/95 backdrop-blur py-1 px-0.5 rounded-lg sm:rounded-xl shadow border border-slate-200 flex flex-col items-center text-center active:scale-95 transition">
             <span class="text-[10px] sm:text-xs">📅</span>
@@ -164,11 +164,11 @@
           </button>
         </div>
 
-        <!-- BOOKING BUTTON: Moved up right above the washing machines -->
+        <!-- PINK BOOKING BUTTON (From commit aa9312e & 9fee329) -->
         <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-[#16a34a] hover:bg-[#15803d] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-emerald-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#ff66c4] hover:bg-[#ff52b8] text-black font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-black-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
             <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -178,62 +178,46 @@
 
       </section>
 
-      <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
-      <section class="px-3 pt-3 pb-2 w-full">
-        <div class="grid grid-cols-4 gap-2">
-          
-          <!-- Card 1: Book -->
-          <button onclick="openBookingStep1()" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition active:scale-95">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              📅
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">Book</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Choose time</span>
-          </button>
-
-          <!-- Card 2: Pay -->
-          <button onclick="toggleModal('paymentModal')" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition active:scale-95">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              💳
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">Pay</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Secure & easy</span>
-          </button>
-
-          <!-- Card 3: We Wash -->
-          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              🧼
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">We Wash</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Fresh & clean</span>
-          </div>
-
-          <!-- Card 4: We Fold -->
-          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              👕
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">We Fold</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Ready for you</span>
-          </div>
-
-        </div>
-      </section>
-
-      <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
-      <section id="servicesSection" class="px-3 py-2 w-full">
+      <!-- ==================== 2. OUR SERVICES & BAGS SECTION ==================== -->
+      <section id="servicesSection" class="px-3 py-3 w-full">
         
         <!-- Brush Ribbon Title -->
         <div class="inline-block px-4 py-1 brush-ribbon text-white font-extrabold text-sm shadow-sm mb-2.5">
           Our Services
         </div>
 
-        <!-- Sizing & Bags White Container -->
+        <!-- MVCC Student & Staff Pricing Banner Button (Outside ribbon, fully clickable) -->
+        <button 
+          id="btnMvccToggle"
+          type="button"
+          onclick="toggleMvccPricing()" 
+          class="w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-sm relative z-30"
+        >
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              🎓
+            </div>
+            <div>
+              <span id="mvccToggleTitle" class="text-xs font-extrabold text-black block leading-tight">
+                MVCC Student, Faculty & Staff Pricing &gt;
+              </span>
+              <span id="mvccToggleSubtitle" class="text-[10px] text-slate-800 leading-tight">
+                Show your MVCC ID and get exclusive $10 off rates!
+              </span>
+            </div>
+          </div>
+
+          <div class="text-right flex-shrink-0">
+            <span class="text-[10px] text-black font-extrabold italic block leading-tight">Support</span>
+            <span class="text-[10px] text-slate-800 font-extrabold italic block leading-tight">Local! ♡</span>
+          </div>
+        </button>
+
+        <!-- Sizing & Bags Container -->
         <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
           
           <!-- 3 Bags Row -->
-          <div class="grid grid-cols-3 gap-2 text-center items-end pb-3 border-b border-slate-100">
+          <div class="grid grid-cols-3 gap-2 text-center items-end">
             
             <!-- Small Bag (Green) -->
             <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
@@ -270,40 +254,13 @@
 
           </div>
 
-          <!-- MVCC Student & Staff Pricing Banner Button (Clickable Toggle) -->
-          <button 
-            id="btnMvccToggle"
-            type="button"
-            onclick="toggleMvccPricing()" 
-            class="w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border-2 border-emerald-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 relative z-30"
-          >
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
-                🎓
-              </div>
-              <div>
-                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
-                  MVCC Student, Faculty & Staff Pricing &gt;
-                </span>
-                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
-                  Show your MVCC ID and get exclusive $10 off rates!
-                </span>
-              </div>
-            </div>
-
-            <div class="text-right flex-shrink-0">
-              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
-              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
-            </div>
-          </button>
-
         </div>
       </section>
 
     </div>
   </main>
 
-  <!-- ==================== 4. CLASSIC MOBILE BOTTOM NAVIGATION BAR ==================== -->
+  <!-- ==================== 3. CLASSIC BOTTOM NAVIGATION ==================== -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-emerald-100 py-1.5 px-4 flex justify-around items-center shadow-lg">
     
     <!-- Home -->
@@ -353,29 +310,29 @@
 
   </nav>
 
-  <!-- ==================== STEP 1: CHOOSE STUDENT OR NON-STUDENT MODAL ==================== -->
+  <!-- ==================== STEP 1: CHOOSE STATUS MODAL ==================== -->
   <div id="statusModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
       <button onclick="toggleModal('statusModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
-      <div class="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl mx-auto mb-2">📋</div>
+      <div class="w-14 h-14 rounded-full bg-pink-50 border border-pink-200 flex items-center justify-center text-pink-600 text-2xl mx-auto mb-2">📋</div>
       <h3 class="text-xl font-extrabold text-slate-900 mb-1">Select Your Status</h3>
       <p class="text-xs text-slate-500 mb-6">Choose an option below to calculate your pricing</p>
 
       <div class="space-y-3.5 text-left">
-        <!-- MVCC Student Option -->
+        <!-- MVCC Student Option (Pink theme from commit 9fee329) -->
         <button 
           onclick="handleStatusSelected('College Student')" 
-          class="w-full p-4 rounded-2xl border-2 border-[#00703C] bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-between transition shadow-sm group"
+          class="w-full p-4 rounded-2xl border-2 border-[#ff66c4] bg-pink-50/80 hover:bg-pink-100/80 flex items-center justify-between transition shadow-sm group"
         >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🎓</span>
             <div>
-              <span class="collegiate font-extrabold text-xs text-[#00703C] block uppercase">MVCC Student or Faculty</span>
+              <span class="collegiate font-extrabold text-xs text-[#ff66c4] block uppercase">MVCC Student or Faculty</span>
               <span class="text-[11px] text-slate-600">Exclusive Campus Rate ($10 Off Every Bag)</span>
             </div>
           </div>
-          <span class="text-emerald-700 font-extrabold text-base group-hover:translate-x-1 transition">&gt;</span>
+          <span class="text-[#ff66c4] font-extrabold text-base group-hover:translate-x-1 transition">&gt;</span>
         </button>
 
         <!-- Non-Student Option -->
@@ -396,7 +353,7 @@
     </div>
   </div>
 
-  <!-- ==================== STEP 2: AUTH MODAL (SIGN IN OR CREATE ACCOUNT) ==================== -->
+  <!-- ==================== STEP 2: AUTH MODAL ==================== -->
   <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative">
       <button onclick="toggleModal('authModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -406,9 +363,9 @@
         <p id="authModalSubtitle" class="text-xs text-slate-500 mt-1">An account is required to book and track your laundry orders</p>
       </div>
 
-      <!-- Tabs: Create Account / Sign In -->
+      <!-- Tabs -->
       <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mb-5">
-        <button type="button" id="tabRegister" onclick="switchAuthTab('register')" class="py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition">
+        <button type="button" id="tabRegister" onclick="switchAuthTab('register')" class="py-2 text-xs font-bold rounded-xl bg-white text-pink-600 shadow-sm transition">
           Create Account
         </button>
         <button type="button" id="tabSignIn" onclick="switchAuthTab('signin')" class="py-2 text-xs font-bold rounded-xl text-slate-600 transition">
@@ -422,26 +379,26 @@
       <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3.5">
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
-          <input type="text" id="regName" placeholder="Your name" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="text" id="regName" placeholder="Your name" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address</label>
-          <input type="email" id="regEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="email" id="regEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
-          <input type="tel" id="regPhone" placeholder="(315) 000-0000" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="tel" id="regPhone" placeholder="(315) 000-0000" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
         <div id="regDormContainer" class="hidden">
           <label class="text-xs font-semibold text-slate-700 block mb-1">MVCC Dorm / Campus Building</label>
-          <input type="text" id="regDorm" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+          <input type="text" id="regDorm" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" />
         </div>
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Create Password</label>
-          <input type="password" id="regPassword" placeholder="Minimum 6 characters" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required minlength="6" />
+          <input type="password" id="regPassword" placeholder="Minimum 6 characters" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required minlength="6" />
         </div>
 
-        <button type="submit" id="btnSubmitRegister" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
+        <button type="submit" id="btnSubmitRegister" class="w-full py-3 bg-[#ff66c4] hover:bg-[#ff52b8] text-black font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
           Create Account & Continue &gt;
         </button>
       </form>
@@ -450,21 +407,21 @@
       <form id="signInForm" onsubmit="handleLogin(event)" class="space-y-3.5 hidden">
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address</label>
-          <input type="email" id="loginEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="email" id="loginEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
-          <input type="password" id="loginPassword" placeholder="Your password" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="password" id="loginPassword" placeholder="Your password" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
 
-        <button type="submit" id="btnSubmitLogin" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
+        <button type="submit" id="btnSubmitLogin" class="w-full py-3 bg-[#ff66c4] hover:bg-[#ff52b8] text-black font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
           Sign In & Continue &gt;
         </button>
       </form>
     </div>
   </div>
 
-  <!-- ==================== STEP 3: ORDER BOOKING MODAL (BAG SIZES, DETERGENT, TEMP, PHOTO & SCROLLABLE CONTRACT) ==================== -->
+  <!-- ==================== STEP 3: BOOKING MODAL (BAGS, DETERGENT, TEMP, PHOTO, SCROLL CONTRACT) ==================== -->
   <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 sm:p-7 shadow-2xl my-8 relative max-h-[92vh] overflow-y-auto custom-scrollbar">
       <button onclick="toggleModal('bookingModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -472,7 +429,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
         <div>
           <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Book VIP Laundry Service</h2>
-          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+          <span id="bookingStatusBadge" class="text-[11px] font-bold text-pink-700 bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-200 inline-block mt-1">
             🎓 MVCC Student & Faculty Rate ($10 Off)
           </span>
         </div>
@@ -482,40 +439,40 @@
 
       <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-4">
         
-        <!-- BAG SIZE SELECTION -->
+        <!-- 1. BAG SIZE SELECTION -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1.5">1. Select Bag Size</label>
           <div class="grid grid-cols-3 gap-2">
             <!-- Small -->
-            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-2.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm">
+            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-2.5 rounded-2xl border-2 border-[#ff66c4] bg-pink-50/70 flex flex-col items-center text-center transition shadow-sm">
               <span class="text-xs font-bold text-slate-800">Small</span>
-              <span id="bookingPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$10</span>
+              <span id="bookingPriceSmall" class="text-base font-black text-[#ff66c4] my-0.5">$10</span>
               <span class="text-[9px] text-slate-400">18" x 27"</span>
             </button>
 
             <!-- Medium -->
             <button type="button" onclick="selectBag('Medium')" id="cardBagMedium" class="p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
               <span class="text-xs font-bold text-slate-800">Medium</span>
-              <span id="bookingPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$20</span>
+              <span id="bookingPriceMedium" class="text-base font-black text-[#ff66c4] my-0.5">$20</span>
               <span class="text-[9px] text-slate-400">24" x 32"</span>
             </button>
 
             <!-- Large -->
             <button type="button" onclick="selectBag('Large')" id="cardBagLarge" class="p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
               <span class="text-xs font-bold text-slate-800">Large</span>
-              <span id="bookingPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$30</span>
+              <span id="bookingPriceLarge" class="text-base font-black text-[#ff66c4] my-0.5">$30</span>
               <span class="text-[9px] text-slate-400">30" x 40"</span>
             </button>
           </div>
         </div>
 
         <!-- 2. IN-APP BAG PHOTO FEATURE -->
-        <div class="p-3 bg-emerald-50/60 border border-emerald-200 rounded-2xl">
+        <div class="p-3 bg-pink-50/60 border border-pink-200 rounded-2xl">
           <div class="flex items-center justify-between mb-1.5">
-            <span class="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+            <span class="text-xs font-bold text-pink-950 flex items-center gap-1.5">
               <span>📸</span> Bag Photo Verification
             </span>
-            <span class="text-[10px] text-emerald-700 bg-emerald-100 font-semibold px-2 py-0.5 rounded-full">Required</span>
+            <span class="text-[10px] text-pink-700 bg-pink-100 font-semibold px-2 py-0.5 rounded-full">Required</span>
           </div>
           <p class="text-[10px] text-slate-500 mb-2 leading-tight">
             Bag must have a <strong>drawstring, zipper, Velcro, or snaps</strong>. No open laundry baskets.
@@ -527,18 +484,18 @@
             <button 
               type="button" 
               onclick="document.getElementById('bagPhotoInput').click()" 
-              class="w-full py-2.5 px-3 bg-white border-2 border-dashed border-emerald-400 hover:bg-emerald-50/50 rounded-xl text-xs font-bold text-emerald-700 flex items-center justify-center gap-2 transition"
+              class="w-full py-2.5 px-3 bg-white border-2 border-dashed border-pink-400 hover:bg-pink-50/50 rounded-xl text-xs font-bold text-pink-700 flex items-center justify-center gap-2 transition"
             >
               <span>📷</span> Take Photo or Upload Bag Picture
             </button>
           </div>
 
           <!-- Uploaded Preview -->
-          <div id="photoPreviewContainer" class="hidden mt-2 flex items-center justify-between bg-white p-2 rounded-xl border border-emerald-200">
+          <div id="photoPreviewContainer" class="hidden mt-2 flex items-center justify-between bg-white p-2 rounded-xl border border-pink-200">
             <div class="flex items-center gap-2.5">
               <img id="bagPhotoPreview" src="" alt="Bag Preview" class="w-12 h-12 object-cover rounded-lg border border-slate-200" />
               <div class="text-left">
-                <span class="text-xs font-bold text-emerald-900 block">Bag Photo Attached!</span>
+                <span class="text-xs font-bold text-pink-900 block">Bag Photo Attached!</span>
                 <span class="text-[10px] text-slate-400">Ready for admin verification</span>
               </div>
             </div>
@@ -552,7 +509,7 @@
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">2. Detergent Preference</label>
           <div class="grid grid-cols-3 gap-1.5 text-center">
-            <button type="button" onclick="selectDetergent('Standard')" id="btnDetStandard" class="p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/70 text-[11px] font-bold text-slate-800 transition">
+            <button type="button" onclick="selectDetergent('Standard')" id="btnDetStandard" class="p-2 rounded-xl border-2 border-[#ff66c4] bg-pink-50/80 text-[11px] font-bold text-slate-800 transition">
               🌸 VIP Scented Formula
             </button>
             <button type="button" onclick="selectDetergent('FragranceFree')" id="btnDetFragranceFree" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
@@ -562,14 +519,14 @@
               🧴 My Own Detergent
             </button>
           </div>
-          <p id="detNote" class="text-[10px] text-emerald-700 mt-1 font-medium">Standard formula includes premium scented detergent, OxiClean, scent boosters, and softener.</p>
+          <p id="detNote" class="text-[10px] text-pink-700 mt-1 font-medium">Standard formula includes premium scented detergent, OxiClean, scent boosters, and softener.</p>
         </div>
 
         <!-- 4. WATER TEMPERATURE SELECTION -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">3. Wash Temperature</label>
           <div class="grid grid-cols-3 gap-1.5 text-center">
-            <button type="button" onclick="selectTemp('Cold')" id="btnTempCold" class="p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/70 text-[11px] font-bold text-slate-800 transition">
+            <button type="button" onclick="selectTemp('Cold')" id="btnTempCold" class="p-2 rounded-xl border-2 border-[#ff66c4] bg-pink-50/80 text-[11px] font-bold text-slate-800 transition">
               ❄️ Cold (Default)
             </button>
             <button type="button" onclick="selectTemp('Warm')" id="btnTempWarm" class="p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition">
@@ -585,7 +542,7 @@
         <!-- Campus Dorm or Drop-off address -->
         <div id="dormFieldContainer">
           <label class="text-xs font-semibold text-slate-700 block mb-1">Campus Building / Dorm Location</label>
-          <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
 
         <div class="grid grid-cols-2 gap-2">
@@ -603,11 +560,11 @@
         <div class="space-y-1.5 pt-1 border-t border-slate-100">
           <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
             <span>⚡ Same-Day Rush (+$20) <span class="text-[10px] text-slate-400">(Before 10am drop-off)</span></span>
-            <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-emerald-600 w-4 h-4" />
+            <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-pink-600 w-4 h-4" />
           </label>
           <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
             <span>🛏️ Bedding / Bulky Comforter (+$25)</span>
-            <input type="checkbox" id="checkBedding" onchange="calcTotal()" class="rounded text-emerald-600 w-4 h-4" />
+            <input type="checkbox" id="checkBedding" onchange="calcTotal()" class="rounded text-pink-600 w-4 h-4" />
           </label>
         </div>
 
@@ -630,10 +587,10 @@
           </div>
 
           <label class="flex items-start gap-2 text-[11px] text-slate-800 cursor-pointer pt-1 font-semibold">
-            <input type="checkbox" id="checkContract" class="mt-0.5 text-emerald-600 rounded w-4 h-4" required />
+            <input type="checkbox" id="checkContract" class="mt-0.5 text-pink-600 rounded w-4 h-4" required />
             <span>I have read, understood, and accept the Sour Apple VIP Service Agreement.</span>
           </label>
-          <input type="text" id="signatureInput" placeholder="Type your full legal name to e-sign" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="text" id="signatureInput" placeholder="Type your full legal name to e-sign" class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500" required />
         </div>
 
         <div class="flex items-center justify-between pt-2">
@@ -642,7 +599,7 @@
             <span id="bookingTotalText" class="text-2xl font-black text-emerald-600">$10</span>
           </div>
 
-          <button type="submit" id="btnSubmitBooking" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-full shadow-lg shadow-emerald-600/30 transition">
+          <button type="submit" id="btnSubmitBooking" class="bg-[#ff66c4] hover:bg-[#ff52b8] text-black font-extrabold text-xs sm:text-sm px-6 py-3 rounded-full shadow-lg transition">
             Confirm Booking &gt;
           </button>
         </div>
@@ -655,19 +612,19 @@
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
       <button onclick="toggleModal('paymentModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
-      <div class="w-12 h-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-xl mx-auto mb-2">💳</div>
+      <div class="w-12 h-12 rounded-full bg-pink-50 border border-pink-200 flex items-center justify-center text-pink-600 text-xl mx-auto mb-2">💳</div>
       <h3 class="text-lg font-bold text-slate-900">Secure Payment Options</h3>
       <p class="text-xs text-slate-500 mb-4">Choose your preferred payment method below</p>
 
       <div class="space-y-3 text-left">
         <!-- 1. Stripe Credit Card / Apple Pay -->
-        <div class="p-4 bg-emerald-50/80 border-2 border-emerald-400 rounded-2xl">
+        <div class="p-4 bg-pink-50/80 border-2 border-pink-300 rounded-2xl">
           <div class="flex items-center justify-between mb-1">
-            <span class="text-xs font-bold text-emerald-950">Credit / Debit Card / Apple Pay</span>
-            <span class="text-[10px] bg-emerald-600 text-white font-bold px-2 py-0.5 rounded-full">Stripe Secure</span>
+            <span class="text-xs font-bold text-pink-950">Credit / Debit Card / Apple Pay</span>
+            <span class="text-[10px] bg-[#ff66c4] text-black font-bold px-2 py-0.5 rounded-full">Stripe Secure</span>
           </div>
           <p class="text-[11px] text-slate-600 mb-2.5">Instant confirmation with invoice receipt.</p>
-          <button onclick="launchStripePayment()" id="btnStripePay" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl transition shadow">
+          <button onclick="launchStripePayment()" id="btnStripePay" class="w-full py-2.5 bg-[#ff66c4] hover:bg-[#ff52b8] text-black text-xs font-extrabold rounded-xl transition shadow">
             Pay with Card or Apple Pay &gt;
           </button>
         </div>
@@ -736,7 +693,7 @@
 
   <!-- ==================== SCRIPT LOGIC ==================== -->
   <script>
-    let selectedStatus = 'Non-Student'; // Default standard pricing
+    let selectedStatus = 'Non-Student';
     let selectedBagSize = 'Small';
     let selectedDetergent = 'Standard';
     let selectedTemp = 'Cold';
@@ -770,8 +727,8 @@
         if (profileBtn) profileBtn.innerHTML = `<span class="text-xs font-black">${firstName[0]}</span>`;
         if (drawerStatus) {
           drawerStatus.innerHTML = `
-            <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between">
-              <span class="text-xs font-bold text-emerald-900">👤 Hi, ${user.name}</span>
+            <div class="p-3 bg-pink-50 rounded-2xl border border-pink-200 flex items-center justify-between">
+              <span class="text-xs font-bold text-pink-900">👤 Hi, ${user.name}</span>
               <button onclick="handleLogout()" class="text-xs text-red-600 font-bold underline">Sign Out</button>
             </div>
           `;
@@ -780,7 +737,7 @@
         if (profileBtn) profileBtn.innerHTML = `<span>👤</span>`;
         if (drawerStatus) {
           drawerStatus.innerHTML = `
-            <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-emerald-50 text-emerald-800 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-emerald-200">
+            <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-pink-50 text-pink-800 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-pink-200">
               <span>👤</span> Sign In / Create Account
             </button>
           `;
@@ -863,11 +820,11 @@
       if (isMvcc) {
         title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
         subtitle.innerHTML = 'Showing exclusive student & staff prices!';
-        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer relative z-30";
+        banner.className = "w-full mb-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer relative z-30";
       } else {
         title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
         subtitle.innerHTML = 'Show your MVCC ID and get exclusive $10 off rates!';
-        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border-2 border-emerald-300 flex items-center justify-between transition text-left cursor-pointer relative z-30";
+        banner.className = "w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-sm relative z-30";
       }
     }
 
@@ -876,7 +833,6 @@
       openBookingStep1();
     }
 
-    // Step 1: Open status choice or proceed
     function openBookingStep1() {
       const user = getSavedUser();
       if (!user || !getToken()) {
@@ -905,7 +861,7 @@
       ['Standard', 'FragranceFree', 'CustomerProvided'].forEach(t => {
         const btn = document.getElementById('btnDet' + t);
         if (t === type) {
-          btn.className = "p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/80 text-[11px] font-bold text-slate-800 transition";
+          btn.className = "p-2 rounded-xl border-2 border-[#ff66c4] bg-pink-50/80 text-[11px] font-bold text-slate-800 transition";
         } else {
           btn.className = "p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition";
         }
@@ -927,7 +883,7 @@
       ['Cold', 'Warm', 'Hot'].forEach(t => {
         const btn = document.getElementById('btnTemp' + t);
         if (t === temp) {
-          btn.className = "p-2 rounded-xl border-2 border-emerald-600 bg-emerald-50/80 text-[11px] font-bold text-slate-800 transition";
+          btn.className = "p-2 rounded-xl border-2 border-[#ff66c4] bg-pink-50/80 text-[11px] font-bold text-slate-800 transition";
         } else {
           btn.className = "p-2 rounded-xl border-2 border-slate-200 bg-white text-[11px] font-bold text-slate-700 hover:border-slate-300 transition";
         }
@@ -969,8 +925,8 @@
 
     function switchAuthTab(tab) {
       const isReg = (tab === 'register');
-      document.getElementById('tabRegister').className = isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
-      document.getElementById('tabSignIn').className = !isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
+      document.getElementById('tabRegister').className = isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-pink-600 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
+      document.getElementById('tabSignIn').className = !isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-pink-600 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
       
       document.getElementById('registerForm').classList.toggle('hidden', !isReg);
       document.getElementById('signInForm').classList.toggle('hidden', isReg);
@@ -1054,7 +1010,6 @@
       }
     }
 
-    // Step 3: Open Order Modal with User Details
     function openOrderModalWithUser(user) {
       document.getElementById('nameInput').value = user.name || '';
       document.getElementById('phoneInput').value = user.phone || '';
@@ -1094,7 +1049,7 @@
       ['Small', 'Medium', 'Large'].forEach(s => {
         const card = document.getElementById('cardBag' + s);
         if (s === size) {
-          card.className = "p-2.5 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm";
+          card.className = "p-2.5 rounded-2xl border-2 border-[#ff66c4] bg-pink-50/70 flex flex-col items-center text-center transition shadow-sm";
         } else {
           card.className = "p-2.5 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition";
         }
