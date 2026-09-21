@@ -191,17 +191,7 @@
           </button>
 
       <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
-      <section class="px-3 pt-3 pb-2 w-full">
-        <div class="grid grid-cols-4 gap-2">
-          
-          <!-- Card 1: Book -->
-          <button onclick="openBookingStep1()" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              📅
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">Book</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Choose time</span>
-          </button>
+     
 
           <!-- Card 2: Pay -->
           <button onclick="toggleModal('paymentModal')" class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center hover:shadow-md transition">
@@ -212,24 +202,7 @@
             <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Secure & easy</span>
           </button>
 
-          <!-- Card 3: We Wash -->
-          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              🧼
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">We Wash</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Fresh & clean</span>
-          </div>
-
-          <!-- Card 4: We Fold -->
-          <div class="bg-white p-2.5 rounded-2xl shadow-sm border border-emerald-50 flex flex-col items-center text-center">
-            <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-sm mb-1.5">
-              👕
-            </div>
-            <span class="text-xs font-bold text-slate-900 leading-tight">We Fold</span>
-            <span class="text-[9px] text-slate-400 mt-0.5 leading-tight">Ready for you</span>
-          </div>
-
+          
         </div>
       </section>
 
@@ -748,7 +721,7 @@
       } else {
         title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
         subtitle.innerHTML = 'Show your MVCC ID and get exclusive rates!';
-        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left";
+        banner.className = "w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff66c4] border border-pink-200 flex items-center justify-between transition text-left";
       }
     }
 
