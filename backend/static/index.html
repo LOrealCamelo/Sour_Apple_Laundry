@@ -33,26 +33,32 @@
         </div>
       </div>
 
-      <!-- Desktop Nav with MVCC Collegiate Button -->
+      <!-- Desktop Nav with MVCC Collegiate Button & Auth -->
       <nav class="hidden md:flex items-center gap-5 lg:gap-7 text-sm font-semibold text-slate-600">
-        
-        <!-- Collegiate MVCC Hawks Button in Top Menu -->
+        <!-- Collegiate MVCC Button in Top Menu -->
         <button 
-          onclick="openMvccPortal()" 
+          onclick="startBookingWithStatus('College Student')" 
           class="collegiate bg-[#00703C] hover:bg-[#005a30] text-white font-extrabold text-xs px-4 py-2 rounded-full border-2 border-white shadow-md shadow-emerald-950/20 flex items-center gap-2 hover:scale-105 transition uppercase"
         >
           <span class="text-base">🎓</span>
           <span>MVCC Hawks VIP Rates</span>
         </button>
 
-        <button onclick="openBookingModal()" class="hover:text-emerald-600 transition">Bag Sizes & Pricing</button>
         <button onclick="toggleModal('paymentModal')" class="hover:text-emerald-600 transition">Payment Options</button>
         <button onclick="toggleModal('ordersModal'); loadMyOrders();" class="hover:text-emerald-600 transition">My Bookings</button>
+
+        <!-- Dynamic Auth Button (Sign In / Account) -->
+        <div id="desktopAuthContainer">
+          <button onclick="openAuthModal('signin')" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-full border border-slate-300 transition">
+            <span>👤</span>
+            <span>Sign In / Create Account</span>
+          </button>
+        </div>
       </nav>
 
       <!-- Right CTA -->
       <div class="flex items-center gap-2 sm:gap-3">
-        <button onclick="openBookingModal()" class="hidden sm:inline-flex bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-full shadow-md shadow-emerald-600/30 transition">
+        <button onclick="openBookingStep1()" class="hidden sm:inline-flex bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 text-white font-extrabold text-xs px-5 py-2.5 rounded-full shadow-md shadow-emerald-600/30 transition">
           Book VIP Service &gt;
         </button>
 
@@ -81,12 +87,17 @@
       </div>
 
       <nav class="mt-6 flex flex-col gap-2">
-        <!-- Collegiate Mobile Button -->
-        <button onclick="toggleDrawer(false); openMvccPortal();" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
+        <div id="mobileAuthContainer" class="mb-2">
+          <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-slate-100 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-slate-200">
+            <span>👤</span> Sign In / Create Account
+          </button>
+        </div>
+
+        <button onclick="toggleDrawer(false); startBookingWithStatus('College Student');" class="collegiate w-full text-left bg-[#00703C] text-white font-extrabold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 shadow-sm my-1">
           <span>🎓</span> MVCC HAWKS VIP RATES
         </button>
 
-        <button onclick="toggleDrawer(false); openBookingModal();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
+        <button onclick="toggleDrawer(false); openBookingStep1();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
           <span>📅</span> Book your VIP Laundry Service
         </button>
         <button onclick="toggleDrawer(false); toggleModal('ordersModal'); loadMyOrders();" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
@@ -106,12 +117,10 @@
     </div>
   </aside>
 
-  <!-- ==================== UNOBSTRUCTED ARTWORK STOREFRONT ==================== -->
-  <!-- 100% of hero_art3.png is displayed with zero blocking cards -->
+  <!-- ==================== MAIN STOREFRONT ARTWORK ==================== -->
   <main class="w-full bg-slate-100 py-4 sm:py-6 flex flex-col items-center flex-grow">
-    <div class="max-w-7xl w-full px-2 sm:px-4 lg:px-6">
+    <div class="max-w-6xl w-full px-3 sm:px-6 flex justify-center">
       
-      <!-- Visual Showcase: Natural Aspect Ratio, Fully Visible Machines & Mascots -->
       <div class="relative w-full rounded-3xl overflow-hidden shadow-2xl border border-slate-300 bg-white">
         
         <!-- 100% Full Uncut Artwork -->
@@ -122,11 +131,38 @@
           class="w-full h-auto object-contain block select-none"
         />
 
-        <!-- BIG ENLARGED CALL TO ACTION BUTTON (In Open Slot Under 'Laundry Made Easy!') -->
-        <div class="absolute left-[2%] top-[43%] w-[32%] max-w-[340px]">
+        <!-- 4 Cards on the grey brick wall right above washing machines -->
+        <div class="absolute left-[30%] top-[33%] w-[48%] grid grid-cols-4 gap-1 sm:gap-2 z-20">
+          <button onclick="openBookingStep1()" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center hover:scale-105 transition">
+            <span class="text-xs sm:text-lg">📅</span>
+            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Book</span>
+            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Choose time</span>
+          </button>
+
+          <button onclick="toggleModal('paymentModal')" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center hover:scale-105 transition">
+            <span class="text-xs sm:text-lg">💳</span>
+            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Pay</span>
+            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Secure & easy</span>
+          </button>
+
+          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center">
+            <span class="text-xs sm:text-lg">🧼</span>
+            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Wash</span>
+            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Fresh & clean</span>
+          </div>
+
+          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow-md border border-slate-200 flex flex-col items-center text-center">
+            <span class="text-xs sm:text-lg">👕</span>
+            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Fold</span>
+            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Ready for you</span>
+          </div>
+        </div>
+
+        <!-- Green VIP Button centered under the washer and dryer -->
+        <div class="absolute left-1/2 -translate-x-1/2 top-[77%] w-[46%] max-w-[380px] z-20">
           <button 
-            onclick="openBookingModal()" 
-            class="w-full bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-500 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold text-xs sm:text-sm md:text-base lg:text-lg py-2.5 sm:py-3.5 md:py-4 px-3 sm:px-6 rounded-full shadow-2xl shadow-emerald-950/40 border-2 border-emerald-300 flex items-center justify-center gap-2 active:scale-95 transition hover:scale-105"
+            onclick="openBookingStep1()" 
+            class="w-full bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-500 hover:from-emerald-700 hover:to-green-700 text-white font-extrabold text-xs sm:text-sm md:text-base py-2.5 sm:py-3.5 px-3 sm:px-6 rounded-full shadow-2xl shadow-emerald-950/50 border-2 border-emerald-300 flex items-center justify-center gap-1.5 sm:gap-2 active:scale-95 transition hover:scale-105"
           >
             <span class="text-sm sm:text-lg">📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -134,180 +170,185 @@
           </button>
         </div>
 
-        <!-- 4 Quick Cards in Open Slot Below "Our Services" Ribbon -->
-        <div class="absolute left-[30%] top-[23%] w-[48%] grid grid-cols-4 gap-1 sm:gap-2">
-          <button onclick="openBookingModal()" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow border border-slate-100 flex flex-col items-center text-center hover:scale-105 transition">
-            <span class="text-xs sm:text-lg">📅</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Book</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Choose time</span>
-          </button>
-
-          <button onclick="toggleModal('paymentModal')" class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow border border-slate-100 flex flex-col items-center text-center hover:scale-105 transition">
-            <span class="text-xs sm:text-lg">💳</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">Pay</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Secure & easy</span>
-          </button>
-
-          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow border border-slate-100 flex flex-col items-center text-center">
-            <span class="text-xs sm:text-lg">🧼</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Wash</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Fresh & clean</span>
-          </div>
-
-          <div class="bg-white/95 backdrop-blur p-1 sm:p-2 rounded-xl sm:rounded-2xl shadow border border-slate-100 flex flex-col items-center text-center">
-            <span class="text-xs sm:text-lg">👕</span>
-            <span class="text-[8px] sm:text-[11px] font-bold text-slate-800 leading-none mt-0.5">We Fold</span>
-            <span class="text-[6px] sm:text-[9px] text-slate-400 hidden sm:block">Ready for you</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Action Bar Below the Artwork (Easy to tap on any device) -->
-      <div class="w-full mt-6 flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-        <button onclick="openBookingModal()" class="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-emerald-600 to-green-600 text-white font-extrabold px-8 py-3.5 sm:px-10 sm:py-4 rounded-full shadow-xl shadow-emerald-700/30 hover:scale-[1.02] active:scale-95 transition text-sm sm:text-base border border-emerald-400">
-          <span>📅</span>
-          <span>Book your VIP Laundry Service</span>
-          <span>&gt;</span>
-        </button>
-
-        <button onclick="openMvccPortal()" class="collegiate inline-flex items-center gap-2 bg-[#00703C] hover:bg-[#005a30] text-white font-extrabold px-6 py-3.5 sm:py-4 rounded-full border-2 border-white shadow-lg transition text-xs sm:text-sm uppercase">
-          <span>🎓</span>
-          <span>MVCC Hawks Student & Faculty Rates</span>
-        </button>
-
-        <button onclick="toggleModal('paymentModal')" class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-bold px-6 py-3.5 sm:py-4 rounded-full border border-slate-200 shadow-sm transition text-sm sm:text-base">
-          <span>💳</span>
-          <span>Payment Options</span>
-        </button>
       </div>
 
     </div>
   </main>
 
-  <!-- ==================== 1. DEDICATED MVCC COLLEGIATE PORTAL MODAL ==================== -->
-  <div id="mvccModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-    <div class="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl relative border-2 border-[#00703C]">
-      
-      <!-- Collegiate Header -->
-      <div class="bg-[#00703C] text-white p-6 text-center relative">
-        <button onclick="toggleModal('mvccModal')" class="absolute top-4 right-4 text-white/80 hover:text-white text-xl font-bold">✕</button>
-        <span class="text-3xl block mb-1">🦅</span>
-        <h3 class="collegiate text-lg sm:text-xl font-black tracking-wider uppercase">Mohawk Valley Community College</h3>
-        <p class="text-xs text-emerald-100 font-medium">Hawks VIP Laundry Perks • $10 Off Every Bag</p>
-      </div>
+  <!-- ==================== STEP 1: CHOOSE STUDENT OR NON-STUDENT MODAL ==================== -->
+  <div id="statusModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
+      <button onclick="toggleModal('statusModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
-      <div class="p-6">
-        <!-- 3 Discounted Bag Tiers -->
-        <div class="grid grid-cols-3 gap-2.5 text-center mb-5">
-          <div class="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
-            <span class="text-[10px] font-bold text-slate-600 block">Small Bag</span>
-            <span class="text-lg font-black text-[#00703C]">$10</span>
-            <span class="text-[9px] text-slate-400 block">18" x 27"</span>
+      <div class="w-14 h-14 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 text-2xl mx-auto mb-2">📋</div>
+      <h3 class="text-xl font-extrabold text-slate-900 mb-1">Select Your Status</h3>
+      <p class="text-xs text-slate-500 mb-6">Choose an option below to calculate your pricing</p>
+
+      <div class="space-y-3.5 text-left">
+        <!-- MVCC Student Option -->
+        <button 
+          onclick="handleStatusSelected('College Student')" 
+          class="w-full p-4 rounded-2xl border-2 border-[#00703C] bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-between transition shadow-sm group"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🎓</span>
+            <div>
+              <span class="collegiate font-extrabold text-xs text-[#00703C] block uppercase">MVCC Student or Faculty</span>
+              <span class="text-[11px] text-slate-600">Exclusive Campus Rate ($10 Off Every Bag)</span>
+            </div>
           </div>
+          <span class="text-emerald-700 font-extrabold text-base group-hover:translate-x-1 transition">&gt;</span>
+        </button>
 
-          <div class="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
-            <span class="text-[10px] font-bold text-slate-600 block">Medium Bag</span>
-            <span class="text-lg font-black text-[#00703C]">$20</span>
-            <span class="text-[9px] text-slate-400 block">24" x 32"</span>
+        <!-- Non-Student Option -->
+        <button 
+          onclick="handleStatusSelected('Non-Student')" 
+          class="w-full p-4 rounded-2xl border-2 border-slate-200 bg-white hover:border-emerald-400 hover:bg-slate-50 flex items-center justify-between transition shadow-sm group"
+        >
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">🏡</span>
+            <div>
+              <span class="font-extrabold text-xs text-slate-800 block">Non-Student / Neighbor</span>
+              <span class="text-[11px] text-slate-500">Local South Utica Drop-Off & Pickup</span>
+            </div>
           </div>
-
-          <div class="p-3 bg-emerald-50/80 border border-emerald-200 rounded-2xl">
-            <span class="text-[10px] font-bold text-slate-600 block">Large Bag</span>
-            <span class="text-lg font-black text-[#00703C]">$30</span>
-            <span class="text-[9px] text-slate-400 block">30" x 40"</span>
-          </div>
-        </div>
-
-        <div class="bg-slate-50 p-4 rounded-2xl text-xs text-slate-600 space-y-1.5 mb-5 border border-slate-200">
-          <div class="font-bold text-slate-800 flex items-center gap-1.5">
-            <span>📍</span> Campus Curbside Pickup & Delivery
-          </div>
-          <p class="text-[11px] leading-relaxed">
-            Scheduled pickup directly from Bellamy Hall, Daugherty Hall, Penfield Hall, Butterfield Hall, or Academic Buildings. Show your MVCC ID at pickup!
-          </p>
-        </div>
-
-        <button onclick="applyMvccAndBook()" class="collegiate w-full py-3.5 bg-[#00703C] hover:bg-[#005a30] text-white text-xs sm:text-sm font-black rounded-xl shadow-lg transition uppercase tracking-wider">
-          Book With MVCC Discount &gt;
+          <span class="text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition font-bold text-base">&gt;</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 2. BOOKING MODAL (NOW SHOWING 3 BAGS & PRICES) ==================== -->
+  <!-- ==================== STEP 2: AUTH MODAL (SIGN IN OR CREATE ACCOUNT) ==================== -->
+  <div id="authModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 sm:p-8 shadow-2xl relative">
+      <button onclick="toggleModal('authModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
+
+      <div class="text-center mb-5">
+        <h3 id="authModalTitle" class="text-xl font-extrabold text-slate-900">Create Your Account</h3>
+        <p id="authModalSubtitle" class="text-xs text-slate-500 mt-1">An account is required to book and track your laundry orders</p>
+      </div>
+
+      <!-- Tabs: Create Account / Sign In -->
+      <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-2xl mb-5">
+        <button type="button" id="tabRegister" onclick="switchAuthTab('register')" class="py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition">
+          Create Account
+        </button>
+        <button type="button" id="tabSignIn" onclick="switchAuthTab('signin')" class="py-2 text-xs font-bold rounded-xl text-slate-600 transition">
+          Sign In
+        </button>
+      </div>
+
+      <div id="authAlert" class="hidden mb-4 p-3 rounded-xl text-xs"></div>
+
+      <!-- Registration Form -->
+      <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3.5">
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
+          <input type="text" id="regName" placeholder="Your name" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address</label>
+          <input type="email" id="regEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
+          <input type="tel" id="regPhone" placeholder="(315) 000-0000" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </div>
+        <div id="regDormContainer" class="hidden">
+          <label class="text-xs font-semibold text-slate-700 block mb-1">MVCC Dorm / Campus Building</label>
+          <input type="text" id="regDorm" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Create Password</label>
+          <input type="password" id="regPassword" placeholder="Minimum 6 characters" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required minlength="6" />
+        </div>
+
+        <button type="submit" id="btnSubmitRegister" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
+          Create Account & Continue &gt;
+        </button>
+      </form>
+
+      <!-- Sign In Form -->
+      <form id="signInForm" onsubmit="handleLogin(event)" class="space-y-3.5 hidden">
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Email Address</label>
+          <input type="email" id="loginEmail" placeholder="yourname@email.com" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-700 block mb-1">Password</label>
+          <input type="password" id="loginPassword" placeholder="Your password" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+        </div>
+
+        <button type="submit" id="btnSubmitLogin" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm rounded-xl shadow-lg transition mt-2">
+          Sign In & Continue &gt;
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== STEP 3: ORDER BOOKING MODAL (BAG SIZES & DETAILS) ==================== -->
   <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
     <div class="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl my-8 relative">
       <button onclick="toggleModal('bookingModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
 
-      <h2 class="text-xl font-extrabold text-slate-900 mb-0.5">Book your VIP Laundry Service</h2>
-      <p class="text-xs text-slate-500 mb-5">Select your bag size, preferences, and pickup details</p>
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+        <div>
+          <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Book your VIP Laundry Service</h2>
+          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+            🎓 MVCC Student & Faculty Rate ($10 Off)
+          </span>
+        </div>
+      </div>
 
       <div id="bookingAlert" class="hidden mb-4 p-3 rounded-xl text-xs"></div>
 
-      <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-5">
+      <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-4">
         
-        <!-- Customer Type Toggle -->
-        <div>
-          <label class="text-xs font-semibold text-slate-700 block mb-1.5">Customer Type</label>
-          <div class="grid grid-cols-2 gap-2">
-            <button type="button" id="btnMvcc" onclick="setBookingCustomerType('College Student')" class="py-2.5 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600 transition">
-              🎓 MVCC Student / Staff ($10 Off)
-            </button>
-            <button type="button" id="btnLocal" onclick="setBookingCustomerType('Non-Student')" class="py-2.5 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200 transition">
-              🏡 Local South Utica Drop-Off
-            </button>
-          </div>
-        </div>
-
-        <!-- THE 3 BAGS & 3 PRICES (Cleanly Displayed Inside the Booking Flow!) -->
+        <!-- THE 3 BAGS & 3 PRICES -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-2">Select Your Bag Size</label>
           <div class="grid grid-cols-3 gap-2.5">
-            
-            <!-- Small Bag -->
-            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-3 rounded-2xl border-2 border-emerald-600 bg-emerald-50/50 flex flex-col items-center text-center transition">
+            <!-- Small -->
+            <button type="button" onclick="selectBag('Small')" id="cardBagSmall" class="p-3 rounded-2xl border-2 border-emerald-600 bg-emerald-50/70 flex flex-col items-center text-center transition shadow-sm">
               <span class="text-xs font-bold text-slate-800">Small Bag</span>
               <span id="bookingPriceSmall" class="text-lg font-black text-emerald-600 my-0.5">$10</span>
               <span class="text-[10px] text-slate-400">18" x 27"</span>
             </button>
 
-            <!-- Medium Bag -->
+            <!-- Medium -->
             <button type="button" onclick="selectBag('Medium')" id="cardBagMedium" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
               <span class="text-xs font-bold text-slate-800">Medium Bag</span>
               <span id="bookingPriceMedium" class="text-lg font-black text-emerald-600 my-0.5">$20</span>
               <span class="text-[10px] text-slate-400">24" x 32"</span>
             </button>
 
-            <!-- Large Bag -->
+            <!-- Large -->
             <button type="button" onclick="selectBag('Large')" id="cardBagLarge" class="p-3 rounded-2xl border-2 border-slate-200 bg-white hover:border-slate-300 flex flex-col items-center text-center transition">
               <span class="text-xs font-bold text-slate-800">Large Bag</span>
               <span id="bookingPriceLarge" class="text-lg font-black text-emerald-600 my-0.5">$30</span>
               <span class="text-[10px] text-slate-400">30" x 40"</span>
             </button>
-
           </div>
         </div>
 
-        <!-- Campus Location (if Student) -->
-        <div id="studentLocationField">
+        <div id="dormFieldContainer">
           <label class="text-xs font-semibold text-slate-700 block mb-1">Dorm / Campus Location</label>
-          <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall Room 204 (or Faculty Office)" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
+          <input type="text" id="dormInput" placeholder="e.g. Bellamy Hall Room 204" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" required />
         </div>
 
         <div class="grid grid-cols-2 gap-2.5">
           <div>
-            <label class="text-xs font-semibold text-slate-700 block mb-1">Full Name</label>
-            <input type="text" id="nameInput" placeholder="Your full name" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none" required />
+            <label class="text-xs font-semibold text-slate-700 block mb-1">Contact Name</label>
+            <input type="text" id="nameInput" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
           </div>
           <div>
             <label class="text-xs font-semibold text-slate-700 block mb-1">Phone Number</label>
-            <input type="tel" id="phoneInput" placeholder="(315) 000-0000" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none" required />
+            <input type="tel" id="phoneInput" class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none bg-slate-50" readonly />
           </div>
         </div>
 
         <!-- Add-ons -->
-        <div class="space-y-2 pt-2 border-t border-slate-100">
+        <div class="space-y-2 pt-1 border-t border-slate-100">
           <label class="flex items-center justify-between text-xs text-slate-700 cursor-pointer">
             <span>⚡ Same-Day Rush (+$20)</span>
             <input type="checkbox" id="checkRush" onchange="calcTotal()" class="rounded text-emerald-600" />
@@ -345,7 +386,7 @@
     </div>
   </div>
 
-  <!-- ==================== 3. PAYMENT MODAL ==================== -->
+  <!-- ==================== 4. PAYMENT MODAL ==================== -->
   <div id="paymentModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative text-center">
       <button onclick="toggleModal('paymentModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -392,7 +433,7 @@
     </div>
   </div>
 
-  <!-- ==================== 4. ORDERS MODAL ==================== -->
+  <!-- ==================== 5. ORDERS MODAL ==================== -->
   <div id="ordersModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
     <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl relative">
       <button onclick="toggleModal('ordersModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -407,10 +448,69 @@
 
   <!-- ==================== SCRIPT LOGIC ==================== -->
   <script>
-    let isMvccActive = true;
+    let selectedStatus = 'College Student';
     let selectedBagSize = 'Small';
-    let bookingCustomerType = 'College Student';
     let lastBookedOrderId = null;
+
+    // Check Auth on Load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderAuthUI();
+    });
+
+    function getSavedUser() {
+      try {
+        return JSON.parse(localStorage.getItem('sour_user') || 'null');
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function getToken() {
+      return localStorage.getItem('sour_token') || '';
+    }
+
+    function renderAuthUI() {
+      const user = getSavedUser();
+      const desktopContainer = document.getElementById('desktopAuthContainer');
+      const mobileContainer = document.getElementById('mobileAuthContainer');
+
+      if (user) {
+        const firstName = user.name.split(' ')[0] || 'Member';
+        const loggedInHtml = `
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-emerald-800">👤 Hi, ${firstName}</span>
+            <button onclick="handleLogout()" class="text-[10px] text-slate-400 hover:text-red-600 underline font-semibold">Sign Out</button>
+          </div>
+        `;
+        if (desktopContainer) desktopContainer.innerHTML = loggedInHtml;
+        if (mobileContainer) mobileContainer.innerHTML = `
+          <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-900">👤 Hi, ${user.name}</span>
+            <button onclick="handleLogout()" class="text-xs text-red-600 font-bold underline">Sign Out</button>
+          </div>
+        `;
+      } else {
+        const loggedOutHtml = `
+          <button onclick="openAuthModal('signin')" class="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-full border border-slate-300 transition">
+            <span>👤</span>
+            <span>Sign In / Create Account</span>
+          </button>
+        `;
+        if (desktopContainer) desktopContainer.innerHTML = loggedOutHtml;
+        if (mobileContainer) mobileContainer.innerHTML = `
+          <button onclick="toggleDrawer(false); openAuthModal('signin');" class="w-full text-left bg-slate-100 text-slate-700 font-bold text-xs px-4 py-3 rounded-2xl flex items-center gap-2 border border-slate-200">
+            <span>👤</span> Sign In / Create Account
+          </button>
+        `;
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('sour_token');
+      localStorage.removeItem('sour_user');
+      renderAuthUI();
+      alert("You have been signed out.");
+    }
 
     function toggleDrawer(open) {
       const drawer = document.getElementById('drawerContent');
@@ -428,20 +528,159 @@
       document.getElementById(id).classList.toggle('hidden');
     }
 
-    function openMvccPortal() {
-      document.getElementById('mvccModal').classList.remove('hidden');
+    // Step 1: Open status choice
+    function openBookingStep1() {
+      document.getElementById('statusModal').classList.remove('hidden');
     }
 
-    function applyMvccAndBook() {
-      isMvccActive = true;
-      setBookingCustomerType('College Student');
-      toggleModal('mvccModal');
-      openBookingModal('Small');
+    function startBookingWithStatus(statusType) {
+      selectedStatus = statusType;
+      handleStatusSelected(statusType);
     }
 
-    function openBookingModal(bagSize = 'Small') {
-      selectBag(bagSize);
-      updateModalPricing();
+    // Step 2: Handle Status Choice & Check Auth
+    function handleStatusSelected(statusType) {
+      selectedStatus = statusType;
+      document.getElementById('statusModal').classList.add('hidden');
+
+      const user = getSavedUser();
+      if (!user || !getToken()) {
+        // Not logged in -> Show Auth Modal
+        openAuthModal('register');
+      } else {
+        // Already logged in -> Open Bag Booking Modal
+        openOrderModalWithUser(user);
+      }
+    }
+
+    // Auth Modal Logic
+    function openAuthModal(defaultTab = 'register') {
+      switchAuthTab(defaultTab);
+      // Toggle dorm field based on selected status
+      const dormContainer = document.getElementById('regDormContainer');
+      if (dormContainer) {
+        if (selectedStatus === 'College Student') dormContainer.classList.remove('hidden');
+        else dormContainer.classList.add('hidden');
+      }
+      document.getElementById('authModal').classList.remove('hidden');
+    }
+
+    function switchAuthTab(tab) {
+      const isReg = (tab === 'register');
+      document.getElementById('tabRegister').className = isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
+      document.getElementById('tabSignIn').className = !isReg ? "py-2 text-xs font-bold rounded-xl bg-white text-emerald-700 shadow-sm transition" : "py-2 text-xs font-bold rounded-xl text-slate-600 transition";
+      
+      document.getElementById('registerForm').classList.toggle('hidden', !isReg);
+      document.getElementById('signInForm').classList.toggle('hidden', isReg);
+      document.getElementById('authModalTitle').textContent = isReg ? "Create Your Account" : "Sign In to Your Account";
+      document.getElementById('authAlert').classList.add('hidden');
+    }
+
+    async function handleRegister(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitRegister');
+      const alertBox = document.getElementById('authAlert');
+      btn.disabled = true;
+      btn.textContent = "Creating Account...";
+
+      const payload = {
+        name: document.getElementById('regName').value,
+        email: document.getElementById('regEmail').value,
+        phone: document.getElementById('regPhone').value,
+        password: document.getElementById('regPassword').value,
+        role: (selectedStatus === 'College Student') ? "STUDENT" : "NEIGHBOR",
+        building: document.getElementById('regDorm') ? document.getElementById('regDorm').value : '',
+      };
+
+      try {
+        const res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Registration failed");
+
+        localStorage.setItem('sour_token', data.access_token);
+        localStorage.setItem('sour_user', JSON.stringify(data.user));
+        renderAuthUI();
+
+        document.getElementById('authModal').classList.add('hidden');
+        openOrderModalWithUser(data.user);
+      } catch (err) {
+        alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-red-50 text-red-700 border border-red-200 block";
+        alertBox.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Create Account & Continue >";
+      }
+    }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitLogin');
+      const alertBox = document.getElementById('authAlert');
+      btn.disabled = true;
+      btn.textContent = "Signing In...";
+
+      const payload = {
+        email: document.getElementById('loginEmail').value,
+        password: document.getElementById('loginPassword').value,
+      };
+
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || "Sign In failed");
+
+        localStorage.setItem('sour_token', data.access_token);
+        localStorage.setItem('sour_user', JSON.stringify(data.user));
+        renderAuthUI();
+
+        document.getElementById('authModal').classList.add('hidden');
+        openOrderModalWithUser(data.user);
+      } catch (err) {
+        alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-red-50 text-red-700 border border-red-200 block";
+        alertBox.textContent = err.message;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Sign In & Continue >";
+      }
+    }
+
+    // Step 3: Open Order Modal with User Details
+    function openOrderModalWithUser(user) {
+      document.getElementById('nameInput').value = user.name || '';
+      document.getElementById('phoneInput').value = user.phone || '';
+      
+      const isStudent = (selectedStatus === 'College Student');
+      const badge = document.getElementById('bookingStatusBadge');
+      if (badge) {
+        badge.textContent = isStudent 
+          ? "🎓 MVCC Student & Faculty Rate ($10 Off per bag)" 
+          : "🏡 Local South Utica Standard Rate";
+      }
+
+      const dormContainer = document.getElementById('dormFieldContainer');
+      const dormInput = document.getElementById('dormInput');
+      if (isStudent) {
+        dormContainer.classList.remove('hidden');
+        dormInput.required = true;
+        dormInput.value = user.building || '';
+      } else {
+        dormContainer.classList.add('hidden');
+        dormInput.required = false;
+      }
+
+      document.getElementById('bookingPriceSmall').textContent = isStudent ? '$10' : '$20';
+      document.getElementById('bookingPriceMedium').textContent = isStudent ? '$20' : '$30';
+      document.getElementById('bookingPriceLarge').textContent = isStudent ? '$30' : '$40';
+
+      selectBag('Small');
       calcTotal();
       document.getElementById('bookingModal').classList.remove('hidden');
     }
@@ -459,39 +698,8 @@
       calcTotal();
     }
 
-    function setBookingCustomerType(type) {
-      bookingCustomerType = type;
-      isMvccActive = (type === 'College Student');
-      
-      const btnMvcc = document.getElementById('btnMvcc');
-      const btnLocal = document.getElementById('btnLocal');
-      const dormField = document.getElementById('studentLocationField');
-
-      if (type === 'College Student') {
-        btnMvcc.className = "py-2.5 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600 transition";
-        btnLocal.className = "py-2.5 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200 transition";
-        dormField.classList.remove('hidden');
-        document.getElementById('dormInput').required = true;
-      } else {
-        btnLocal.className = "py-2.5 text-xs font-bold rounded-xl border bg-emerald-600 text-white border-emerald-600 transition";
-        btnMvcc.className = "py-2.5 text-xs font-bold rounded-xl border bg-slate-50 text-slate-700 border-slate-200 transition";
-        dormField.classList.add('hidden');
-        document.getElementById('dormInput').required = false;
-      }
-
-      updateModalPricing();
-      calcTotal();
-    }
-
-    function updateModalPricing() {
-      const isStudent = (bookingCustomerType === 'College Student');
-      document.getElementById('bookingPriceSmall').textContent = isStudent ? '$10' : '$20';
-      document.getElementById('bookingPriceMedium').textContent = isStudent ? '$20' : '$30';
-      document.getElementById('bookingPriceLarge').textContent = isStudent ? '$30' : '$40';
-    }
-
     function calcTotal() {
-      const isStudent = (bookingCustomerType === 'College Student');
+      const isStudent = (selectedStatus === 'College Student');
       let base = 20;
       if (isStudent) {
         base = selectedBagSize === 'Small' ? 10 : (selectedBagSize === 'Medium' ? 20 : 30);
@@ -509,16 +717,23 @@
 
     async function submitBooking(e) {
       e.preventDefault();
+      const token = getToken();
+      if (!token) {
+        alert("Please sign in or create an account first.");
+        openAuthModal('signin');
+        return;
+      }
+
       const btn = document.getElementById('btnSubmitBooking');
       const alertBox = document.getElementById('bookingAlert');
-      
       btn.disabled = true;
-      btn.textContent = "Submitting Booking...";
+      btn.textContent = "Submitting Order...";
 
+      const isStudent = (selectedStatus === 'College Student');
       const payload = {
-        customer_type: bookingCustomerType,
-        is_mvcc: (bookingCustomerType === 'College Student'),
-        college: bookingCustomerType === 'College Student' ? 'MVCC' : '',
+        customer_type: selectedStatus,
+        is_mvcc: isStudent,
+        college: isStudent ? 'MVCC' : '',
         dorm: document.getElementById('dormInput').value || 'South Utica Local',
         directions: '',
         bag_size: selectedBagSize,
@@ -533,7 +748,10 @@
       try {
         const res = await fetch('/api/orders', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
           body: JSON.stringify(payload)
         });
 
