@@ -152,7 +152,7 @@
         <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-[#ff66c4] hover:bg-[#ff66c4] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-black-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#ff66c4] hover:bg-[#ff66c4] text-black font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-black-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
             <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -161,6 +161,34 @@
         </div>
 
       </section>
+      <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
+      <section id="servicesSection" class="px-3 py-2 w-full">
+        
+         <!-- MVCC Student & Staff Pricing Banner Button -->
+          <button 
+            id="btnMvccToggle"
+            onclick="toggleMvccPricing()" 
+            class="w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#d5f5e3] border border-pink-200 flex items-center justify-between transition text-left"
+          >
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-[#ff66c4] text-black flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+                🎓
+              </div>
+              <div>
+                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
+                  MVCC Student, Faculty & Staff Pricing &gt;
+                </span>
+                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
+                  Show your MVCC ID and get exclusive rates!
+                </span>
+              </div>
+            </div>
+
+            <div class="text-right flex-shrink-0">
+              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
+            </div>
+          </button>
 
       <!-- ==================== 2. QUICK ACTION CARDS (MATCHING IMAGE 2) ==================== -->
       <section class="px-3 pt-3 pb-2 w-full">
@@ -205,34 +233,7 @@
         </div>
       </section>
 
-      <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
-      <section id="servicesSection" class="px-3 py-2 w-full">
-        
-         <!-- MVCC Student & Staff Pricing Banner Button -->
-          <button 
-            id="btnMvccToggle"
-            onclick="toggleMvccPricing()" 
-            class="w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left"
-          >
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
-                🎓
-              </div>
-              <div>
-                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
-                  MVCC Student, Faculty & Staff Pricing &gt;
-                </span>
-                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
-                  Show your MVCC ID and get exclusive rates!
-                </span>
-              </div>
-            </div>
-
-            <div class="text-right flex-shrink-0">
-              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
-              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
-            </div>
-          </button>
+      
 
         </div>
       </section>
