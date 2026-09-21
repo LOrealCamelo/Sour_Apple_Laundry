@@ -152,7 +152,7 @@
         <div class="absolute left-[30%] top-[38%] w-[47%] z-20">
           <button 
             onclick="openBookingStep1()" 
-            class="w-full bg-[#ff66c4] hover:bg-[#ff66c4] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-pink-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
+            class="w-full bg-[#ff66c4] hover:bg-[#ff66c4] text-white font-extrabold text-[9px] sm:text-xs py-1.5 sm:py-2.5 px-2 rounded-full shadow-lg border border-black-300 flex items-center justify-center gap-1 active:scale-95 transition hover:scale-105"
           >
             <span>📅</span>
             <span class="truncate">Book your VIP Laundry Service</span>
@@ -208,10 +208,34 @@
       <!-- ==================== 3. OUR SERVICES SECTION (MATCHING IMAGE 2) ==================== -->
       <section id="servicesSection" class="px-3 py-2 w-full">
         
-        <!-- Brush Ribbon Title -->
-        <div class="inline-block px-4 py-1 brush-ribbon text-white font-extrabold text-sm shadow-sm mb-2.5">
-          Our Services
+         <!-- MVCC Student & Staff Pricing Banner Button -->
+          <button 
+            id="btnMvccToggle"
+            onclick="toggleMvccPricing()" 
+            class="w-full mt-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left"
+          >
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+                🎓
+              </div>
+              <div>
+                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
+                  MVCC Student, Faculty & Staff Pricing &gt;
+                </span>
+                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
+                  Show your MVCC ID and get exclusive rates!
+                </span>
+              </div>
+            </div>
+
+            <div class="text-right flex-shrink-0">
+              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
+              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
+            </div>
+          </button>
+
         </div>
+      </section>
 
         <!-- Sizing & Bags White Container -->
         <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
@@ -267,34 +291,7 @@
 
           </div>
 
-          <!-- MVCC Student & Staff Pricing Banner Button -->
-          <button 
-            id="btnMvccToggle"
-            onclick="toggleMvccPricing()" 
-            class="w-full mt-3 p-2.5 rounded-2xl bg-[#eafaf1] hover:bg-[#d5f5e3] border border-emerald-200 flex items-center justify-between transition text-left"
-          >
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-[#16a34a] text-white flex items-center justify-center text-sm shadow-sm flex-shrink-0">
-                🎓
-              </div>
-              <div>
-                <span id="mvccToggleTitle" class="text-xs font-extrabold text-emerald-900 block leading-tight">
-                  MVCC Student, Faculty & Staff Pricing &gt;
-                </span>
-                <span id="mvccToggleSubtitle" class="text-[10px] text-emerald-700 leading-tight">
-                  Show your MVCC ID and get exclusive rates!
-                </span>
-              </div>
-            </div>
-
-            <div class="text-right flex-shrink-0">
-              <span class="text-[10px] text-emerald-800 font-extrabold italic block leading-tight">Support</span>
-              <span class="text-[10px] text-emerald-600 font-extrabold italic block leading-tight">Local! ♡</span>
-            </div>
-          </button>
-
-        </div>
-      </section>
+         
 
     </div>
   </main>
@@ -362,7 +359,7 @@
         <!-- MVCC Student Option -->
         <button 
           onclick="handleStatusSelected('College Student')" 
-          class="w-full p-4 rounded-2xl border-2 border-[#00703C] bg-emerald-50/80 hover:bg-emerald-100/80 flex items-center justify-between transition shadow-sm group"
+          class="w-full p-4 rounded-2xl border-2 border-[#ff66c4] bg-pink-50/80 hover:bg-pink-100/80 flex items-center justify-between transition shadow-sm group"
         >
           <div class="flex items-center gap-3">
             <span class="text-2xl">🎓</span>
@@ -468,7 +465,7 @@
       <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
         <div>
           <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">Book your VIP Laundry Service</h2>
-          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
+          <span id="bookingStatusBadge" class="text-[11px] font-bold text-emerald-700 bg-ff66c4-50 px-2.5 py-0.5 rounded-full border border-emerald-200 inline-block mt-1">
             🎓 MVCC Student & Faculty Rate ($10 Off)
           </span>
         </div>
