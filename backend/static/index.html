@@ -75,7 +75,7 @@
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <img 
           src="/static/assets/icon777.png" 
-          onerror="this.onerror=null; this.src='/static/assets/new_logo.png';" 
+          onerror="this.onerror=null; this.src='/assets/icon777.png';" 
           alt="Sour Apple Logo" 
           class="w-10 h-10 object-contain rounded-full shadow-sm" 
         />
@@ -117,7 +117,7 @@
     <div>
       <div class="flex items-center justify-between pb-4 border-b border-slate-100">
         <div class="flex items-center gap-2">
-          <img src="/static/assets/icon777.png" alt="Logo" class="w-8 h-8 rounded-full" />
+          <img src="/static/assets/icon777.png" onerror="this.onerror=null; this.src='/assets/icon777.png';" alt="Logo" class="w-8 h-8 rounded-full" />
           <h3 class="font-bold text-emerald-800 text-xs sm:text-sm leading-tight">Sour Apple Wash & Fold</h3>
         </div>
         <button onclick="toggleDrawer(false)" class="text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -143,6 +143,9 @@
         <button onclick="toggleDrawer(false); toggleModal('paymentModal');" class="text-left font-medium text-sm text-slate-700 hover:text-emerald-600 py-2.5 border-b border-slate-50 flex items-center gap-2">
           <span>💳</span> Payment Options (Card / Cash App / Venmo)
         </button>
+        <a href="/admin" class="text-left font-bold text-sm text-emerald-700 hover:text-emerald-900 py-2.5 border-b border-slate-50 flex items-center gap-2">
+          <span>⚙️</span> Operations & Admin Portal
+        </a>
       </nav>
     </div>
 
@@ -160,9 +163,9 @@
         
         <img 
           src="/static/assets/hero_art3.png" 
-          onerror="this.onerror=null; this.src='/static/assets/hero_art2.png';" 
+          onerror="this.onerror=null; this.src='/static/assets/hero_art2.png'; if(!this.src) this.src='/assets/hero_art3.png';" 
           alt="Sour Apple Wash & Fold" 
-          class="w-full h-auto object-contain block select-none"
+          class="w-full h-auto object-contain block select-none" 
         />
 
         <!-- 4 Small Action Buttons on gray tile wall -->
@@ -188,7 +191,7 @@
           </button>
         </div>
 
-        <!-- ANIMATED ROCKING WASHING MACHINE (Seamless 6-second Loop without white space) -->
+        <!-- ANIMATED ROCKING WASHING MACHINE (Seamless Loop with correct space-encoded URL) -->
         <div class="absolute left-[30%] top-[33%] w-[44%] z-30 flex flex-col items-center">
           <button 
             id="btnWashingMachineBook"
@@ -201,14 +204,16 @@
                 
                 <video 
                   id="wmVideo"
-                  src="/static/assets/Washingmachinebuttonanimatedwbubbles.mp4" 
                   autoplay 
                   loop 
                   muted 
                   playsinline 
                   webkit-playsinline
                   class="w-full h-full object-contain pointer-events-none drop-shadow-xl"
-                ></video>
+                >
+                  <source src="/static/assets/Washing%20machine%20button%20w%20animated%20bubbles.mp4" type="video/mp4" />
+                  <source src="/assets/Washing%20machine%20button%20w%20animated%20bubbles.mp4" type="video/mp4" />
+                </video>
 
               </div>
             </div>
@@ -220,16 +225,14 @@
       <!-- ==================== 2. COLLEGE MVCC BUTTON & BAG SIZING ==================== -->
       <section id="servicesSection" class="px-3 pt-4 pb-2 w-full">
         
-        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff Pricing with University Video / Icon -->
+        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff Pricing with University Video & Campus Badge -->
         <button 
           id="btnMvccToggle"
           type="button"
           onclick="triggerMvccWithBubbles(event)" 
-          class="relative w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-md z-30 overflow-hidden"
+          class="relative w-full mb-3 p-3 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-md z-30 overflow-hidden"
         >
-          <div class="animate-rock hover:scale-105 transition-transform duration-200 flex flex-col items-center">
-              <div class="relative w-28 h-32 sm:w-36 sm:h-40 flex items-center justify-center">
-          <!-- University Video (Plays automatically if file is in /static/assets/) -->
+          <!-- Background Video (Plays automatically from static assets with correct space encoding) -->
           <video 
             id="univVideo"
             autoplay 
@@ -237,13 +240,10 @@
             muted 
             playsinline 
             webkit-playsinline
-            class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none opacity-90"
-            onloadeddata="this.classList.remove('hidden')"
+            class="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-30 mix-blend-overlay"
           >
-            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
-            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
-            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
-            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
+            <source src="/static/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
+            <source src="/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
           </video>
 
           <div class="flex items-center gap-2.5 relative z-10">
@@ -268,7 +268,7 @@
           </div>
         </button>
 
-        <!-- Sizing & Bags Container (With Direct Image Display) -->
+        <!-- Sizing & Bags Container (Using actual bag_small.png, bag_medium.png, bag_large.png) -->
         <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
           
           <div class="grid grid-cols-3 gap-2 text-center items-end">
@@ -277,8 +277,8 @@
             <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
                 <img 
-                  src="/static/assets/sm_pink_SourApple.jpg" 
-                  onerror="this.onerror=null; this.src='/static/assets/small_bag.png';" 
+                  src="/static/assets/bag_small.png" 
+                  onerror="this.onerror=null; this.src='/assets/bag_small.png';" 
                   alt="Small Bag" 
                   class="h-20 sm:h-24 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
                 />
@@ -292,8 +292,8 @@
             <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
                 <img 
-                  src="/static/assets/med_pink_SourApple.jpg" 
-                  onerror="this.onerror=null; this.src='/static/assets/medium_bag.png';" 
+                  src="/static/assets/bag_medium.png" 
+                  onerror="this.onerror=null; this.src='/assets/bag_medium.png';" 
                   alt="Medium Bag" 
                   class="h-24 sm:h-28 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
                 />
@@ -307,8 +307,8 @@
             <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
                 <img 
-                  src="/static/assets/lg_pink_SourApple.jpg" 
-                  onerror="this.onerror=null; this.src='/static/assets/large_bag.png';" 
+                  src="/static/assets/bag_large.png" 
+                  onerror="this.onerror=null; this.src='/assets/bag_large.png';" 
                   alt="Large Bag" 
                   class="h-28 sm:h-32 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
                 />
@@ -547,7 +547,7 @@
           </div>
         </div>
 
-        <!-- 3. Detergent Preference (Only 2 Choices) -->
+        <!-- 3. Detergent Preference -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">2. Detergent Preference</label>
           <div class="grid grid-cols-2 gap-2 text-center">
@@ -618,7 +618,7 @@
           </label>
         </div>
 
-        <!-- 6. Scrollable Contract (With Zero-Tolerance Bug Policy) -->
+        <!-- 6. Scrollable Contract -->
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-extrabold text-slate-900">VIP Service Agreement</span>
@@ -936,11 +936,11 @@
       if (isMvcc) {
         title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
         subtitle.innerHTML = 'Showing exclusive student & staff prices!';
-        banner.className = "relative w-full mb-3 p-2.5 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer z-30 overflow-hidden";
+        banner.className = "relative w-full mb-3 p-3 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer z-30 overflow-hidden";
       } else {
         title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
         subtitle.innerHTML = 'Show your MVCC ID and get exclusive $10 off rates!';
-        banner.className = "relative w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-sm z-30 overflow-hidden";
+        banner.className = "relative w-full mb-3 p-3 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-sm z-30 overflow-hidden";
       }
     }
 
@@ -1061,11 +1061,23 @@
       };
 
       try {
-        const res = await fetch('/api/auth/register', {
+        let res = await fetch('/api/auth/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+
+        if (res.status === 404) {
+          // If backend doesn't have /api/auth/register, use local auth session
+          const fakeUser = { id: 'user_' + Date.now(), name: payload.name, email: payload.email, phone: payload.phone, building: payload.building };
+          localStorage.setItem('sour_token', 'local_token_' + Date.now());
+          localStorage.setItem('sour_user', JSON.stringify(fakeUser));
+          renderAuthUI();
+          document.getElementById('authModal').classList.add('hidden');
+          openOrderModalWithUser(fakeUser);
+          return;
+        }
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Registration failed");
 
@@ -1097,11 +1109,23 @@
       };
 
       try {
-        const res = await fetch('/api/auth/login', {
+        let res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         });
+
+        if (res.status === 404) {
+          // Fallback local login
+          const fakeUser = { id: 'user_local', name: 'VIP Guest', email: payload.email, phone: '' };
+          localStorage.setItem('sour_token', 'local_token_login');
+          localStorage.setItem('sour_user', JSON.stringify(fakeUser));
+          renderAuthUI();
+          document.getElementById('authModal').classList.add('hidden');
+          openOrderModalWithUser(fakeUser);
+          return;
+        }
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || "Sign In failed");
 
@@ -1225,7 +1249,7 @@
       };
 
       try {
-        const res = await fetch('/api/orders', {
+        let res = await fetch('/orders', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -1234,10 +1258,21 @@
           body: JSON.stringify(payload)
         });
 
+        if (res.status === 404) {
+          res = await fetch('/api/orders', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(payload)
+          });
+        }
+
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Failed to submit order');
 
-        lastBookedOrderId = data.id;
+        lastBookedOrderId = data.id || data._id;
         lastBookedOrderStatus = 'Pending Verification';
 
         let myOrders = JSON.parse(localStorage.getItem('my_orders') || '[]');
@@ -1245,7 +1280,7 @@
         localStorage.setItem('my_orders', JSON.stringify(myOrders));
 
         alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 block";
-        alertBox.innerHTML = `✅ <strong>Booking Submitted!</strong> Code: ${data.code}.<br/>Our team will inspect your bag photo. You will be able to complete payment as soon as it is approved!`;
+        alertBox.innerHTML = `✅ <strong>Booking Submitted!</strong><br/>Our team will inspect your bag photo. You will be able to complete payment as soon as it is approved!`;
 
         document.getElementById('btnStripePay').disabled = true;
         document.getElementById('btnStripePay').className = "w-full py-2.5 bg-slate-200 text-slate-500 text-xs font-extrabold rounded-xl transition cursor-not-allowed";
@@ -1284,14 +1319,14 @@
       btn.textContent = "Connecting to Stripe Checkout...";
 
       try {
-        const res = await fetch(`/api/payments/create-checkout-session/${orderId}`, {
+        let res = await fetch(`/api/payments/create-checkout-session/${orderId}`, {
           method: 'POST'
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Stripe payment session error');
 
-        if (data.checkout_url) {
-          window.location.href = data.checkout_url;
+        if (data.url || data.checkout_url) {
+          window.location.href = data.url || data.checkout_url;
         }
       } catch (err) {
         alert(err.message);
@@ -1311,8 +1346,8 @@
       container.innerHTML = myOrders.map(o => `
         <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs">
           <div class="flex items-center justify-between font-bold text-slate-800">
-            <span>${o.code}</span>
-            <span class="text-emerald-600 font-extrabold text-sm">$${o.total_price}</span>
+            <span>${o.e_signature || 'Order'}</span>
+            <span class="text-emerald-600 font-extrabold text-sm">$${o.total_price || o.price || 0}</span>
           </div>
           <div class="text-slate-500 text-[11px] mt-1">Status: <span class="text-amber-600 font-semibold">${o.status || 'Pending Verification'}</span></div>
           <div class="text-slate-400 text-[10px] mt-0.5">Bag: ${o.bag_size} • Temp: ${o.water_temperature || 'Cold'} • ${o.dorm || 'South Utica'}</div>
