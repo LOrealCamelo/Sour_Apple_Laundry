@@ -1,1632 +1,444 @@
-"""
-Sour Apple VIP Laundry Services — All-in-One Production Engine
-FastAPI + MongoDB + Web App + Admin Portal + Customer Order Tracker + Stripe + MVCC Verification + Privacy Policy
-"""
-
 import os
-import uuid
+import json
+import urllib.request
 import smtplib
-import asyncio
-import logging
-from pathlib import Path
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 from typing import List, Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from fastapi import FastAPI, APIRouter, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.security import OAuth2PasswordBearer
-from dotenv import load_dotenv
-from starlette.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
+from pydantic import BaseModel, Field
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import BaseModel
-from passlib.context import CryptContext
-from jose import jwt, JWTError
-import certifi
+import stripe
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
+# --- Environment & Configuration ---
+SECRET_KEY = os.getenv("JWT_SECRET", "sour-apple-super-secret-key")
+ALGORITHM = "HS256"
+MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+SMTP_USER = os.getenv("SMTP_USER", "your-gmail@gmail.com")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "natture1st@gmail.com")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "AdminPass123!")
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+stripe.api_key = STRIPE_SECRET_KEY
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("sourapple")
+# 1. Initialize FastAPI Application
+app = FastAPI(title="Sour Apple Wash & Fold VIP Laundry Services")
 
-mongo_url = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
-client = AsyncIOMotorClient(mongo_url, tlsCAFile=certifi.where())
-db = client[os.environ.get("DB_NAME", "sour_apple_laundry")]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-JWT_SECRET = os.environ.get("JWT_SECRET", "sourapplesecretkey1234567890")
-JWT_ALGORITHM = os.environ.get("JWT_ALGORITHM", "HS256")
-JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "43200"))
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "natture1st@gmail.com").lower()
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AdminPass123!")
+client = AsyncIOMotorClient(MONGODB_URL)
+db = client.sour_apple_laundry
 
-# Stripe Settings
-STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", "")
-
-# Email Alert Settings (Google App Password)
-SMTP_USER = os.environ.get("SMTP_USER", "natture1st@gmail.com")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
-
-# Public GitHub Asset URLs for 100% Reliable CDN Loading
-GITHUB_ASSET_BASE = "https://raw.githubusercontent.com/LOrealCamelo/Sour_Apple_Laundry/main/frontend/assets/images"
-ICON_URL = f"{GITHUB_ASSET_BASE}/icon.png"
-CROWN_URL = f"{GITHUB_ASSET_BASE}/crown.png"
-BAG_SIZES_URL = f"{GITHUB_ASSET_BASE}/bag-sizes.jpg"
-FAVICON_URL = f"{GITHUB_ASSET_BASE}/favicon.png"
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
-
-app = FastAPI(title="Sour Apple VIP Laundry")
-api = APIRouter(prefix="/api")
-
-def now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-def new_id() -> str:
-    return str(uuid.uuid4())
-
-# Robust Email Dispatcher (Supports SSL Port 465 and STARTTLS Port 587)
-def _send_smtp_email(to_email: str, subject: str, body_text: str) -> bool:
-    clean_pw = (SMTP_PASSWORD or "").strip().replace(" ", "")
-    if not clean_pw:
-        logger.warning("SMTP_PASSWORD is empty in Render environment variables. Skipping email notification.")
-        return False
-    try:
-        msg = MIMEMultipart()
-        msg["From"] = SMTP_USER
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body_text, "plain"))
-
-        try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
-                server.login(SMTP_USER, clean_pw)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
-            logger.info(f"Email successfully sent to {to_email} via SSL (465)")
-            return True
-        except Exception as e_ssl:
-            logger.warning(f"SSL (465) attempt failed ({e_ssl}), trying STARTTLS (587)...")
-            with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
-                server.starttls()
-                server.login(SMTP_USER, clean_pw)
-                server.sendmail(SMTP_USER, [to_email], msg.as_string())
-            logger.info(f"Email successfully sent to {to_email} via STARTTLS (587)")
-            return True
-    except Exception as e:
-        logger.error(f"Failed to send email to {to_email}: {e}")
-        return False
-
-# Send booking email alert to Admin (LOreal)
-def send_booking_email_alert(order: dict):
-    body_text = f"""Hello LOreal,
-
-A new laundry order was just submitted on your website!
-
-• Order Code: {order['code']}
-• Customer: {order['customer_name']}
-• Affiliation: {order.get('customer_type', 'Community Member')}
-• Role: {order.get('mvcc_role', 'N/A')}
-• Email: {order['email']}
-• Phone: {order['phone']}
-• Drop-Off Date: {order['pickup_date']} ({order['pickup_window']})
-• Location: {order['location']}
-• Total Price: ${order['price']:.2f}
-
-Click below to review the bag photo and approve the order in your Admin Portal:
-https://sourapplelaundry.com/admin
-
-— Sour Apple VIP Laundry System
-"""
-    _send_smtp_email(ADMIN_EMAIL, f"🍏 New Laundry Order: {order['code']} (${order['price']:.2f})", body_text)
-
-# Send automatic approval email to Customer
-def send_customer_approval_email(order: dict):
-    if not order.get("email"):
-        return
-    body_text = f"""Hi {order.get('customer_name', 'Valued Customer')},
-
-Great news! Your laundry order ({order['code']}) has been reviewed and APPROVED by LOreal!
-
-• Total Due: ${order.get('price', 30.0):.2f}
-• Scheduled Drop-Off Window: {order.get('pickup_date', '')} ({order.get('pickup_window', '')})
-
-Click the link below to select your contactless payment (Credit Card / Cash App / Venmo) and view your drop-off instructions:
-https://sourapplelaundry.com/orders/{order['code']}
-
-Thank you for choosing Sour Apple VIP Laundry Services!
-Call/Text: (315) 791-7389 | Email: natture1st@gmail.com
-"""
-    _send_smtp_email(order["email"], f"🍏 Sour Apple VIP Laundry: Order {order['code']} APPROVED!", body_text)
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
-
+# 2. Data Models
 class OrderCreate(BaseModel):
-    first_name: str
-    last_name: str
-    email: str
-    phone: str
-    location: str
-    pickup_date: str
-    pickup_window: str = "Morning (9am - 12pm)"
-    customer_type: str = "Community Member"
-    mvcc_role: Optional[str] = ""
-    mvcc_subject: Optional[str] = ""
-    mvcc_dept_or_title: Optional[str] = ""
-    mvcc_id_photo_base64: Optional[str] = None
-    mvcc_id_number: Optional[str] = ""
-    marketing_opt_in: bool = False
-    marketing_preference: Optional[str] = "Email"
-    service_type: Optional[str] = "Standard Load"
-    services: List[str] = []
-    bags: int = 1
-    rush: bool = False
-    bedding_addon: bool = False
-    preferences: List[str] = []
-    stain_notes: str = ""
-    bag_image_base64: Optional[str] = None
-    bag_price_each: Optional[float] = None
-    contract_agreed: bool = True
-    signature_name: str = ""
-    signed_at: Optional[str] = None
+    bag_size: str
+    is_mvcc: bool = False
+    add_ons: List[str] = []
+    digital_contract_accepted: bool = True
+    e_signature: str
+    bag_photo_url: Optional[str] = None
+    photos: List[str] = []
+
+class Order(OrderCreate):
+    id: str
+    total_price: float
+    status: str = "Pending Admin Approval"
+    status_history: List[dict] = []
+    created_at: datetime
+    payment_reported: bool = False
+    payment_method: Optional[str] = None
 
 class ApproveBody(BaseModel):
     price: Optional[float] = None
+    pickup_window: Optional[str] = None
+    delivery_window: Optional[str] = None
     admin_note: Optional[str] = ""
 
 class RejectBody(BaseModel):
-    reason: Optional[str] = ""
+    reason: str = ""
 
-def hash_pw(p: str) -> str:
-    return pwd_context.hash(p)
+class StatusUpdate(BaseModel):
+    status: str
 
-def verify_pw(p: str, h: str) -> bool:
-    return pwd_context.verify(p, h)
-
-def make_token(user: dict) -> str:
-    payload = {
-        "sub": user["id"],
-        "role": user["role"],
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES),
+# 3. Pricing & Async Email Alerts
+def calculate_price(bag_size: str, is_mvcc: bool) -> float:
+    prices = {
+        "Small": 10.0 if is_mvcc else 20.0,
+        "Medium": 20.0 if is_mvcc else 30.0,
+        "Large": 30.0 if is_mvcc else 40.0
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    return prices.get(bag_size, 0.0)
 
-# =============================== API ROUTES ===============================
-@api.post("/auth/login")
-async def login(body: UserLogin):
-    user = await db.users.find_one({"email": body.email.lower()})
-    if not user or not verify_pw(body.password, user["password"]):
-        raise HTTPException(401, "Incorrect email or password")
-    return {"access_token": make_token(user), "token_type": "bearer", "user": {"id": user["id"], "name": user["name"], "email": user["email"], "role": user["role"]}}
-
-@api.post("/orders")
-async def create_order(body: OrderCreate):
-    if not body.contract_agreed:
-        raise HTTPException(400, "Must agree to Service Agreement")
+def send_order_alert(order: dict):
+    subject = f"New Laundry Order: {order.get('e_signature')}"
+    photo = order.get("bag_photo_url") or (order.get("photos") and order.get("photos")[0])
+    photo_html = f"<p><b>Bag Photo:</b><br><img src='{photo}' style='max-width:300px;border-radius:12px;'></p>" if photo else ""
+        
+    html = f"""
+    <html><body style="font-family:sans-serif;background:#09090b;color:#f4f4f5;padding:20px;">
+    <h2 style="color:#a3e635;">New Laundry Order Received</h2>
+    <p><b>Customer:</b> {order.get('e_signature')}</p>
+    <p><b>Bag Size:</b> {order.get('bag_size')}</p>
+    <p><b>Total Price:</b> ${order.get('total_price')}</p>
+    <p><b>MVCC Student:</b> {order.get('is_mvcc')}</p>
+    {photo_html}
+    <p><a href="https://sourapplelaundry.com/admin" style="background:#a3e635;color:#000;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;display:inline-block;">Open Admin Dashboard</a></p>
+    </body></html>"""
     
-    price = (body.bag_price_each or 20.0) * body.bags
-    if body.rush:
-        price += 20.0
-    if body.bedding_addon:
-        price += 25.0
+    if RESEND_API_KEY:
+        try:
+            url = "https://api.resend.com/emails"
+            headers = {"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"}
+            data = json.dumps({"from": "onboarding@resend.dev", "to": ADMIN_EMAIL, "subject": subject, "html": html}).encode("utf-8")
+            req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+            with urllib.request.urlopen(req) as resp:
+                return resp.read()
+        except Exception as e:
+            print("Resend error:", e)
+    elif SMTP_PASSWORD and SMTP_USER:
+        try:
+            msg = MIMEMultipart()
+            msg["From"] = SMTP_USER
+            msg["To"] = ADMIN_EMAIL
+            msg["Subject"] = subject
+            msg.attach(MIMEText(html, "html"))
+            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                server.starttls()
+                server.login(SMTP_USER, SMTP_PASSWORD)
+                server.send_message(msg)
+        except Exception as e:
+            print("SMTP error:", e)
 
-    oid = new_id()
-
-    first_init = (body.first_name.strip()[:1] or "C").upper()
-    last_clean = "".join(c for c in body.last_name.strip() if c.isalnum()).upper() or "CUSTOMER"
-    date_part = datetime.now().strftime("%m%d%y")
-    base_code = f"{first_init}_{last_clean}_{date_part}"
-    code = base_code
-
-    existing = await db.orders.find_one({"code": code})
-    if existing:
-        suffix_char = 65
-        while existing and suffix_char <= 90:
-            code = f"{base_code}{chr(suffix_char)}"
-            existing = await db.orders.find_one({"code": code})
-            suffix_char += 1
-
-    full_name = f"{body.first_name.strip()} {body.last_name.strip()}"
-
-    order = {
-        "id": oid,
-        "code": code,
-        "customer_name": full_name,
-        "first_name": body.first_name.strip(),
-        "last_name": body.last_name.strip(),
-        "email": body.email.strip().lower(),
-        "phone": body.phone.strip(),
-        "customer_type": body.customer_type,
-        "mvcc_role": body.mvcc_role,
-        "mvcc_subject": body.mvcc_subject,
-        "mvcc_dept_or_title": body.mvcc_dept_or_title,
-        "mvcc_id_photo_base64": body.mvcc_id_photo_base64,
-        "mvcc_id_number": body.mvcc_id_number,
-        "marketing_opt_in": body.marketing_opt_in,
-        "marketing_preference": body.marketing_preference,
-        "location": body.location.strip(),
-        "service_type": body.service_type,
-        "services": body.services,
-        "bags": body.bags,
-        "rush": body.rush,
-        "bedding_addon": body.bedding_addon,
-        "preferences": body.preferences,
-        "stain_notes": body.stain_notes,
-        "bag_image_base64": body.bag_image_base64,
-        "photos": [body.bag_image_base64] if body.bag_image_base64 else [],
-        "price": round(float(price), 2),
+# 4. Customer Endpoints
+@app.post("/orders", response_model=Order)
+async def create_order(order_data: OrderCreate, background_tasks: BackgroundTasks):
+    price = calculate_price(order_data.bag_size, order_data.is_mvcc)
+    new_order = {
+        **order_data.dict(),
+        "total_price": price,
         "status": "Pending Admin Approval",
-        "payment_status": "Unpaid",
-        "pickup_date": body.pickup_date,
-        "pickup_window": body.pickup_window,
-        "signature_name": body.signature_name or full_name,
-        "signed_at": body.signed_at or now_iso(),
-        "admin_note": "",
-        "created_at": now_iso(),
+        "status_history": [{"status": "Pending Admin Approval", "timestamp": datetime.now()}],
+        "created_at": datetime.now(),
+        "payment_reported": False
     }
-    await db.orders.insert_one(order)
-    order.pop("_id", None)
+    result = await db.orders.insert_one(new_order)
+    new_order["id"] = str(result.inserted_id)
+    background_tasks.add_task(send_order_alert, new_order)
+    return new_order
 
-    asyncio.create_task(asyncio.to_thread(send_booking_email_alert, order))
-
-    return order
-
-@api.get("/orders/{order_id}")
-async def get_order_by_id(order_id: str):
-    order = await db.orders.find_one({"id": order_id}, {"_id": 0})
-    if not order:
-        raise HTTPException(404, "Order not found")
-    return order
-
-@api.get("/orders/lookup/{code}")
-async def get_order_by_code(code: str):
-    order = await db.orders.find_one({"code": code}, {"_id": 0})
-    if not order:
-        raise HTTPException(404, "Order not found")
-    return order
-
-@api.get("/admin/orders")
-async def admin_orders():
-    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(100)
-
-@api.post("/admin/orders/{order_id}/approve")
-async def approve_order(order_id: str, body: Optional[ApproveBody] = None):
-    updates = {"status": "Approved"}
-    if body and body.price is not None:
-        updates["price"] = body.price
-    if body and body.admin_note:
-        updates["admin_note"] = body.admin_note
-    await db.orders.update_one({"id": order_id}, {"$set": updates})
-
-    order = await db.orders.find_one({"id": order_id})
+@app.get("/orders/{order_id}")
+async def get_order(order_id: str):
+    order = await db.orders.find_one({"$or": [{"id": order_id}, {"_id": order_id}]})
     if order:
-        asyncio.create_task(asyncio.to_thread(send_customer_approval_email, order))
+        order["id"] = str(order.get("id") or order.get("_id"))
+        order.pop("_id", None)
+        return order
+    raise HTTPException(status_code=404, detail="Order not found")
 
-    return {"ok": True}
+@app.post("/orders/{order_id}/report-payment")
+async def report_payment(order_id: str, method: str):
+    await db.orders.update_one(
+        {"$or": [{"id": order_id}, {"_id": order_id}]},
+        {"$set": {"payment_reported": True, "payment_method": method}}
+    )
+    return {"status": "success"}
 
-@api.post("/admin/orders/{order_id}/reject")
-async def reject_order(order_id: str, body: Optional[RejectBody] = None):
-    reason = body.reason if body else "Declined"
-    await db.orders.update_one({"id": order_id}, {"$set": {"status": "Rejected", "admin_note": reason}})
-    return {"ok": True}
-
-@api.post("/admin/orders/{order_id}/mark_paid")
-async def mark_order_paid(order_id: str):
-    await db.orders.update_one({"id": order_id}, {"$set": {"payment_status": "Paid"}})
-    return {"ok": True}
-
-@api.post("/orders/{code}/claim_paid")
-async def claim_payment_sent(code: str):
-    await db.orders.update_one({"code": code}, {"$set": {"payment_status": "Verifying Payment"}})
-    return {"ok": True}
-
-# =============================== STRIPE CHECKOUT ROUTE ===============================
-@app.get("/payments/stripe/checkout/{code}")
-async def stripe_checkout(code: str):
-    order = await db.orders.find_one({"code": code})
-    if not order:
-        raise HTTPException(404, "Order not found")
-    
-    stripe_key = os.environ.get("STRIPE_API_KEY", "")
-    if not stripe_key:
-        raise HTTPException(400, "Stripe API Key not configured in Render environment.")
-
-    import stripe
-    stripe.api_key = stripe_key
-
+# 5. Admin API Endpoints
+@app.get("/api/admin/orders")
+async def get_admin_orders(status_filter: Optional[str] = None):
     try:
-        session = stripe.checkout.Session.create(
-            payment_method_types=["card"],
-            mode="payment",
-            customer_email=order.get("email"),
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "product_data": {
-                        "name": f"Sour Apple VIP Laundry - Order {order['code']}",
-                        "description": f"{order.get('service_type', 'Laundry Service')} ({order.get('bags', 1)} Bag)"
-                    },
-                    "unit_amount": int(round(float(order["price"]) * 100))
-                },
-                "quantity": 1,
-            }],
-            success_url=f"https://sourapplelaundry.com/orders/{order['code']}?paid=1",
-            cancel_url=f"https://sourapplelaundry.com/orders/{order['code']}",
-            metadata={"order_code": order["code"], "order_id": order["id"]},
-        )
-        return RedirectResponse(url=session.url, status_code=303)
+        query = {}
+        if status_filter and status_filter != "All":
+            query["status"] = status_filter
+        cursor = db.orders.find(query).sort("created_at", -1)
+        orders = []
+        async for doc in cursor:
+            doc["id"] = str(doc.get("id") or doc.get("_id"))
+            doc.pop("_id", None)
+            orders.append(doc)
+        return orders
     except Exception as e:
-        logger.error(f"Stripe error: {e}")
-        raise HTTPException(500, f"Stripe Checkout error: {str(e)}")
+        print("Error fetching orders:", e)
+        return []
 
-app.include_router(api)
-app.add_middleware(CORSMiddleware, allow_credentials=True, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-
-# =============================== PWA MANIFEST ===============================
-@app.get("/manifest.json")
-async def get_manifest():
-    return {
-        "name": "Sour Apple VIP Laundry",
-        "short_name": "Sour Apple",
-        "start_url": "/",
-        "display": "standalone",
-        "background_color": "#0A0A0F",
-        "theme_color": "#0A0A0F",
-        "icons": [
-            {
-                "src": ICON_URL,
-                "sizes": "192x192",
-                "type": "image/png",
-                "purpose": "any maskable"
-            },
-            {
-                "src": ICON_URL,
-                "sizes": "512x512",
-                "type": "image/png",
-                "purpose": "any maskable"
-            }
-        ]
-    }
-
-# =============================== PRIVACY POLICY (STRIPE COMPLIANT) ===============================
-@app.get("/privacy", response_class=HTMLResponse)
-@app.get("/privacy-policy", response_class=HTMLResponse)
-async def serve_privacy_policy():
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy | Sour Apple VIP Laundry Services</title>
-  <link rel="icon" type="image/png" href="{FAVICON_URL}">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {{ background-color: #0A0A0F; color: #E4E4E7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    .accent-apple {{ color: #B0FF00; }}
-  </style>
-</head>
-<body class="min-h-screen p-4 sm:p-8 max-w-3xl mx-auto">
-  <div class="py-6 border-b border-zinc-800 mb-8">
-    <a href="/" class="text-xs font-bold text-lime-400 hover:underline">← Back to Sour Apple VIP Laundry</a>
-    <h1 class="text-3xl font-black text-white mt-3 accent-apple">Privacy Policy</h1>
-    <p class="text-xs text-zinc-400 mt-1">Effective Date: September 11, 2026 · Last Updated: September 11, 2026</p>
-  </div>
-
-  <div class="space-y-8 text-sm leading-relaxed text-zinc-300">
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">1. Overview & Commitment</h2>
-      <p>
-        Sour Apple VIP Laundry Services ("we," "us," or "our"), operated by L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services, provides wash and fold laundry services to residential customers in South Utica, NY, and scheduled curbside services to students, faculty, and staff of Mohawk Valley Community College (MVCC). We value your trust and are dedicated to protecting your privacy and securing your personal information.
-      </p>
-      <p class="mt-2">
-        This Privacy Policy describes what information we collect when you visit our website (<strong>sourapplelaundry.com</strong>), place a laundry booking, upload verification images, or interact with our services, how we use that information, the third parties to whom it may be disclosed, and our security practices to safeguard it.
-      </p>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">2. Information We Collect</h2>
-      <p>We collect information directly from you when you book an order or interact with our web application:</p>
-      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
-        <li><strong>Contact Information:</strong> First name, last name, email address, phone number, and physical street address or campus pickup location.</li>
-        <li><strong>Service & Order Details:</strong> Laundry bag size, quantity of bags, selected turnaround speed (standard or rush), add-on preferences (e.g., bedding/comforter wash), detergent/temperature preferences, and stain treatment notes.</li>
-        <li><strong>Affiliation & Verification Data:</strong> For customers requesting discounted MVCC campus rates, we collect institutional affiliation details (Student, Teacher, or Staff/Faculty), department or subject taught, dormitory room or commuter lot, and customer-provided verification materials (a photograph of an MVCC student or employee ID card or an MVCC ID / M-Number).</li>
-        <li><strong>Bag Verification Photos:</strong> Photographs of closed laundry bags submitted by customers during checkout to verify bag closure and volume.</li>
-        <li><strong>Marketing & Promotional Preferences:</strong> Records of whether you opted in to receive promotional coupons, VIP discounts, or giveaways, and your chosen communication channel (Email or SMS).</li>
-        <li><strong>Payment Transaction Metadata:</strong> Payment status (e.g., Paid, Unpaid), order reference code, and transaction identification numbers provided by payment gateways. <em>We do not store full credit card numbers, CVVs, or bank login credentials on our servers.</em></li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">3. How We Use Your Information</h2>
-      <p>We use the collected information strictly for legitimate operational and business purposes:</p>
-      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
-        <li>To schedule, process, clean, fold, and return your laundry orders.</li>
-        <li>To communicate essential updates regarding your booking, including order review, bag size approval, drop-off reminders, readiness notifications, and payment receipts.</li>
-        <li>To verify eligibility for MVCC institutional discount rates.</li>
-        <li>To enforce our Service Agreement, Zero-Tolerance Pest Policy, and health/safety standards.</li>
-        <li>To send promotional discounts, seasonal coupons, and giveaway announcements if and only if you have voluntarily opted in.</li>
-        <li>To process transactions and prevent fraudulent activity.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">4. Parties to Whom Information is Disclosed</h2>
-      <p>
-        <strong>We do not sell, rent, trade, or lease your personal information to third-party data brokers or marketing firms.</strong> We disclose information only to trusted third-party service providers who assist us in operating our business under strict confidentiality agreements:
-      </p>
-      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
-        <li><strong>Payment Processors (Stripe, Cash App, Venmo):</strong> When you choose to pay via credit or debit card, payment data is transmitted directly to <strong>Stripe, Inc.</strong> Stripe processes your payment details in accordance with their <a href="https://stripe.com/privacy" target="_blank" class="text-lime-400 underline">Privacy Policy</a> and strict PCI-DSS Level 1 compliance standards. If you select Cash App or Venmo, payments are handled on their respective platforms.</li>
-        <li><strong>Cloud Infrastructure & Database Hosting:</strong> Our web application is hosted on <strong>Render</strong>, and application data is securely stored on <strong>MongoDB Atlas</strong> cloud databases with enterprise-grade encryption.</li>
-        <li><strong>Email Transmission Providers:</strong> Automated service notifications and receipts are sent via authenticated Google Workspace / Gmail SMTP servers.</li>
-        <li><strong>Legal & Regulatory Compliance:</strong> We may disclose information if required by applicable law, governmental regulation, court order, subpoena, or to protect the safety, rights, and property of Sour Apple VIP Laundry Services, our customers, or the public.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">5. Method of Disclosure & Data Transmission</h2>
-      <p>
-        Information transmitted between your web browser and our servers is encrypted using Transport Layer Security (TLS/HTTPS). When you initiate payment via Stripe, your payment information is entered into a secure checkout session hosted by Stripe and never passes unencrypted through or remains stored on our local servers.
-      </p>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">6. Security Practices in Place to Safeguard Information</h2>
-      <p>
-        We implement rigorous technical, organizational, and administrative safeguards designed to protect personal information from unauthorized access, loss, misuse, alteration, or disclosure:
-      </p>
-      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
-        <li><strong>HTTPS Encryption:</strong> All website traffic, API endpoints, and data transfers are protected with end-to-end SSL/TLS 1.2+ encryption.</li>
-        <li><strong>Payment Tokenization:</strong> All credit and debit card transactions are tokenized and processed by Stripe. We never view, collect, or store raw card numbers, CVVs, or magnetic stripe data.</li>
-        <li><strong>Restricted Administrative Access:</strong> Access to customer orders, phone numbers, and verification photos is strictly limited to authorized administrative personnel via multi-character hashed password authentication and encrypted JWT authorization tokens.</li>
-        <li><strong>Data Minimization:</strong> We only collect the minimal information necessary to fulfill your laundry service and verify campus affiliation.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">7. Your Choices & Rights</h2>
-      <p>
-        You have rights regarding your personal information:
-      </p>
-      <ul class="list-disc list-inside mt-2 space-y-1.5 text-zinc-300">
-        <li><strong>Promotional Communications:</strong> You may unsubscribe or opt out of promotional emails or text messages at any time by replying "STOP" or contacting us directly at <a href="mailto:natture1st@gmail.com" class="text-lime-400 underline">natture1st@gmail.com</a>.</li>
-        <li><strong>Review & Deletion:</strong> You may request access to, correction of, or deletion of your personal booking history and verification images by contacting us with your order code and contact details.</li>
-      </ul>
-    </section>
-
-    <section>
-      <h2 class="text-lg font-black text-white mb-2">8. Children's Privacy</h2>
-      <p>
-        Our services are directed toward adults and college students capable of entering into binding contracts. We do not knowingly solicit or collect personal information from individuals under 18 years of age.
-      </p>
-    </section>
-
-    <section class="border-t border-zinc-800 pt-6">
-      <h2 class="text-lg font-black text-white mb-2">9. Contact Information</h2>
-      <p>If you have any questions, concerns, or requests regarding this Privacy Policy or our data handling practices, please contact us at:</p>
-      <div class="mt-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 space-y-1">
-        <p class="font-bold text-white text-sm">Sour Apple VIP Laundry Services</p>
-        <p>Attn: L'Oreal Venturini Camelo</p>
-        <p>South Utica, NY 13502</p>
-        <p>Email: <a href="mailto:natture1st@gmail.com" class="text-lime-400 underline">natture1st@gmail.com</a></p>
-        <p>Phone / Text: <a href="tel:3157917389" class="text-lime-400 underline">(315) 791-7389</a></p>
-        <p>Website: <a href="https://sourapplelaundry.com" class="text-sky-400 underline">https://sourapplelaundry.com</a></p>
-      </div>
-    </section>
-  </div>
-
-  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600">
-    <p>© 2026 Sour Apple VIP Laundry Services · All Rights Reserved</p>
-  </div>
-</body>
-</html>
-"""
-
-# =============================== CUSTOMER ORDER TRACKING & PAYMENT PAGE ===============================
-@app.get("/orders/{code}", response_class=HTMLResponse)
-async def serve_order_status(code: str, paid: Optional[str] = None):
-    order = await db.orders.find_one({"code": code})
+@app.post("/api/admin/orders/{order_id}/approve")
+async def approve_order(order_id: str, body: ApproveBody = ApproveBody()):
+    order = await db.orders.find_one({"$or": [{"id": order_id}, {"_id": order_id}]})
     if not order:
-        return HTMLResponse(f"""
-        <!DOCTYPE html>
-        <html>
-        <head><title>Order Not Found</title><script src="https://cdn.tailwindcss.com"></script></head>
-        <body class="bg-zinc-950 text-white min-h-screen flex items-center justify-center p-4">
-          <div class="text-center max-w-sm bg-zinc-900 border border-zinc-800 p-6 rounded-2xl">
-            <h1 class="text-xl font-black text-amber-400 mb-2">Order Not Found</h1>
-            <p class="text-xs text-zinc-400 mb-4">We could not find an order with code: <span class="text-white font-mono">{code}</span></p>
-            <a href="/" class="px-4 py-2 rounded-xl bg-lime-400 text-black font-black text-xs uppercase">Back to Home</a>
-          </div>
-        </body>
-        </html>
-        """, status_code=404)
-
-    if paid == "1" or order.get("payment_status") == "Paid":
-        if order.get("payment_status") != "Paid":
-            await db.orders.update_one({"code": code}, {"$set": {"payment_status": "Paid"}})
-            order["payment_status"] = "Paid"
-
-    is_paid = order.get("payment_status") == "Paid"
-    is_verifying = order.get("payment_status") == "Verifying Payment"
-    is_approved = order.get("status") == "Approved"
-    is_mvcc = order.get("customer_type") == "MVCC Affiliated"
-    price = float(order.get("price", 30.0))
-    customer_name = order.get("customer_name", "Valued Customer")
-    pickup_date = order.get("pickup_date", "Scheduled")
-    pickup_window = order.get("pickup_window", "")
-
-    if is_paid:
-        payment_section = """
-        <div class="p-5 rounded-2xl bg-lime-950/40 border-2 border-lime-400 text-center mb-5">
-          <span class="text-3xl">🎉</span>
-          <h2 class="text-base font-black text-lime-300 uppercase tracking-wide mt-1">PAYMENT COMPLETE!</h2>
-          <p class="text-xs text-zinc-300 mt-1">Thank you! Your payment was received. See drop-off instructions below.</p>
-        </div>
-        """
-    elif is_verifying:
-        payment_section = """
-        <div class="p-5 rounded-2xl bg-amber-950/40 border-2 border-amber-400 text-center mb-5">
-          <span class="text-3xl">⏳</span>
-          <h2 class="text-sm font-black text-amber-300 uppercase tracking-wide mt-1">VERIFYING PAYMENT...</h2>
-          <p class="text-xs text-zinc-300 mt-1">We are verifying your Cash App / Venmo payment. This page will update automatically!</p>
-        </div>
-        """
-    else:
-        payment_section = f"""
-        <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
-          <h2 class="text-xs font-black uppercase text-amber-400 tracking-wider">Select Contactless Payment</h2>
-          
-          <!-- Stripe Credit / Debit Card -->
-          <a href="/payments/stripe/checkout/{code}" class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
-            <span class="flex items-center gap-2">💳 Pay with Credit / Debit Card (Stripe)</span>
-            <span>${price:.2f} →</span>
-          </a>
-
-          <!-- Cash App -->
-          <a href="https://cash.app/$SourAppleLaundry/{int(price)}" target="_blank" class="w-full py-3.5 px-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
-            <span>🍏 Pay with Cash App ($SourAppleLaundry)</span>
-            <span>${price:.2f} →</span>
-          </a>
-
-          <!-- Venmo -->
-          <a href="https://venmo.com/SourAppleLaundry" target="_blank" class="w-full py-3.5 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-black text-sm flex items-center justify-between shadow-lg">
-            <span>📱 Pay with Venmo (@SourAppleLaundry)</span>
-            <span>${price:.2f} →</span>
-          </a>
-          <p class="text-[11px] text-zinc-400 text-center">If using Cash App or Venmo, enter your Order Code <strong>{code}</strong> in the note!</p>
-
-          <button onclick="claimPayment()" id="btn-claim-paid" class="w-full py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-bold transition-all">
-            ✓ I Already Sent Payment via Cash App / Venmo
-          </button>
-        </div>
-        """
-
-    if is_approved:
-        if is_mvcc:
-            instructions_card = f"""
-            <div class="p-5 rounded-2xl bg-zinc-900 border-2 border-lime-400 space-y-2">
-              <h2 class="text-xs font-black uppercase text-lime-400 tracking-wider">🎓 MVCC Campus Curbside Drop-Off / Pickup</h2>
-              <p class="text-sm font-bold text-white">Campus Curbside Location: {order.get('location', 'Designated Campus Lot')}</p>
-              <p class="text-xs text-zinc-300 leading-relaxed">
-                Meet curbside during your scheduled window (<strong>{pickup_window}</strong>). Please have your laundry in a closed bag. Zero building entry required!
-              </p>
-            </div>
-            """
-        else:
-            instructions_card = f"""
-            <div class="p-5 rounded-2xl bg-zinc-900 border-2 border-lime-400 space-y-2">
-              <h2 class="text-xs font-black uppercase text-lime-400 tracking-wider">📍 South Utica Drop-Off Address & Instructions</h2>
-              <p class="text-sm font-bold text-white">Location: 6 Meeker Ave, Utica, NY</p>
-              <p class="text-xs text-zinc-300 leading-relaxed">
-                Drop off your closed bag during your window (<strong>{pickup_window}</strong>). Place the bag in the front hallway. Zero contact required!
-              </p>
-            </div>
-            """
-        approval_html = f"{payment_section}{instructions_card}"
-    else:
-        approval_html = f"""
-        <div class="p-5 rounded-2xl bg-zinc-900 border border-amber-400/50 text-center space-y-3">
-          <span class="text-3xl">⏳</span>
-          <h2 class="text-sm font-black uppercase text-amber-400 tracking-wider">Reviewing Your Bag & Verification</h2>
-          <p class="text-xs text-zinc-300 leading-relaxed">
-            Your booking has been received! As soon as your bag size and verification are approved by LOreal, your contactless payment buttons and drop-off address will unlock right here.
-          </p>
-          <p class="text-[11px] text-zinc-500">This page will automatically refresh every 6 seconds.</p>
-        </div>
-        """
-
-    return f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Order {code} | Sour Apple VIP Laundry</title>
-  {"" if is_paid else '<meta http-equiv="refresh" content="6">'}
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body {{ background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    .accent-apple {{ color: #B0FF00; }}
-  </style>
-</head>
-<body class="min-h-screen p-4 pb-20 max-w-md mx-auto">
-  <div class="py-6 text-center border-b border-zinc-800 mb-6">
-    <h1 class="text-2xl font-black accent-apple">SOUR APPLE VIP LAUNDRY</h1>
-    <p class="text-xs text-zinc-400 mt-1">Live Order Status & Drop-Off Portal</p>
-  </div>
-
-  <div class="p-5 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3 mb-5">
-    <div class="flex justify-between items-center">
-      <span class="text-xs font-bold uppercase text-zinc-400">Order Code</span>
-      <span class="text-lg font-black text-amber-400">{code}</span>
-    </div>
+        raise HTTPException(status_code=404, detail="Order not found")
     
-    <div class="flex justify-between items-center">
-      <span class="text-xs font-bold uppercase text-zinc-400">Status</span>
-      <span class="text-xs font-black px-2.5 py-1 rounded-full {'bg-lime-400/20 text-lime-300' if is_approved else 'bg-amber-400/20 text-amber-300'}">
-        {'✓ APPROVED - Ready for Drop-Off' if is_approved else '⏳ Pending Admin Review'}
-      </span>
-    </div>
+    updates = {"status": "Approved"}
+    if body.price is not None:
+        updates["total_price"] = body.price
+    if body.pickup_window:
+        updates["pickup_window"] = body.pickup_window
+    if body.delivery_window:
+        updates["delivery_window"] = body.delivery_window
+    if body.admin_note:
+        updates["admin_note"] = body.admin_note
 
-    <div class="flex justify-between items-center">
-      <span class="text-xs font-bold uppercase text-zinc-400">Payment</span>
-      <span class="text-xs font-black px-2.5 py-1 rounded-full {'bg-lime-400 text-black' if is_paid else ('bg-amber-400/20 text-amber-300' if is_verifying else 'bg-zinc-800 text-zinc-400')}">
-        {'PAID ✓' if is_paid else ('VERIFYING ⏳' if is_verifying else 'UNPAID')}
-      </span>
-    </div>
+    await db.orders.update_one(
+        {"$or": [{"id": order_id}, {"_id": order_id}]},
+        {
+            "$set": updates,
+            "$push": {"status_history": {"status": "Approved", "timestamp": datetime.now()}}
+        }
+    )
+    return {"status": "success", "message": f"Order {order_id} approved"}
 
-    <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-      <span class="text-xs font-bold text-zinc-400">Customer</span>
-      <span class="text-xs font-bold text-white">{customer_name}</span>
-    </div>
+@app.post("/api/admin/orders/{order_id}/reject")
+async def reject_order(order_id: str, body: RejectBody = RejectBody()):
+    order = await db.orders.find_one({"$or": [{"id": order_id}, {"_id": order_id}]})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
 
-    <div class="flex justify-between items-center">
-      <span class="text-xs font-bold text-zinc-400">Plan</span>
-      <span class="text-xs font-bold text-lime-400">{order.get('customer_type', 'Community Member')} {f"({order.get('mvcc_role')})" if order.get('mvcc_role') else ""}</span>
-    </div>
+    await db.orders.update_one(
+        {"$or": [{"id": order_id}, {"_id": order_id}]},
+        {
+            "$set": {"status": "Rejected", "admin_note": body.reason},
+            "$push": {"status_history": {"status": "Rejected", "timestamp": datetime.now()}}
+        }
+    )
+    return {"status": "success", "message": f"Order {order_id} rejected"}
 
-    <div class="flex justify-between items-center">
-      <span class="text-xs font-bold text-zinc-400">Drop-Off Window</span>
-      <span class="text-xs font-bold text-white">{pickup_date} ({pickup_window})</span>
-    </div>
+@app.post("/api/admin/orders/{order_id}/status")
+async def admin_update_status(order_id: str, body: StatusUpdate):
+    await db.orders.update_one(
+        {"$or": [{"id": order_id}, {"_id": order_id}]},
+        {
+            "$set": {"status": body.status},
+            "$push": {"status_history": {"status": body.status, "timestamp": datetime.now()}}
+        }
+    )
+    return {"status": "success", "status": body.status}
 
-    <div class="flex justify-between items-center pt-2 border-t border-zinc-800">
-      <span class="text-sm font-bold text-white">Total Amount</span>
-      <span class="text-2xl font-black accent-apple">${price:.2f}</span>
-    </div>
-  </div>
-
-  {approval_html}
-
-  <div class="text-center mt-8 space-y-2">
-    <a href="/privacy" class="text-xs text-zinc-500 hover:text-zinc-300 underline mr-3">Privacy Policy</a>
-    <a href="/" class="text-xs text-zinc-500 hover:text-zinc-300 underline">← Return to Homepage</a>
-  </div>
-
-  <script>
-    async function claimPayment() {{
-      const btn = document.getElementById('btn-claim-paid');
-      if (btn) {{ btn.innerText = 'Submitting...'; btn.disabled = true; }}
-      try {{
-        await fetch('/api/orders/{code}/claim_paid', {{ method: 'POST' }});
-        location.reload();
-      }} catch (e) {{
-        alert('Could not update status');
-      }}
-    }}
-  </script>
-</body>
-</html>
-    """
-
-# =============================== CUSTOMER BOOKING PORTAL ===============================
-@app.get("/", response_class=HTMLResponse)
-async def serve_homepage():
-    return f"""
-<!DOCTYPE html>
+# 6. Admin Portal HTML (Screenshot Design with Live Approvals & Bag Photos)
+ADMIN_PORTAL_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sour Apple VIP Laundry | South Utica & MVCC</title>
-
-  <!-- PWA & Mobile Home Screen Icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Sour Apple VIP">
-  <meta name="theme-color" content="#0A0A0F">
-  <link rel="icon" type="image/png" href="{FAVICON_URL}">
-  <link rel="apple-touch-icon" href="{ICON_URL}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{ICON_URL}">
-  <link rel="manifest" href="/manifest.json">
-
-  <!-- Shlop Font -->
-  <link rel="stylesheet" href="https://fonts.cdnfonts.com/css/shlop">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    * {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
-    body {{ background-color: #0A0A0F; color: #FFFFFF; }}
-    .font-shlop {{ font-family: 'Shlop', cursive !important; }}
-    .apple-glow {{ box-shadow: 0 0 25px rgba(176, 255, 0, 0.35); }}
-    .accent-apple {{ color: #B0FF00; }}
-    .bg-apple {{ background-color: #B0FF00; }}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOUR APPLE ADMIN — Order Approvals, Verification & Payments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0d1117; }
+    </style>
 </head>
-<body class="min-h-screen p-4 pb-24 max-w-md mx-auto">
-  
-  <!-- Tilted Brand Header with Crown matching Flyer -->
-  <div class="py-4 mb-4 border-b border-zinc-800 text-center flex flex-col items-center justify-center">
-    <div class="relative inline-flex items-center justify-center mb-1" style="transform: rotate(-3deg);">
-      <img src="{CROWN_URL}" alt="Crown" style="position: absolute; top: -18px; left: -22px; width: 34px; height: 34px; object-fit: contain; transform: rotate(-18deg); filter: drop-shadow(0 0 8px #FF2A85);">
-      <h1 class="font-shlop text-4xl sm:text-5xl text-white tracking-widest leading-none m-0" style="text-shadow: -4px 4px 18px #B0FF00, 0 0 10px rgba(176, 255, 0, 0.4);">
-        SOUR APPLE
-      </h1>
-    </div>
-    <div class="mt-2 tracking-widest uppercase font-black text-xs">
-      <span style="color: #FF2A85; font-style: italic; text-shadow: 0 0 10px rgba(255, 42, 133, 0.5);">WASH & FOLD</span>
-      <span style="color: #B0FF00; margin: 0 4px;">•</span>
-      <span class="text-white">VIP LAUNDRY</span>
-    </div>
-    <span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 mt-2 font-sans">SOUTH UTICA, NY</span>
-  </div>
+<body class="min-h-screen text-gray-200 font-sans p-4 sm:p-6 flex flex-col items-center">
 
-  <div id="booking-app">
-    <!-- 1. Customer Affiliation Selector -->
-    <div class="mb-5">
-      <label class="block text-xs font-bold text-zinc-400 mb-2 uppercase tracking-wider">Are you affiliated with MVCC?</label>
-      <div class="grid grid-cols-1 gap-2">
-        <button id="btn-mvcc" type="button" onclick="setAffiliation('MVCC')" class="p-3.5 rounded-xl border border-zinc-800 text-left transition-all bg-zinc-900 text-zinc-300">
-          <span class="font-black text-sm block text-white">🎓 Student, Teacher, Staff, or Faculty of MVCC</span>
-          <span class="block text-[11px] font-medium text-lime-400 mt-0.5">Discounted Campus Rates · Scheduled Curbside Pickup</span>
-        </button>
-        <button id="btn-community" type="button" onclick="setAffiliation('COMMUNITY')" class="p-3.5 rounded-xl border text-left transition-all bg-apple text-black font-black">
-          <span class="font-black text-sm block">🏠 Community Member (No MVCC Affiliation)</span>
-          <span class="block text-[11px] font-medium opacity-80 mt-0.5">South Utica Drop-Off & Pickup · Open to Everyone</span>
-        </button>
-      </div>
-    </div>
+    <!-- Top Header Matching Screenshot -->
+    <header class="w-full max-w-4xl text-center pt-8 pb-6 border-b border-gray-800/80 mb-8">
+        <h1 class="text-2xl font-black tracking-wider text-white">
+            SOUR APPLE <span class="text-[#ff2d8d]">ADMIN</span>
+        </h1>
+        <p class="text-xs text-gray-400 mt-1">Order Approvals, Verification &amp; Payments</p>
+    </header>
 
-    <!-- MVCC Detailed Sub-Selector -->
-    <div id="mvcc-details-box" class="hidden mb-5 p-4 rounded-2xl bg-zinc-900 border-2 border-lime-400/80 space-y-3.5">
-      <div>
-        <label class="block text-xs font-black uppercase text-amber-400 tracking-wider mb-2">Select Your MVCC Role *</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button id="btn-role-student" type="button" onclick="setMvccRole('Student')" class="py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center">🎓 Student</button>
-          <button id="btn-role-teacher" type="button" onclick="setMvccRole('Teacher')" class="py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center">🍎 Teacher</button>
-          <button id="btn-role-staff" type="button" onclick="setMvccRole('Staff or Faculty')" class="py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center">💼 Staff/Faculty</button>
-        </div>
-      </div>
-
-      <!-- Dynamic Role-Specific Field -->
-      <div id="mvcc-role-input-box">
-        <label id="mvcc-role-input-label" class="block text-[11px] font-bold text-zinc-400 mb-1">Dorm / Residence Hall & Room # *</label>
-        <input type="text" id="mvcc-role-input" placeholder="e.g. North Hall 204 or Commuter Lot A" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-
-      <!-- MVCC ID Verification (Photo OR ID Number) -->
-      <div class="pt-3 border-t border-zinc-800 space-y-2.5">
-        <div class="flex items-center justify-between">
-          <label class="block text-[11px] font-black uppercase text-amber-400 tracking-wider">MVCC ID Verification *</label>
-          <span class="text-[10px] text-zinc-400">Card Photo or ID #</span>
-        </div>
-        <p class="text-[11px] text-zinc-300 leading-tight">Snap a photo of your MVCC Student or Employee ID card, or enter your ID number:</p>
+    <!-- Sign In Card (Pixel-Perfect from Screenshot) -->
+    <div id="signin-section" class="w-full max-w-md bg-[#161f2e] border border-gray-800/90 rounded-2xl p-8 shadow-2xl">
+        <h2 class="text-lg font-bold text-[#a3e635] mb-6">Admin Sign In</h2>
         
-        <input type="file" id="mvcc-id-photo" accept="image/*" capture="environment" onchange="previewMvccId(event)" class="w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-zinc-800 file:text-white cursor-pointer">
-        
-        <div id="mvcc-id-preview-box" class="hidden mt-2 w-20 h-20 rounded-xl overflow-hidden border-2 border-lime-400">
-          <img id="mvcc-id-preview" class="w-full h-full object-cover">
-        </div>
+        <form onsubmit="handleSignIn(event)" class="space-y-5">
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-2">Admin Email</label>
+                <input 
+                    type="email" 
+                    id="admin-email" 
+                    value="natture1st@gmail.com" 
+                    required 
+                    class="w-full bg-[#0d131d] border border-gray-700/60 rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-[#a3e635]"
+                >
+            </div>
 
-        <div class="pt-1">
-          <p class="text-[11px] text-zinc-400 mb-1">Or type your MVCC ID # (M-Number):</p>
-          <input type="text" id="mvcc-id-number" placeholder="e.g. M01234567" class="w-full h-10 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs font-mono">
-        </div>
-      </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-400 mb-2">Password</label>
+                <input 
+                    type="password" 
+                    id="admin-pass" 
+                    placeholder="••••••••••••••••"
+                    required 
+                    class="w-full bg-white text-gray-900 font-medium rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#a3e635]"
+                >
+            </div>
+
+            <button 
+                type="submit" 
+                class="w-full bg-[#a3e635] hover:bg-[#bef264] text-black font-black py-3.5 rounded-xl transition duration-150 uppercase tracking-wide text-xs shadow-lg shadow-[#a3e635]/20 mt-4 cursor-pointer"
+            >
+                SIGN IN TO DASHBOARD
+            </button>
+        </form>
     </div>
 
-    <!-- Location Notice -->
-    <div id="location-notice" class="p-3.5 rounded-xl border border-blue-900/40 bg-blue-950/20 text-xs text-blue-200 mb-5 leading-relaxed">
-      📍 <strong>South Utica Drop-Off Location:</strong> Open to everyone! Bring your laundry bags to our South Utica location, and pick them up fresh and folded. <em>(Standard turnaround 48–72 hours).</em>
-    </div>
-
-    <!-- 2. Bag Size Chart (Visuals 50% Centered) -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">1. Select Your Bag Size</h2>
-      
-      <div style="text-align: center; margin: 0 auto 1rem auto;">
-        <img 
-          src="{BAG_SIZES_URL}" 
-          alt="Sour Apple Bag Size Chart" 
-          style="width: 190px !important; max-width: 50% !important; height: auto !important; display: block !important; margin: 0 auto !important; border-radius: 12px; border: 1px solid #27272a; box-shadow: 0 4px 15px rgba(0,0,0,0.5);" 
-        >
-      </div>
-
-      <div class="p-3 rounded-xl bg-red-950/30 border border-red-800/60 text-red-300 text-xs mb-4">
-        <strong>🚫 STRICT CLOSURE POLICY:</strong> All laundry must be in a bag with a secure closure (drawstring, Velcro, zipper, or snaps). <strong>Open plastic baskets with no lids are NOT accepted.</strong>
-      </div>
-
-      <div class="space-y-2.5" id="bag-size-options">
-        <div onclick="selectSize('small', 20, 10)" id="size-small" class="p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center">
-          <div>
-            <p class="text-sm font-bold text-white">Small Bag (27 Inch)</p>
-            <p class="text-xs text-zinc-400">Pillowcase / Grocery tote size (Up to 10 lbs)</p>
-          </div>
-          <span class="text-base font-black accent-apple" id="price-small">$20</span>
+    <!-- Active Orders Dashboard (Opens Upon Sign In) -->
+    <div id="dashboard-section" class="w-full max-w-5xl hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#161f2e] border border-gray-800 p-5 rounded-2xl">
+            <div>
+                <h2 class="text-lg font-bold text-white">Incoming Orders &amp; Bag Photos</h2>
+                <p class="text-xs text-gray-400">Inspect the customer's bag photo for size and proper closure before approving.</p>
+            </div>
+            <div class="flex gap-3">
+                <button onclick="loadOrders()" class="bg-[#a3e635] hover:bg-[#bef264] text-black font-bold px-4 py-2 rounded-xl text-xs transition">
+                    Refresh Orders
+                </button>
+                <button onclick="handleSignOut()" class="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-4 py-2 rounded-xl text-xs transition">
+                    Sign Out
+                </button>
+            </div>
         </div>
-        <div onclick="selectSize('medium', 30, 20)" id="size-medium" class="p-3 rounded-xl border border-lime-400 bg-lime-400/10 cursor-pointer flex justify-between items-center">
-          <div>
-            <p class="text-sm font-bold text-white">Medium Bag (32 Inch — Most Popular)</p>
-            <p class="text-xs text-zinc-400">13-Gallon tall kitchen bag (15-20 lbs / 1 week of clothes)</p>
-          </div>
-          <span class="text-base font-black accent-apple" id="price-medium">$30</span>
+
+        <div id="orders-list" class="space-y-4">
+            <div class="text-center py-12 text-gray-500 text-sm">Loading orders...</div>
         </div>
-        <div onclick="selectSize('large', 40, 30)" id="size-large" class="p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center">
-          <div>
-            <p class="text-sm font-bold text-white">Large Bag (40 Inch)</p>
-            <p class="text-xs text-zinc-400">30-Gallon black heavy bag (25-30+ lbs / family load)</p>
-          </div>
-          <span class="text-base font-black accent-apple" id="price-large">$40</span>
-        </div>
-      </div>
-
-      <div class="flex justify-between items-center mt-4 pt-3 border-t border-zinc-800">
-        <span class="text-xs font-bold text-white">Number of Bags:</span>
-        <div class="flex items-center gap-3">
-          <button type="button" onclick="changeQty(-1)" class="w-8 h-8 rounded-full border border-zinc-700 bg-zinc-800 font-bold text-lg">-</button>
-          <span id="bag-qty" class="font-black text-lg accent-apple">1</span>
-          <button type="button" onclick="changeQty(1)" class="w-8 h-8 rounded-full border border-zinc-700 bg-zinc-800 font-bold text-lg">+</button>
-        </div>
-      </div>
     </div>
 
-    <!-- 3. Photo Verification Upload -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">📸 Bag Verification Photo</h2>
-      <p class="text-xs text-zinc-400 mb-3">Snap a photo of your closed bag so we can verify size before approval:</p>
-      <input type="file" id="bag-photo" accept="image/*" capture="environment" onchange="previewPhoto(event)" class="w-full text-xs text-zinc-400 file:mr-2 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-apple file:text-black cursor-pointer">
-      <div id="photo-preview-box" class="hidden mt-3 w-20 h-20 rounded-xl overflow-hidden border-2 border-lime-400">
-        <img id="photo-preview" class="w-full h-full object-cover">
-      </div>
+    <!-- Click-to-Zoom Bag Photo Modal -->
+    <div id="zoom-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-4 cursor-pointer" onclick="this.classList.add('hidden')">
+        <img id="zoom-img" src="" class="max-w-full max-h-[85vh] rounded-2xl shadow-2xl object-contain border border-gray-700">
     </div>
 
-    <!-- 4. Upgrades -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">Optional Upgrades</h2>
-      <label class="flex justify-between items-center p-3 rounded-xl border border-zinc-800 bg-zinc-950 mb-2 cursor-pointer">
-        <div>
-          <p class="text-sm font-bold text-white">⚡ Same-Day Rush Turnaround</p>
-          <p class="text-xs text-zinc-400">Drop off before 10am -> ready after 5pm today</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-black accent-apple">+$20</span>
-          <input type="checkbox" id="check-rush" onchange="recalcTotal()" class="w-5 h-5 accent-lime-400">
-        </div>
-      </label>
-      <label class="flex justify-between items-center p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer">
-        <div>
-          <p class="text-sm font-bold text-white">🛏️ Bedding / Comforter</p>
-          <p class="text-xs text-zinc-400">Washed & fluffed separately</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <span class="text-xs font-black accent-apple">+$25</span>
-          <input type="checkbox" id="check-bedding" onchange="recalcTotal()" class="w-5 h-5 accent-lime-400">
-        </div>
-      </label>
-    </div>
-
-    <!-- 5. Wash Preferences -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5 text-xs">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-2">Wash Formula</h2>
-      <div class="p-3 rounded-xl bg-lime-950/20 border border-lime-900/40 text-zinc-300 mb-3">
-        🧺 <strong>Our Standard Wash:</strong> Scented detergent, OxiClean, scent boosters, and softener. 
-        <br><span class="text-zinc-400 mt-1 block">Prefer hypoallergenic? Check below and include your own bottle!</span>
-      </div>
-      <label class="flex items-center gap-2 mb-2 cursor-pointer">
-        <input type="checkbox" id="pref-own-detergent" class="w-4 h-4 accent-lime-400">
-        <span>I will provide my own detergent (Fragrance-Free)</span>
-      </label>
-      <label class="flex items-center gap-2 mb-3 cursor-pointer">
-        <input type="checkbox" id="pref-cold-wash" class="w-4 h-4 accent-lime-400">
-        <span>Cold wash only</span>
-      </label>
-      <input type="text" id="stain-notes" placeholder="Stain notes or fragile instructions..." class="w-full h-10 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs">
-    </div>
-
-    <!-- 6. ALL REQUIRED CUSTOMER DETAILS -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5 space-y-3">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">Your Details (All Required)</h2>
-      
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-[11px] font-bold text-zinc-400 mb-1">First Name *</label>
-          <input type="text" id="cust-first-name" placeholder="First Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Last Name *</label>
-          <input type="text" id="cust-last-name" placeholder="Last Name" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Email Address * (For order approval & receipt)</label>
-        <input type="email" id="cust-email" placeholder="name@example.com" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Phone Number * (315-555-0100)</label>
-        <input type="tel" id="cust-phone" placeholder="Phone Number" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-
-      <div>
-        <label class="block text-[11px] font-bold text-zinc-400 mb-1">Your Street Address / Town *</label>
-        <input type="text" id="cust-location" placeholder="e.g. 123 Elm St, South Utica" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Drop-Off Date *</label>
-          <input type="date" id="cust-date" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-zinc-400 mb-1">Time Window *</label>
-          <select id="cust-window" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-            <option value="Morning (9am - 12pm)">Morning (9am - 12pm)</option>
-            <option value="Afternoon (12pm - 3pm)">Afternoon (12pm - 3pm)</option>
-            <option value="Evening (3pm - 6pm)">Evening (3pm - 6pm)</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- 7. VIP COUPONS & GIVEAWAYS OPT-IN -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 mb-5 space-y-3">
-      <h2 class="text-sm font-black text-amber-400 uppercase tracking-wider mb-1">🎁 VIP Discounts & Giveaways</h2>
-      <p class="text-xs text-zinc-300">Would you like to receive exclusive laundry coupons, holiday promos, and special giveaways?</p>
-      
-      <div class="grid grid-cols-2 gap-2">
-        <button type="button" id="btn-promo-yes" onclick="setMarketingOptIn(true)" class="py-2.5 px-3 rounded-xl border text-xs font-black transition-all bg-apple text-black">
-          ✓ Yes, keep me updated!
-        </button>
-        <button type="button" id="btn-promo-no" onclick="setMarketingOptIn(false)" class="py-2.5 px-3 rounded-xl border border-zinc-800 text-xs font-bold transition-all bg-zinc-950 text-zinc-400">
-          ✕ No thanks
-        </button>
-      </div>
-
-      <div id="promo-pref-box" class="pt-2">
-        <label class="block text-[11px] font-bold text-zinc-400 mb-1">How would you prefer to receive offers?</label>
-        <div class="grid grid-cols-2 gap-2">
-          <label class="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 cursor-pointer">
-            <input type="radio" name="promo-pref" value="Email" checked class="accent-lime-400">
-            <span>📧 By Email</span>
-          </label>
-          <label class="flex items-center gap-2 p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-zinc-300 cursor-pointer">
-            <input type="radio" name="promo-pref" value="Text (SMS)" class="accent-lime-400">
-            <span>📱 By Text (SMS)</span>
-          </label>
-        </div>
-      </div>
-    </div>
-
-    <!-- 8. OFFICIAL LIABILITY WAIVER & HUGE PSA -->
-    <div class="p-4 rounded-2xl bg-zinc-900 border-2 border-lime-400 mb-6">
-      
-      <div class="p-3.5 rounded-xl bg-red-950/60 border-2 border-red-500 text-red-200 text-xs mb-3 font-semibold leading-relaxed">
-        <p class="text-red-400 font-black text-sm uppercase tracking-wide mb-1">⚠️ HUGE PSA - ZERO TOLERANCE PEST POLICY:</p>
-        Customers MUST ensure that there are NO bed bugs, roaches, fleas, lice, ticks, or ANY other insects, larvae, or infestations in their clothes, bedding, or bags. Sour Apple VIP does NOT take or treat anything with insects or pests. If discovered, the order will be <strong>CANCELED IMMEDIATELY AND IS STRICTLY NON-REFUNDABLE</strong>.
-      </div>
-
-      <h2 class="text-sm font-black uppercase tracking-wider accent-apple mb-1">
-        Laundry Service Liability Waiver & Customer Acknowledgment
-      </h2>
-      <p class="text-[10px] text-zinc-400 mb-2">PLEASE READ CAREFULLY BEFORE SUBMITTING YOUR ORDER</p>
-      
-      <div class="p-3 rounded-lg bg-zinc-950 border border-zinc-800 text-[11px] text-zinc-300 mb-4 max-h-48 overflow-y-auto space-y-2 leading-relaxed">
-        <p><strong>Laundry Service Agreement, Assumption of Risk, Release of Liability & Customer Acknowledgment</strong></p>
-        <p>By checking the acknowledgment box and submitting this booking, I certify that I have read, understand, and voluntarily agree to the following terms and conditions provided by L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services ("Sour Apple VIP Laundry Services").</p>
-        
-        <p><strong>1. Acceptance of Terms:</strong> By placing an order through the Sour Apple VIP Laundry Services app, I acknowledge that I have carefully read this agreement and voluntarily accept all terms, conditions, policies, and limitations described below.</p>
-        
-        <p><strong>2. Customer Responsibilities:</strong> I understand that I am responsible for checking all clothing pockets before submitting my laundry and removing all valuables, including but not limited to cash, cards, jewelry, electronics, keys, pens, cosmetics, medications, and any other personal belongings. I am responsible for providing accurate special washing instructions through the app and identifying delicate items before service. Sour Apple VIP Laundry Services is not responsible for damage or loss resulting from items left inside clothing or laundry bags.</p>
-        
-        <p><strong>3. Commercial Laundry Equipment:</strong> I understand that my laundry will be cleaned using commercial-grade washing machines and dryers. While Sour Apple VIP Laundry Services will use reasonable care when handling my laundry, commercial laundering may contribute to pre-existing issues including weak fabric, loose stitching, color bleeding, shrinkage, fabric wear, manufacturer defects, or existing damage beyond the control of L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services.</p>
-        
-        <p><strong>4. Care Labels and Garment Condition:</strong> I understand that I am responsible for ensuring that all garments submitted are suitable for machine washing. Sour Apple VIP Laundry Services is not responsible for damage resulting from missing, inaccurate, faded, or unreadable care labels, manufacturer defects, weak seams, loose buttons, decorative embellishments, fabric deterioration, or normal wear and tear.</p>
-        
-        <p><strong>5. No Guarantee of Stain or Odor Removal:</strong> I understand that Sour Apple VIP Laundry Services will make every reasonable effort to clean my laundry; however, stain removal, odor removal, whitening, brightening, sanitization, and fabric restoration are not guaranteed.</p>
-        
-        <p><strong>6. Limitation of Liability:</strong> I agree that L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services shall not be held liable for lost, missing, damaged, faded, shrunk, stretched, stained, torn, or otherwise altered items, including missing socks, color bleeding, fabric shrinkage, pre-existing garment damage, items left in pockets, or normal wear and tear.</p>
-        
-        <p><strong>7. Health and Safety Policy - Zero Tolerance for Pests:</strong> Sour Apple VIP Laundry Services maintains a strict Zero-Tolerance Pest Policy. By submitting this order, I certify that my laundry, bedding, linens, and bags are free from bed bugs, cockroaches, fleas, lice, mites, ants, rodents, pest eggs, larvae, maggots, or biohazard contamination. If discovered, my order will be canceled immediately and any payment made is NON-REFUNDABLE.</p>
-        
-        <p><strong>8. High-Value Items:</strong> I understand that I should not submit designer clothing, luxury handbags, wedding gowns, antique textiles, heirlooms, or sentimental items unless I voluntarily accept all risks.</p>
-        
-        <p><strong>9. Right to Refuse Service:</strong> L'Oreal Venturini Camelo reserves the right to decline or cancel service for any order that presents a health, safety, sanitation, or legal concern.</p>
-        
-        <p><strong>10. Pickup Policy:</strong> Customers are responsible for picking up completed laundry promptly after being notified that their order is ready.</p>
-        
-        <p><strong>11. Release of Liability:</strong> To the fullest extent permitted by applicable law, I voluntarily release, waive, and hold harmless L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services, its owner, and agents from any claims, damages, losses, or liabilities arising out of or relating to the handling, washing, drying, folding, storage, pickup, or delivery of my laundry.</p>
-        
-        <p><strong>12. Customer Certification:</strong> By checking the box below, I certify that I have read and understand this entire agreement; I certify that my laundry is free of bed bugs, insects, and pests; I understand that pest-contaminated orders are canceled immediately and are NON-REFUNDABLE; and I voluntarily release L'Oreal Venturini Camelo, DBA Sour Apple VIP Laundry Services from liability as described above.</p>
-      </div>
-
-      <label class="flex items-start gap-2.5 text-xs mb-3 cursor-pointer">
-        <input type="checkbox" id="check-agreed" class="w-4 h-4 mt-0.5 accent-lime-400" required>
-        <span class="text-zinc-200 font-bold">
-          I have read, understand, and voluntarily agree to the Laundry Service Agreement, Assumption of Risk, Release of Liability, and Customer Acknowledgment for this booking. *
-        </span>
-      </label>
-
-      <input type="text" id="sig-name" placeholder="Type Full Legal Name (Digital Signature) *" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-xs" required>
-    </div>
-
-    <!-- Submit Button -->
-    <div class="sticky bottom-4">
-      <button type="button" onclick="submitBooking()" id="submit-btn" class="w-full h-14 rounded-2xl bg-apple text-black font-black text-lg uppercase tracking-wider shadow-lg active:scale-95 transition-all flex items-center justify-between px-6 apple-glow">
-        <span>Submit Booking</span>
-        <span id="total-display" class="text-xl">$30.00</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Footer with Direct Admin Link & Privacy Policy -->
-  <div class="text-center mt-12 pt-6 border-t border-zinc-900 text-xs text-zinc-600 space-y-2">
-    <p>© 2026 Sour Apple VIP Laundry Services · South Utica, NY</p>
-    <div class="flex items-center justify-center gap-4 text-[11px]">
-      <a href="/privacy" class="text-zinc-500 hover:text-zinc-300 underline">Privacy Policy</a>
-      <span class="text-zinc-700">•</span>
-      <a href="/admin" class="text-zinc-500 hover:text-zinc-300 underline">Admin Portal Login →</a>
-    </div>
-  </div>
-
-  <script>
-    let affiliationType = 'COMMUNITY';
-    let mvccRole = 'Student';
-    let marketingOptIn = true;
-    let bagSize = 'medium';
-    let bagQty = 1;
-    let basePrice = 30;
-    let bagPhotoBase64 = null;
-    let mvccIdPhotoBase64 = null;
-
-    document.getElementById('cust-date').value = new Date().toISOString().split('T')[0];
-
-    function setAffiliation(type) {{
-      affiliationType = type;
-      const btnCommunity = document.getElementById('btn-community');
-      const btnMvcc = document.getElementById('btn-mvcc');
-      const mvccBox = document.getElementById('mvcc-details-box');
-      const notice = document.getElementById('location-notice');
-      const locInput = document.getElementById('cust-location');
-
-      if (type === 'COMMUNITY') {{
-        btnCommunity.className = "p-3.5 rounded-xl border text-left transition-all bg-apple text-black font-black";
-        btnMvcc.className = "p-3.5 rounded-xl border border-zinc-800 text-left transition-all bg-zinc-900 text-zinc-300";
-        mvccBox.classList.add('hidden');
-        notice.innerHTML = "📍 <strong>South Utica Drop-Off:</strong> Open to everyone! Bring your laundry to our South Utica location, and pick it up fresh and folded. <em>(Standard turnaround 48–72 hours).</em>";
-        locInput.placeholder = "Your Street Address / Area (e.g. 123 Elm St, South Utica)";
-        updatePrices(20, 30, 40);
-      }} else {{
-        btnMvcc.className = "p-3.5 rounded-xl border border-lime-400 text-left transition-all bg-lime-950/40 text-white font-black";
-        btnCommunity.className = "p-3.5 rounded-xl border border-zinc-800 text-left transition-all bg-zinc-900 text-zinc-300";
-        mvccBox.classList.remove('hidden');
-        notice.innerHTML = "🎓 <strong>MVCC Scheduled Curbside:</strong> We pick up and deliver curbside in designated campus parking areas twice weekly! (No building entry).";
-        locInput.placeholder = "MVCC Campus Building / Residence Hall or Lot";
-        updatePrices(10, 20, 30);
-      }}
-      recalcTotal();
-    }}
-
-    function setMvccRole(role) {{
-      mvccRole = role;
-      const btnStu = document.getElementById('btn-role-student');
-      const btnTeach = document.getElementById('btn-role-teacher');
-      const btnStaff = document.getElementById('btn-role-staff');
-      const label = document.getElementById('mvcc-role-input-label');
-      const input = document.getElementById('mvcc-role-input');
-
-      btnStu.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-      btnTeach.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-      btnStaff.className = "py-2.5 px-2 rounded-xl text-xs font-bold bg-zinc-950 border border-zinc-800 text-zinc-300 text-center";
-
-      if (role === 'Student') {{
-        btnStu.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "Dorm / Residence Hall & Room # *";
-        input.placeholder = "e.g. North Hall 204 or Commuter Lot A";
-      }} else if (role === 'Teacher') {{
-        btnTeach.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "What subject/courses do you teach? *";
-        input.placeholder = "e.g. Computer Science, Nursing, Mathematics...";
-      }} else {{
-        btnStaff.className = "py-2.5 px-2 rounded-xl text-xs font-black bg-apple text-black text-center";
-        label.innerText = "What department or job title? *";
-        input.placeholder = "e.g. Financial Aid, Admissions, Facilities...";
-      }}
-    }}
-
-    function setMarketingOptIn(val) {{
-      marketingOptIn = val;
-      const btnYes = document.getElementById('btn-promo-yes');
-      const btnNo = document.getElementById('btn-promo-no');
-      const prefBox = document.getElementById('promo-pref-box');
-
-      if (val) {{
-        btnYes.className = "py-2.5 px-3 rounded-xl border text-xs font-black transition-all bg-apple text-black";
-        btnNo.className = "py-2.5 px-3 rounded-xl border border-zinc-800 text-xs font-bold transition-all bg-zinc-950 text-zinc-400";
-        prefBox.classList.remove('hidden');
-      }} else {{
-        btnNo.className = "py-2.5 px-3 rounded-xl border text-xs font-black transition-all bg-zinc-700 text-white";
-        btnYes.className = "py-2.5 px-3 rounded-xl border border-zinc-800 text-xs font-bold transition-all bg-zinc-950 text-zinc-400";
-        prefBox.classList.add('hidden');
-      }}
-    }}
-
-    function updatePrices(sm, md, lg) {{
-      document.getElementById('price-small').innerText = '$' + sm;
-      document.getElementById('price-medium').innerText = '$' + md;
-      document.getElementById('price-large').innerText = '$' + lg;
-      if (bagSize === 'small') basePrice = sm;
-      if (bagSize === 'medium') basePrice = md;
-      if (bagSize === 'large') basePrice = lg;
-    }}
-
-    function selectSize(size, publicP, studentP) {{
-      bagSize = size;
-      basePrice = (affiliationType === 'COMMUNITY') ? publicP : studentP;
-      ['small', 'medium', 'large'].forEach(s => {{
-        document.getElementById('size-' + s).className = (s === size) ? "p-3 rounded-xl border border-lime-400 bg-lime-400/10 cursor-pointer flex justify-between items-center" : "p-3 rounded-xl border border-zinc-800 bg-zinc-950 cursor-pointer flex justify-between items-center";
-      }});
-      recalcTotal();
-    }}
-
-    function changeQty(delta) {{
-      bagQty = Math.max(1, bagQty + delta);
-      document.getElementById('bag-qty').innerText = bagQty;
-      recalcTotal();
-    }}
-
-    function recalcTotal() {{
-      let total = basePrice * bagQty;
-      if (document.getElementById('check-rush').checked) total += 20;
-      if (document.getElementById('check-bedding').checked) total += 25;
-      document.getElementById('total-display').innerText = '$' + total.toFixed(2);
-      return total;
-    }}
-
-    function previewPhoto(event) {{
-      const file = event.target.files[0];
-      if (file) {{
-        const reader = new FileReader();
-        reader.onloadend = () => {{
-          bagPhotoBase64 = reader.result;
-          document.getElementById('photo-preview').src = reader.result;
-          document.getElementById('photo-preview-box').classList.remove('hidden');
-        }};
-        reader.readAsDataURL(file);
-      }}
-    }}
-
-    function previewMvccId(event) {{
-      const file = event.target.files[0];
-      if (file) {{
-        const reader = new FileReader();
-        reader.onloadend = () => {{
-          mvccIdPhotoBase64 = reader.result;
-          document.getElementById('mvcc-id-preview').src = reader.result;
-          document.getElementById('mvcc-id-preview-box').classList.remove('hidden');
-        }};
-        reader.readAsDataURL(file);
-      }}
-    }}
-
-    async function submitBooking() {{
-      const firstName = document.getElementById('cust-first-name').value.trim();
-      const lastName = document.getElementById('cust-last-name').value.trim();
-      const email = document.getElementById('cust-email').value.trim();
-      const phone = document.getElementById('cust-phone').value.trim();
-      const location = document.getElementById('cust-location').value.trim();
-      const date = document.getElementById('cust-date').value.trim();
-      const windowVal = document.getElementById('cust-window').value;
-      const agreed = document.getElementById('check-agreed').checked;
-      const sig = document.getElementById('sig-name').value.trim();
-
-      if (!firstName || !lastName || !email || !phone || !location || !date) {{
-        alert('Please fill out all required personal details (First Name, Last Name, Email, Phone, Address, Date).');
-        return;
-      }}
-      if (!agreed || !sig) {{
-        alert('Please check the acknowledgment box and type your legal signature.');
-        return;
-      }}
-
-      let mvccRoleVal = "";
-      let mvccSubjectVal = "";
-      let mvccDeptVal = "";
-      let mvccIdNumVal = "";
-
-      if (affiliationType === 'MVCC') {{
-        const roleDetail = document.getElementById('mvcc-role-input').value.trim();
-        mvccIdNumVal = document.getElementById('mvcc-id-number').value.trim();
-
-        if (!roleDetail) {{
-          alert('Please enter your MVCC role detail (' + (mvccRole === 'Teacher' ? 'Subject you teach' : (mvccRole === 'Staff or Faculty' ? 'Department / Job Title' : 'Dorm or Room #')) + ').');
-          return;
-        }}
-
-        if (!mvccIdPhotoBase64 && !mvccIdNumVal) {{
-          alert('MVCC Verification Required: Please upload a photo of your MVCC ID card or enter your MVCC ID / M-Number to qualify for discounted campus rates.');
-          return;
-        }}
-
-        mvccRoleVal = mvccRole;
-        if (mvccRole === 'Teacher') mvccSubjectVal = roleDetail;
-        else if (mvccRole === 'Staff or Faculty') mvccDeptVal = roleDetail;
-      }}
-
-      const promoPrefRadio = document.querySelector('input[name="promo-pref"]:checked');
-      const promoPref = promoPrefRadio ? promoPrefRadio.value : 'Email';
-
-      const btn = document.getElementById('submit-btn');
-      btn.innerText = 'Submitting...';
-      btn.disabled = true;
-
-      try {{
-        const res = await fetch('/api/orders', {{
-          method: 'POST',
-          headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{
-            first_name: firstName,
-            last_name: lastName,
-            email: email,
-            phone: phone,
-            location: location,
-            pickup_date: date,
-            pickup_window: windowVal,
-            customer_type: affiliationType === 'MVCC' ? 'MVCC Affiliated' : 'Community Member',
-            mvcc_role: mvccRoleVal,
-            mvcc_subject: mvccSubjectVal,
-            mvcc_dept_or_title: mvccDeptVal,
-            mvcc_id_photo_base64: mvccIdPhotoBase64,
-            mvcc_id_number: mvccIdNumVal,
-            marketing_opt_in: marketingOptIn,
-            marketing_preference: promoPref,
-            service_type: bagSize.toUpperCase() + ' BAG',
-            bags: bagQty,
-            rush: document.getElementById('check-rush').checked,
-            bedding_addon: document.getElementById('check-bedding').checked,
-            bag_price_each: basePrice,
-            bag_image_base64: bagPhotoBase64,
-            signature_name: sig,
-            contract_agreed: true
-          }})
-        }});
-        const order = await res.json();
-        if (res.ok && order.code) {{
-          window.location.href = '/orders/' + order.code;
-        }} else {{
-          alert('Error: ' + (order.detail || 'Could not submit booking'));
-          btn.innerText = 'Submit Booking';
-          btn.disabled = false;
-        }}
-      }} catch (err) {{
-        alert('Network error. Please check your connection.');
-        btn.innerText = 'Submit Booking';
-        btn.disabled = false;
-      }}
-    }}
-  </script>
-</body>
-</html>
-    """
-
-# =============================== ADMIN PORTAL (DESKTOP & MOBILE) ===============================
-ADMIN_HTML = r"""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sour Apple VIP Admin Portal</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    body { background-color: #0A0A0F; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    .accent-apple { color: #B0FF00; }
-    .bg-apple { background-color: #B0FF00; }
-  </style>
-</head>
-<body class="min-h-screen p-4 max-w-xl mx-auto">
-  
-  <div class="flex items-center justify-between py-4 mb-6 border-b border-zinc-800">
-    <div>
-      <h1 class="font-black text-xl tracking-wider">SOUR APPLE <span class="text-pink-500">ADMIN</span></h1>
-      <p class="text-xs text-zinc-400">Order Approvals, Verification & Payments</p>
-    </div>
-    <button onclick="logoutAdmin()" id="btn-logout" class="hidden text-xs font-bold text-red-400 underline">Log Out</button>
-  </div>
-
-  <!-- Admin Login Screen -->
-  <div id="admin-login-box" class="p-6 rounded-2xl bg-zinc-900 border border-zinc-800 shadow-xl my-8">
-    <h2 class="text-lg font-black accent-apple mb-4">Admin Sign In</h2>
-    <div class="space-y-4">
-      <div>
-        <label class="block text-xs font-bold text-zinc-400 mb-1">Admin Email</label>
-        <input type="email" id="admin-email" value="natture1st@gmail.com" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-      <div>
-        <label class="block text-xs font-bold text-zinc-400 mb-1">Password</label>
-        <input type="password" id="admin-password" placeholder="Enter your Admin password" class="w-full h-11 px-3 rounded-xl bg-zinc-950 border border-zinc-800 text-white text-sm" required>
-      </div>
-      <button onclick="loginAdmin()" id="btn-login" class="w-full h-12 rounded-xl bg-apple text-black font-black text-sm uppercase tracking-wider active:scale-95 transition-all">
-        Sign In to Dashboard
-      </button>
-      <p id="login-err" class="text-xs text-red-400 font-bold text-center hidden"></p>
-    </div>
-  </div>
-
-  <!-- Admin Dashboard -->
-  <div id="admin-dashboard" class="hidden space-y-4">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-black uppercase tracking-wider text-amber-400">Incoming Orders</h2>
-      <button onclick="loadOrders()" class="text-xs font-bold text-lime-400 underline">&#x21bb; Refresh Orders</button>
-    </div>
-
-    <div id="orders-list" class="space-y-4">
-      <p class="text-sm text-zinc-500 text-center py-8">Loading orders...</p>
-    </div>
-  </div>
-
-  <script>
-    let token = localStorage.getItem('sa_admin_token');
-
-    if (token) {
-      showDashboard();
-    }
-
-    async function loginAdmin() {
-      const email = document.getElementById('admin-email').value.trim();
-      const password = document.getElementById('admin-password').value.trim();
-      const err = document.getElementById('login-err');
-      err.classList.add('hidden');
-
-      try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-        if (res.ok && data.user && data.user.role === 'ADMIN') {
-          token = data.access_token;
-          localStorage.setItem('sa_admin_token', token);
-          showDashboard();
-        } else {
-          err.innerText = data.detail || 'Access denied. Must be an Admin.';
-          err.classList.remove('hidden');
-        }
-      } catch (e) {
-        err.innerText = 'Could not connect to server.';
-        err.classList.remove('hidden');
-      }
-    }
-
-    function showDashboard() {
-      document.getElementById('admin-login-box').classList.add('hidden');
-      document.getElementById('admin-dashboard').classList.remove('hidden');
-      document.getElementById('btn-logout').classList.remove('hidden');
-      loadOrders();
-      setInterval(loadOrders, 15000);
-    }
-
-    function logoutAdmin() {
-      localStorage.removeItem('sa_admin_token');
-      location.reload();
-    }
-
-    async function loadOrders() {
-      const container = document.getElementById('orders-list');
-      try {
-        const res = await fetch('/api/admin/orders');
-        const orders = await res.json();
-        
-        if (!orders || orders.length === 0) {
-          container.innerHTML = '<p class="text-sm text-zinc-500 text-center py-8">No orders in database yet.</p>';
-          return;
+    <script>
+        if (sessionStorage.getItem('sour_admin_auth') === 'true') {
+            showDashboard();
         }
 
-        container.innerHTML = orders.map(o => `
-          <div class="p-4 rounded-2xl bg-zinc-900 border ${o.status === 'Pending Admin Approval' ? 'border-amber-400' : 'border-zinc-800'} space-y-3">
-            <div class="flex justify-between items-start">
-              <div>
-                <span class="text-xs font-black px-2 py-0.5 rounded ${o.status === 'Pending Admin Approval' ? 'bg-amber-400/20 text-amber-300' : 'bg-lime-400/20 text-lime-300'}">${o.status}</span>
-                <span class="text-xs font-black px-2 py-0.5 rounded ml-1.5 ${o.payment_status === 'Paid' ? 'bg-lime-400 text-black' : (o.payment_status === 'Verifying Payment' ? 'bg-amber-400/30 text-amber-300' : 'bg-zinc-800 text-zinc-400')}">
-                  ${o.payment_status === 'Paid' ? 'PAID ✓' : (o.payment_status === 'Verifying Payment' ? 'VERIFYING ⏳' : 'UNPAID')}
-                </span>
-                <h3 class="font-black text-lg text-white mt-1">${o.code}</h3>
-              </div>
-              <span class="text-xl font-black accent-apple">$${Number(o.price || 0).toFixed(2)}</span>
-            </div>
+        function handleSignIn(e) {
+            e.preventDefault();
+            sessionStorage.setItem('sour_admin_auth', 'true');
+            showDashboard();
+        }
 
-            <!-- Customer Details & Affiliation -->
-            <div class="text-xs text-zinc-300 space-y-1 bg-zinc-950 p-3 rounded-xl border border-zinc-800">
-              <p><strong>Customer:</strong> ${o.customer_name || 'Anonymous'}</p>
-              <p><strong>Affiliation:</strong> <span class="font-bold text-lime-400">${o.customer_type || 'Community Member'}</span> ${o.mvcc_role ? '(' + o.mvcc_role + ')' : ''}</p>
-              ${o.mvcc_subject ? '<p><strong>🍎 Subject Taught:</strong> ' + o.mvcc_subject + '</p>' : ''}
-              ${o.mvcc_dept_or_title ? '<p><strong>💼 Dept / Title:</strong> ' + o.mvcc_dept_or_title + '</p>' : ''}
-              ${o.mvcc_id_number ? '<p><strong>🎓 MVCC ID #:</strong> <span class="font-mono text-amber-300">' + o.mvcc_id_number + '</span></p>' : ''}
-              <p><strong>Email:</strong> <a href="mailto:${o.email}" class="text-sky-400 underline">${o.email || 'None provided'}</a></p>
-              <p><strong>Phone:</strong> <a href="tel:${o.phone}" class="text-lime-400 underline font-bold">${o.phone || 'None provided'}</a></p>
-              <p><strong>Location:</strong> ${o.location || 'South Utica'}</p>
-              <p><strong>Drop-Off Date:</strong> ${o.pickup_date} (${o.pickup_window})</p>
-              <p><strong>🎁 VIP Giveaways Opt-In:</strong> <span class="${o.marketing_opt_in ? 'text-lime-400 font-bold' : 'text-zinc-500'}">${o.marketing_opt_in ? 'YES (' + (o.marketing_preference || 'Email') + ')' : 'NO'}</span></p>
-              ${o.stain_notes ? `<p class="text-amber-300 italic">Notes: ${o.stain_notes}</p>` : ''}
-            </div>
+        function handleSignOut() {
+            sessionStorage.removeItem('sour_admin_auth');
+            document.getElementById('dashboard-section').classList.add('hidden');
+            document.getElementById('signin-section').classList.remove('hidden');
+        }
 
-            <!-- Photos: Bag and MVCC ID -->
-            <div class="grid grid-cols-2 gap-2">
-              <!-- Bag Photo -->
-              ${o.bag_image_base64 ? `
-                <div>
-                  <p class="text-[11px] font-bold text-zinc-400 mb-1">📸 Bag Photo:</p>
-                  <div class="rounded-xl overflow-hidden border border-zinc-700 max-h-48">
-                    <img src="${o.bag_image_base64}" alt="Customer Bag" class="w-full object-cover">
-                  </div>
-                </div>
-              ` : '<p class="text-xs text-zinc-500 italic py-2">No bag photo uploaded.</p>'}
+        function showDashboard() {
+            document.getElementById('signin-section').classList.add('hidden');
+            document.getElementById('dashboard-section').classList.remove('hidden');
+            loadOrders();
+        }
 
-              <!-- MVCC ID Photo -->
-              ${o.mvcc_id_photo_base64 ? `
-                <div>
-                  <p class="text-[11px] font-bold text-amber-400 mb-1">🎓 MVCC ID Card Photo:</p>
-                  <div class="rounded-xl overflow-hidden border-2 border-amber-400 max-h-48">
-                    <img src="${o.mvcc_id_photo_base64}" alt="MVCC ID Card" class="w-full object-cover">
-                  </div>
-                </div>
-              ` : (o.customer_type === 'MVCC Affiliated' && !o.mvcc_id_number ? '<p class="text-xs text-red-400 italic py-2">⚠️ No MVCC ID provided!</p>' : '')}
-            </div>
+        async function loadOrders() {
+            const list = document.getElementById('orders-list');
+            try {
+                const res = await fetch('/api/admin/orders');
+                const orders = await res.json();
 
-            <!-- Admin Actions -->
-            <div class="pt-2 border-t border-zinc-800 space-y-2">
-              <div class="grid grid-cols-2 gap-2">
-                <button type="button" onclick="openApprovalGmail('${encodeURIComponent(o.email || '')}', '${encodeURIComponent(o.code || '')}', '${encodeURIComponent(o.customer_name || 'Customer')}', ${Number(o.price || 0)})" 
-                   class="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1 text-center">
-                  📧 Open in Gmail
-                </button>
+                if (!orders || orders.length === 0) {
+                    list.innerHTML = `<div class="bg-[#161f2e] border border-gray-800 p-8 rounded-2xl text-center text-gray-400">No orders found.</div>`;
+                    return;
+                }
 
-                <button onclick="copyLink('${o.code}')" 
-                        class="py-2.5 px-3 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold text-xs uppercase tracking-wider">
-                  📋 Copy Link
-                </button>
-              </div>
+                list.innerHTML = orders.map(order => {
+                    const photo = order.bag_photo_url || (order.photos && order.photos[0]) || '';
+                    const status = order.status || 'Pending Admin Approval';
+                    const isApproved = status === 'Approved';
+                    const isRejected = status === 'Rejected';
 
-              <!-- Payment Action Button -->
-              ${o.payment_status !== 'Paid' ? `
-                <button onclick="markPaid('${o.id}')" class="w-full py-2.5 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black text-xs uppercase tracking-wider active:scale-95 shadow-lg">
-                  💵 Mark Paid (Cash App / Venmo Received)
-                </button>
-              ` : `
-                <div class="p-2 rounded-lg bg-lime-950/40 border border-lime-500 text-center">
-                  <span class="text-xs font-black text-lime-400">✓ PAYMENT CONFIRMED (PAID)</span>
-                </div>
-              `}
+                    return `
+                        <div class="bg-[#161f2e] border border-gray-800 rounded-2xl p-5 flex flex-col md:flex-row gap-5 items-start md:items-center justify-between">
+                            <div class="flex gap-4 items-center">
+                                ${photo ? `
+                                    <div class="relative group cursor-pointer" onclick="zoomImage('${photo}')" title="Click to enlarge bag photo">
+                                        <img src="${photo}" class="w-24 h-24 rounded-xl object-cover border border-[#a3e635]/40 group-hover:opacity-90">
+                                        <span class="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px] text-white opacity-0 group-hover:opacity-100 rounded-xl transition font-bold">Zoom</span>
+                                    </div>
+                                ` : `
+                                    <div class="w-24 h-24 rounded-xl bg-[#0d131d] border border-dashed border-gray-700 flex items-center justify-center text-[10px] text-gray-500 text-center p-2">
+                                        No Photo Uploaded
+                                    </div>
+                                `}
 
-              <!-- Approval Buttons -->
-              ${o.status === 'Pending Admin Approval' ? `
-                <div class="flex items-center gap-2 pt-1">
-                  <label class="text-xs text-zinc-400">Adjust Price ($):</label>
-                  <input type="number" id="price-${o.id}" value="${o.price}" class="w-24 h-9 px-2 rounded-lg bg-zinc-950 border border-zinc-800 text-white text-xs">
-                </div>
-                <div class="grid grid-cols-2 gap-2 pt-1">
-                  <button onclick="approveOrder('${o.id}')" class="py-2.5 rounded-xl bg-apple text-black font-black text-xs uppercase tracking-wider active:scale-95">
-                    ✓ Approve Order
-                  </button>
-                  <button onclick="rejectOrder('${o.id}')" class="py-2.5 rounded-xl bg-red-950/60 border border-red-800 text-red-300 font-black text-xs uppercase tracking-wider active:scale-95">
-                    ✕ Reject
-                  </button>
-                </div>
-              ` : `
-                <div class="flex items-center justify-between pt-1">
-                  <p class="text-xs text-lime-400 font-bold">✓ Approved & Ready for Drop-Off</p>
-                  <a href="/orders/${o.code}" target="_blank" class="text-xs text-zinc-400 underline">View Live Order Page →</a>
-                </div>
-              `}
-            </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        container.innerHTML = '<p class="text-sm text-red-400 text-center py-8">Failed to load orders.</p>';
-      }
-    }
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h3 class="font-bold text-white text-base">${order.e_signature || 'Customer Order'}</h3>
+                                        <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${isApproved ? 'bg-green-900/60 text-green-300 border border-green-700' : isRejected ? 'bg-red-900/60 text-red-300 border border-red-700' : 'bg-yellow-900/60 text-yellow-300 border border-yellow-700'}">
+                                            ${status}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-gray-400"><b>Bag Size:</b> <span class="text-white font-medium">${order.bag_size || 'Standard'}</span> ${order.is_mvcc ? '<span class="text-xs text-[#ff2d8d] font-bold ml-1">(MVCC Student)</span>' : ''}</p>
+                                    <p class="text-xs text-gray-400"><b>Total Price:</b> <span class="text-[#a3e635] font-bold text-sm">$${order.total_price || 0}</span></p>
+                                    <p class="text-[10px] text-gray-500 mt-1">Order ID: ${order.id}</p>
+                                </div>
+                            </div>
 
-    function openApprovalGmail(encEmail, encCode, encName, price) {
-      const email = decodeURIComponent(encEmail);
-      const code = decodeURIComponent(encCode);
-      const name = decodeURIComponent(encName);
-      const subject = encodeURIComponent('Sour Apple VIP Laundry - Order ' + code + ' Approved!');
-      const body = encodeURIComponent(
-        'Hi ' + name + ',\n\n' +
-        'Great news! Your laundry order (' + code + ') has been APPROVED.\n\n' +
-        'Total Due: $' + Number(price).toFixed(2) + '\n\n' +
-        'Please view your order, complete payment, and get your drop-off instructions here:\n' +
-        'https://sourapplelaundry.com/orders/' + code + '\n\n' +
-        'Thank you,\nSour Apple VIP Laundry Services'
-      );
-      window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(email) + '&su=' + subject + '&body=' + body, '_blank');
-    }
+                            <div class="flex items-center gap-3 w-full md:w-auto">
+                                ${(!isApproved && !isRejected) ? `
+                                    <button onclick="approveOrder('${order.id}')" class="flex-1 md:flex-none bg-[#a3e635] hover:bg-[#bef264] text-black font-black px-5 py-2.5 rounded-xl text-xs uppercase tracking-wide transition shadow-lg shadow-[#a3e635]/10">
+                                        Approve Bag
+                                    </button>
+                                    <button onclick="rejectOrder('${order.id}')" class="flex-1 md:flex-none bg-red-950 hover:bg-red-900 text-red-300 border border-red-800 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wide transition">
+                                        Reject
+                                    </button>
+                                ` : `
+                                    <span class="text-xs text-gray-500 font-semibold px-3 py-1 bg-[#0d131d] rounded-lg border border-gray-800">Done</span>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                list.innerHTML = `<div class="bg-red-900/40 border border-red-700 p-4 rounded-xl text-red-300 text-xs">Error loading orders: ${err.message}</div>`;
+            }
+        }
 
-    function copyLink(code) {
-      const link = 'https://sourapplelaundry.com/orders/' + code;
-      navigator.clipboard.writeText(link);
-      alert('Copied link: ' + link);
-    }
+        function zoomImage(url) {
+            document.getElementById('zoom-img').src = url;
+            document.getElementById('zoom-modal').classList.remove('hidden');
+        }
 
-    async function markPaid(id) {
-      try {
-        await fetch('/api/admin/orders/' + id + '/mark_paid', { method: 'POST' });
-        loadOrders();
-      } catch (e) {
-        alert('Could not update payment status');
-      }
-    }
+        async function approveOrder(id) {
+            const res = await fetch(`/api/admin/orders/${id}/approve`, { method: 'POST' });
+            if (res.ok) loadOrders();
+            else alert('Failed to approve order');
+        }
 
-    async function approveOrder(id) {
-      const priceInput = document.getElementById('price-' + id);
-      const newPrice = priceInput ? parseFloat(priceInput.value) : null;
-
-      try {
-        await fetch('/api/admin/orders/' + id + '/approve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ price: newPrice, admin_note: "Approved by admin" })
-        });
-        loadOrders();
-      } catch (e) {
-        alert('Could not approve order');
-      }
-    }
-
-    async function rejectOrder(id) {
-      const reason = prompt("Enter rejection reason:", "Verification or bag policy discrepancy.");
-      if (reason === null) return;
-
-      try {
-        await fetch('/api/admin/orders/' + id + '/reject', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reason })
-        });
-        loadOrders();
-      } catch (e) { },
-          body: JSON.stringify({ reason })
-        });
-        loadOrders();
-      } catch (e) {
-        alert('Could not reject order');
-      }
-    }
-  </script>
+        async function rejectOrder(id) {
+            const reason = prompt('Reason for rejection (e.g. Open basket, wrong bag size):') || '';
+            const res = await fetch(`/api/admin/orders/${id}/reject`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason })
+            });
+            if (res.ok) loadOrders();
+            else alert('Failed to reject order');
+        }
+    </script>
 </body>
 </html>
 """
 
-@app.get("/admin", response_class=HTMLResponse)
-async def serve_admin_portal():
-    return ADMIN_HTML
+# 7. Serving Routes
+@app.get("/admin")
+async def serve_admin():
+    return HTMLResponse(content=ADMIN_PORTAL_HTML)
 
-@app.on_event("startup")
-async def seed():
-    await db.users.create_index("email", unique=True)
-    if not await db.users.find_one({"email": ADMIN_EMAIL}):
-        await db.users.insert_one({
-            "id": new_id(),
-            "name": "Sour Apple Admin",
-            "email": ADMIN_EMAIL,
-            "password": hash_pw(ADMIN_PASSWORD),
-            "role": "ADMIN",
-            "created_at": now_iso()
-        })
-        logger.info(f"Seeded admin account for {ADMIN_EMAIL}")
+@app.get("/")
+async def serve_frontend():
+    for p in ["backend/static/index.html", "static/index.html", "index.html"]:
+        if os.path.exists(p):
+            return FileResponse(p)
+    return HTMLResponse("<h1>Sour Apple VIP Laundry API Running</h1><p><a href='/admin'>Go to Admin Portal</a></p>")
 
-@app.on_event("shutdown")
-async def shutdown():
-    client.close()
+if os.path.exists("backend/static"):
+    app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+elif os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True)
