@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from motor.motor_asyncio import AsyncIOMotorClient
 import stripe
 
-# --- Environment & Configuration ---
+# Configuration
 SECRET_KEY = os.getenv("JWT_SECRET", "sour-apple-super-secret-key")
 ALGORITHM = "HS256"
 MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
@@ -27,7 +27,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "AdminPass123!")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 stripe.api_key = STRIPE_SECRET_KEY
 
-# 1. Initialize FastAPI Application
+# 1. Initialize App
 app = FastAPI(title="Sour Apple Wash & Fold VIP Laundry Services")
 
 app.add_middleware(
@@ -41,7 +41,7 @@ app.add_middleware(
 client = AsyncIOMotorClient(MONGODB_URL)
 db = client.sour_apple_laundry
 
-# 2. Data Models
+# 2. Models
 class OrderCreate(BaseModel):
     bag_size: str
     is_mvcc: bool = False
@@ -72,7 +72,7 @@ class RejectBody(BaseModel):
 class StatusUpdate(BaseModel):
     status: str
 
-# 3. Pricing & Async Email Alerts
+# 3. Helpers & Pricing
 def calculate_price(bag_size: str, is_mvcc: bool) -> float:
     prices = {
         "Small": 10.0 if is_mvcc else 20.0,
@@ -224,8 +224,8 @@ async def admin_update_status(order_id: str, body: StatusUpdate):
     )
     return {"status": "success", "status": body.status}
 
-# 6. Admin Portal HTML (Screenshot Design with Live Approvals & Bag Photos)
-ADMIN_PORTAL_HTML = """<!DOCTYPE html>
+# 6. Admin Portal HTML (Exact Screenshot Design)
+DARK_ADMIN_HTML = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -233,7 +233,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
     <title>SOUR APPLE ADMIN — Order Approvals, Verification & Payments</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0d1117; }
+        body { background-color: #0b0f17; }
     </style>
 </head>
 <body class="min-h-screen text-gray-200 font-sans p-4 sm:p-6 flex flex-col items-center">
@@ -247,7 +247,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
     </header>
 
     <!-- Sign In Card (Pixel-Perfect from Screenshot) -->
-    <div id="signin-section" class="w-full max-w-md bg-[#161f2e] border border-gray-800/90 rounded-2xl p-8 shadow-2xl">
+    <div id="signin-section" class="w-full max-w-md bg-[#131b26] border border-gray-800/90 rounded-2xl p-8 shadow-2xl">
         <h2 class="text-lg font-bold text-[#a3e635] mb-6">Admin Sign In</h2>
         
         <form onsubmit="handleSignIn(event)" class="space-y-5">
@@ -258,7 +258,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
                     id="admin-email" 
                     value="natture1st@gmail.com" 
                     required 
-                    class="w-full bg-[#0d131d] border border-gray-700/60 rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-[#a3e635]"
+                    class="w-full bg-[#0a0f18] border border-gray-700/60 rounded-xl px-4 py-3 text-sm text-gray-200 focus:outline-none focus:border-[#a3e635]"
                 >
             </div>
 
@@ -282,12 +282,12 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
         </form>
     </div>
 
-    <!-- Active Orders Dashboard (Opens Upon Sign In) -->
+    <!-- Active Orders Dashboard (Reveals Upon Sign In) -->
     <div id="dashboard-section" class="w-full max-w-5xl hidden space-y-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#161f2e] border border-gray-800 p-5 rounded-2xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#131b26] border border-gray-800 p-5 rounded-2xl">
             <div>
-                <h2 class="text-lg font-bold text-white">Incoming Orders &amp; Bag Photos</h2>
-                <p class="text-xs text-gray-400">Inspect the customer's bag photo for size and proper closure before approving.</p>
+                <h2 class="text-lg font-bold text-white">Pending Bag Approvals</h2>
+                <p class="text-xs text-gray-400">Inspect customer bag photos for size and closure rule before approving.</p>
             </div>
             <div class="flex gap-3">
                 <button onclick="loadOrders()" class="bg-[#a3e635] hover:bg-[#bef264] text-black font-bold px-4 py-2 rounded-xl text-xs transition">
@@ -334,12 +334,18 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
 
         async function loadOrders() {
             const list = document.getElementById('orders-list');
+            list.innerHTML = `<div class="text-center py-12 text-gray-500 text-sm">Loading orders...</div>`;
             try {
                 const res = await fetch('/api/admin/orders');
-                const orders = await res.json();
+                if (!res.ok) {
+                    list.innerHTML = `<div class="bg-[#131b26] border border-gray-800 p-8 rounded-2xl text-center text-gray-400">Failed to fetch orders (Status ${res.status}).</div>`;
+                    return;
+                }
+                const data = await res.json();
+                const orders = Array.isArray(data) ? data : [];
 
                 if (!orders || orders.length === 0) {
-                    list.innerHTML = `<div class="bg-[#161f2e] border border-gray-800 p-8 rounded-2xl text-center text-gray-400">No orders found.</div>`;
+                    list.innerHTML = `<div class="bg-[#131b26] border border-gray-800 p-8 rounded-2xl text-center text-gray-400">No pending orders found.</div>`;
                     return;
                 }
 
@@ -350,7 +356,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
                     const isRejected = status === 'Rejected';
 
                     return `
-                        <div class="bg-[#161f2e] border border-gray-800 rounded-2xl p-5 flex flex-col md:flex-row gap-5 items-start md:items-center justify-between">
+                        <div class="bg-[#131b26] border border-gray-800 rounded-2xl p-5 flex flex-col md:flex-row gap-5 items-start md:items-center justify-between">
                             <div class="flex gap-4 items-center">
                                 ${photo ? `
                                     <div class="relative group cursor-pointer" onclick="zoomImage('${photo}')" title="Click to enlarge bag photo">
@@ -358,21 +364,21 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
                                         <span class="absolute inset-0 flex items-center justify-center bg-black/50 text-[10px] text-white opacity-0 group-hover:opacity-100 rounded-xl transition font-bold">Zoom</span>
                                     </div>
                                 ` : `
-                                    <div class="w-24 h-24 rounded-xl bg-[#0d131d] border border-dashed border-gray-700 flex items-center justify-center text-[10px] text-gray-500 text-center p-2">
+                                    <div class="w-24 h-24 rounded-xl bg-[#0a0f18] border border-dashed border-gray-700 flex items-center justify-center text-[10px] text-gray-500 text-center p-2">
                                         No Photo Uploaded
                                     </div>
                                 `}
 
                                 <div>
                                     <div class="flex items-center gap-2 mb-1">
-                                        <h3 class="font-bold text-white text-base">${order.e_signature || 'Customer Order'}</h3>
+                                        <h3 class="font-bold text-white text-base">${order.e_signature || order.name || 'Customer Order'}</h3>
                                         <span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold ${isApproved ? 'bg-green-900/60 text-green-300 border border-green-700' : isRejected ? 'bg-red-900/60 text-red-300 border border-red-700' : 'bg-yellow-900/60 text-yellow-300 border border-yellow-700'}">
                                             ${status}
                                         </span>
                                     </div>
                                     <p class="text-xs text-gray-400"><b>Bag Size:</b> <span class="text-white font-medium">${order.bag_size || 'Standard'}</span> ${order.is_mvcc ? '<span class="text-xs text-[#ff2d8d] font-bold ml-1">(MVCC Student)</span>' : ''}</p>
                                     <p class="text-xs text-gray-400"><b>Total Price:</b> <span class="text-[#a3e635] font-bold text-sm">$${order.total_price || 0}</span></p>
-                                    <p class="text-[10px] text-gray-500 mt-1">Order ID: ${order.id}</p>
+                                    <p class="text-[10px] text-gray-500 mt-1">ID: ${order.id}</p>
                                 </div>
                             </div>
 
@@ -385,7 +391,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
                                         Reject
                                     </button>
                                 ` : `
-                                    <span class="text-xs text-gray-500 font-semibold px-3 py-1 bg-[#0d131d] rounded-lg border border-gray-800">Done</span>
+                                    <span class="text-xs text-gray-500 font-semibold px-3 py-1 bg-[#0a0f18] rounded-lg border border-gray-800">Done</span>
                                 `}
                             </div>
                         </div>
@@ -425,7 +431,7 @@ ADMIN_PORTAL_HTML = """<!DOCTYPE html>
 # 7. Serving Routes
 @app.get("/admin")
 async def serve_admin():
-    return HTMLResponse(content=ADMIN_PORTAL_HTML)
+    return HTMLResponse(content=DARK_ADMIN_HTML)
 
 @app.get("/")
 async def serve_frontend():
@@ -438,7 +444,3 @@ if os.path.exists("backend/static"):
     app.mount("/static", StaticFiles(directory="backend/static"), name="static")
 elif os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)), reload=True)
