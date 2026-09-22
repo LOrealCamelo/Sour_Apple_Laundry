@@ -15,7 +15,7 @@
     body { font-family: 'Plus Jakarta Sans', sans-serif; }
     .collegiate { font-family: 'Montserrat', sans-serif; letter-spacing: 0.05em; }
     
-    /* Rocking Washing Machine */
+    /* Gentle Rocking Animation */
     @keyframes rockMachine {
       0%, 100% { transform: rotate(0deg); }
       25% { transform: rotate(-3deg); }
@@ -26,7 +26,7 @@
       transform-origin: bottom center;
     }
 
-    /* Floating Bubbles on College Button */
+    /* Floating Bubbles */
     @keyframes floatGentle {
       0%, 100% { transform: translateY(0px) scale(1); }
       50% { transform: translateY(-4px) scale(1.08); }
@@ -35,7 +35,7 @@
       animation: floatGentle 2s ease-in-out infinite;
     }
 
-    /* On-Click Bubble Burst */
+    /* Click Bubble Burst */
     @keyframes bubbleRise {
       0% {
         transform: scale(0.2) translate(0, 0);
@@ -60,7 +60,6 @@
       animation: bubbleRise 1.1s cubic-bezier(0.2, 0.8, 0.4, 1) forwards;
     }
 
-    /* Custom scrollbar for legal agreement */
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 8px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #ff66c4; border-radius: 8px; }
@@ -73,7 +72,6 @@
   <header class="w-full bg-white/95 backdrop-blur border-b border-emerald-100 sticky top-0 z-40 shadow-sm">
     <div class="max-w-md mx-auto sm:max-w-4xl px-4 h-16 flex items-center justify-between">
       
-      <!-- Exact Business Brand Name -->
       <div class="flex items-center gap-2.5 cursor-pointer" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
         <img 
           src="/static/assets/icon777.png" 
@@ -87,7 +85,6 @@
         </div>
       </div>
 
-      <!-- Right Header Actions -->
       <div class="flex items-center gap-2">
         <button 
           id="btnHeaderProfile" 
@@ -161,7 +158,6 @@
       <!-- ==================== 1. HERO ARTWORK ==================== -->
       <section class="relative w-full overflow-hidden bg-white shadow-sm sm:rounded-b-3xl">
         
-        <!-- Full-width hero graphic -->
         <img 
           src="/static/assets/hero_art3.png" 
           onerror="this.onerror=null; this.src='/static/assets/hero_art2.png';" 
@@ -192,7 +188,7 @@
           </button>
         </div>
 
-        <!-- ANIMATED ROCKING WASHING MACHINE (Using your uploaded MP4 video) -->
+        <!-- ANIMATED ROCKING WASHING MACHINE (Seamless 6-second Loop without white space) -->
         <div class="absolute left-[30%] top-[33%] w-[44%] z-30 flex flex-col items-center">
           <button 
             id="btnWashingMachineBook"
@@ -200,12 +196,11 @@
             class="relative w-full group focus:outline-none"
             title="Book your VIP Laundry Service"
           >
-            <!-- Rocking Container -->
             <div class="animate-rock hover:scale-105 transition-transform duration-200 flex flex-col items-center">
-              
               <div class="relative w-28 h-32 sm:w-36 sm:h-40 flex items-center justify-center">
                 
                 <video 
+                  id="wmVideo"
                   src="/static/assets/Washing%20machine%20button%20w%20animated%20bubbles.mp4" 
                   autoplay 
                   loop 
@@ -213,34 +208,9 @@
                   playsinline 
                   webkit-playsinline
                   class="w-full h-full object-contain pointer-events-none drop-shadow-xl"
-                  onerror="this.style.display='none'; document.getElementById('svgMachineFallback').classList.remove('hidden');"
                 ></video>
 
-                <!-- Vector Fallback if video is loading or unsupported -->
-                <div id="svgMachineFallback" class="hidden absolute inset-0 flex flex-col items-center justify-center">
-                  <svg viewBox="0 0 160 190" class="w-full h-full drop-shadow-xl" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="25" cy="40" r="14" fill="#a7f3d0" opacity="0.75"/>
-                    <circle cx="135" cy="50" r="16" fill="#6ee7b7" opacity="0.6"/>
-                    <circle cx="15" cy="110" r="12" fill="#a7f3d0" opacity="0.8"/>
-                    <circle cx="145" cy="115" r="15" fill="#a7f3d0" opacity="0.7"/>
-                    <rect x="25" y="25" width="110" height="145" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="4"/>
-                    <rect x="33" y="33" width="94" height="24" rx="4" fill="#f8fafc" stroke="#e2e8f0" stroke-width="2"/>
-                    <rect x="38" y="38" width="22" height="14" rx="2" fill="#e2e8f0"/>
-                    <circle cx="75" cy="45" r="7" fill="#cbd5e1"/>
-                    <rect x="92" y="38" width="30" height="14" rx="2" fill="#ef4444"/>
-                    <circle cx="80" cy="110" r="42" fill="#e2e8f0" stroke="#94a3b8" stroke-width="3"/>
-                    <circle cx="80" cy="110" r="34" fill="#38bdf8"/>
-                    <circle cx="80" cy="110" r="28" fill="#ffffff" opacity="0.95"/>
-                  </svg>
-                  <div class="absolute inset-0 flex flex-col items-center justify-center pt-8 px-2 text-center pointer-events-none">
-                    <span class="text-[7px] sm:text-[9px] font-black text-slate-900 leading-tight">
-                      Click here to<br/>Book your VIP<br/>Laundry Service
-                    </span>
-                  </div>
-                </div>
-
               </div>
-
             </div>
           </button>
         </div>
@@ -250,29 +220,37 @@
       <!-- ==================== 2. COLLEGE MVCC BUTTON & BAG SIZING ==================== -->
       <section id="servicesSection" class="px-3 pt-4 pb-2 w-full">
         
-        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff Pricing -->
+        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff Pricing with University Video / Icon -->
         <button 
           id="btnMvccToggle"
           type="button"
           onclick="triggerMvccWithBubbles(event)" 
           class="relative w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-md z-30 overflow-hidden"
         >
-          <!-- Floating Background Bubble Accents -->
           <div class="absolute -right-2 -top-2 w-10 h-10 rounded-full bg-white/30 bubble-float pointer-events-none"></div>
           <div class="absolute right-12 -bottom-2 w-6 h-6 rounded-full bg-white/20 bubble-float pointer-events-none" style="animation-delay: 0.8s;"></div>
 
-          <!-- Video placeholder: Automatically shows if you save college_button.mp4 to /static/assets/ -->
+          <!-- University Video (Plays automatically if file is in /static/assets/) -->
           <video 
-            src="/static/assets/college_button.mp4" 
-            autoplay loop muted playsinline 
-            class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none"
+            id="univVideo"
+            autoplay 
+            loop 
+            muted 
+            playsinline 
+            webkit-playsinline
+            class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none opacity-90"
             onloadeddata="this.classList.remove('hidden')"
-          ></video>
+          >
+            <source src="/static/assets/University.mp4" type="video/mp4" />
+            <source src="/static/assets/university.mp4" type="video/mp4" />
+            <source src="/static/assets/college.mp4" type="video/mp4" />
+            <source src="/static/assets/college_button.mp4" type="video/mp4" />
+          </video>
 
           <div class="flex items-center gap-2.5 relative z-10">
-            <!-- College Cap / Building Icon Badge -->
-            <div class="w-10 h-10 rounded-2xl bg-white border border-pink-200 text-black flex flex-col items-center justify-center shadow-sm flex-shrink-0">
-              <span class="text-base leading-none">🎓</span>
+            <!-- College Emblem -->
+            <div class="w-11 h-11 rounded-2xl bg-white border border-pink-200 text-black flex flex-col items-center justify-center shadow-sm flex-shrink-0">
+              <span class="text-lg leading-none">🎓</span>
               <span class="text-[7px] font-black uppercase tracking-wider text-slate-800 mt-0.5">College</span>
             </div>
             <div>
@@ -291,47 +269,50 @@
           </div>
         </button>
 
-        <!-- Sizing & Bags Container -->
+        <!-- Sizing & Bags Container (With Direct Image Display) -->
         <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
           
           <div class="grid grid-cols-3 gap-2 text-center items-end">
             
-            <!-- Small Bag (Green Drawstring) -->
+            <!-- Small Bag -->
             <div onclick="selectBagAndBook('Small')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
-                <div class="w-16 h-20 sm:w-20 sm:h-24 rounded-2xl bg-emerald-50 border-2 border-emerald-500 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 transition">
-                  <span class="text-[8px] font-black text-emerald-800 uppercase px-1.5 py-0.5 bg-emerald-100 rounded-full border border-emerald-300">Drawstring</span>
-                  <div class="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white text-base shadow-inner">🍏</div>
-                  <span class="text-[8px] font-bold text-emerald-700">Small</span>
-                </div>
+                <img 
+                  src="/static/assets/sm_pink_Sour%20Apple.jpg" 
+                  onerror="this.onerror=null; this.src='/static/assets/small_bag.png';" 
+                  alt="Small Bag" 
+                  class="h-20 sm:h-24 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
+                />
               </div>
               <span class="text-xs font-bold text-slate-800">Small Bag</span>
               <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
               <span class="text-[9px] text-slate-400">(approx. 18" x 27")</span>
             </div>
 
-            <!-- Medium Bag (Blue Drawstring) -->
+            <!-- Medium Bag -->
             <div onclick="selectBagAndBook('Medium')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
-                <div class="w-16 h-24 sm:w-20 sm:h-28 rounded-2xl bg-blue-50 border-2 border-blue-500 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 transition">
-                  <span class="text-[8px] font-black text-blue-800 uppercase px-1.5 py-0.5 bg-blue-100 rounded-full border border-blue-300">Drawstring</span>
-                  <div class="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center text-white text-base shadow-inner">🍏</div>
-                  <span class="text-[8px] font-bold text-blue-700">Medium</span>
-                </div>
+                <img 
+                  src="/static/assets/med_pink_Sour%20Apple.jpg" 
+                  onerror="this.onerror=null; this.src='/static/assets/medium_bag.png';" 
+                  alt="Medium Bag" 
+                  class="h-24 sm:h-28 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
+                />
               </div>
               <span class="text-xs font-bold text-slate-800">Medium Bag</span>
               <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
               <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
             </div>
 
-            <!-- Large Bag (Pink Drawstring) -->
+            <!-- Large Bag -->
             <div onclick="selectBagAndBook('Large')" class="cursor-pointer flex flex-col items-center group active:scale-95 transition">
               <div class="w-full flex justify-center mb-1">
-                <div class="w-16 h-28 sm:w-20 sm:h-32 rounded-2xl bg-pink-50 border-2 border-pink-500 flex flex-col items-center justify-between p-1.5 shadow-sm group-hover:scale-105 transition">
-                  <span class="text-[8px] font-black text-pink-800 uppercase px-1.5 py-0.5 bg-pink-100 rounded-full border border-pink-300">Drawstring</span>
-                  <div class="w-10 h-10 rounded-full bg-pink-500 flex items-center justify-center text-white text-lg shadow-inner">🍏</div>
-                  <span class="text-[8px] font-bold text-pink-700">Large</span>
-                </div>
+                <img 
+                  src="/static/assets/lg_pink_Sour%20Apple.jpg" 
+                  onerror="this.onerror=null; this.src='/static/assets/large_bag.png';" 
+                  alt="Large Bag" 
+                  class="h-28 sm:h-32 w-auto object-contain drop-shadow-sm group-hover:scale-105 transition"
+                />
               </div>
               <span class="text-xs font-bold text-slate-800">Large Bag</span>
               <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
@@ -529,7 +510,7 @@
           </div>
         </div>
 
-        <!-- 2. In-App Bag Photo Verification -->
+        <!-- 2. Bag Photo Verification -->
         <div class="p-3 bg-pink-50/60 border border-pink-200 rounded-2xl">
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-xs font-bold text-pink-950 flex items-center gap-1.5">
@@ -538,7 +519,7 @@
             <span class="text-[10px] text-pink-700 bg-pink-100 font-semibold px-2 py-0.5 rounded-full">Required</span>
           </div>
           <p class="text-[10px] text-slate-500 mb-2 leading-tight">
-            Bag must have a <strong>drawstring, zipper, Velcro, or snaps</strong>. No open laundry baskets. We verify this photo before approving your payment.
+            Bag must have a <strong>drawstring, zipper, Velcro, or snaps</strong>. We verify this photo before approving your payment.
           </p>
 
           <input type="file" accept="image/*" capture="environment" id="bagPhotoInput" onchange="previewBagPhoto(event)" class="hidden" />
@@ -567,7 +548,7 @@
           </div>
         </div>
 
-        <!-- 3. Detergent Preference (ONLY 2 CHOICES) -->
+        <!-- 3. Detergent Preference (Only 2 Choices) -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1">2. Detergent Preference</label>
           <div class="grid grid-cols-2 gap-2 text-center">
@@ -607,7 +588,6 @@
             placeholder="Describe any stains & garments (e.g. coffee stain on white cotton shirt, grass stains on denim jeans)..." 
             class="w-full text-xs p-2.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 placeholder-slate-400"
           ></textarea>
-          <span class="text-[9px] text-slate-400 block mt-0.5 leading-tight">We pre-treat stains with professional spot removers. Pre-existing set-in stains cannot be guaranteed.</span>
         </div>
 
         <!-- Campus Dorm or Drop-off address -->
@@ -639,7 +619,7 @@
           </label>
         </div>
 
-        <!-- 6. Scrollable Contract (With Zero-Tolerance Bug/Contamination Policy) -->
+        <!-- 6. Scrollable Contract (With Zero-Tolerance Bug Policy) -->
         <div class="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
           <div class="flex items-center justify-between">
             <span class="text-xs font-extrabold text-slate-900">VIP Service Agreement</span>
@@ -688,7 +668,6 @@
       <div class="w-12 h-12 rounded-full bg-pink-50 border border-pink-200 flex items-center justify-center text-pink-600 text-xl mx-auto mb-2">💳</div>
       <h3 class="text-lg font-bold text-slate-900">Payment Options</h3>
       
-      <!-- Verification Status Notice -->
       <div id="payStatusNotice" class="my-3 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-left">
         <span class="text-xs font-bold text-amber-900 block flex items-center gap-1">
           <span>⏳</span> Bag Verification Required
@@ -699,7 +678,6 @@
       </div>
 
       <div class="space-y-3 text-left">
-        <!-- 1. Stripe Credit Card / Apple Pay (Locked until approved) -->
         <div class="p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs font-bold text-slate-900">Credit / Debit Card / Apple Pay</span>
@@ -716,7 +694,6 @@
           </button>
         </div>
 
-        <!-- 2. Cash App (Opens in New Tab) -->
         <a 
           href="https://cash.app/$SourAppleLaundry" 
           target="_blank" 
@@ -737,7 +714,6 @@
           </div>
         </a>
 
-        <!-- 3. Venmo (Opens in New Tab) -->
         <a 
           href="https://account.venmo.com/u/SourAppleLaundry" 
           target="_blank" 
@@ -791,7 +767,21 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderAuthUI();
       updatePricingDisplay();
+      initWashingMachineLoop();
     });
+
+    // CUT OFF TRAILING WHITE SPACE & LOOP WASHING MACHINE AT 6.0 SECONDS
+    function initWashingMachineLoop() {
+      const wmVideo = document.getElementById('wmVideo');
+      if (wmVideo) {
+        wmVideo.addEventListener('timeupdate', () => {
+          if (wmVideo.currentTime >= 6.0) {
+            wmVideo.currentTime = 0;
+            wmVideo.play();
+          }
+        });
+      }
+    }
 
     function getSavedUser() {
       try {
@@ -874,7 +864,6 @@
       alert("No new notifications. Order updates are dispatched directly to your registered email!");
     }
 
-    // Bubble Burst Effect
     function spawnBubbleBurst(element) {
       const rect = element.getBoundingClientRect();
       const parent = document.body;
@@ -983,7 +972,6 @@
       }
     }
 
-    // Detergent Preference Selector (Only 2 Choices)
     function selectDetergent(type) {
       selectedDetergent = type;
       ['Standard', 'CustomerProvided'].forEach(t => {
@@ -1260,7 +1248,6 @@
         alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 block";
         alertBox.innerHTML = `✅ <strong>Booking Submitted!</strong> Code: ${data.code}.<br/>Our team will inspect your bag photo. You will be able to complete payment as soon as it is approved!`;
 
-        // Update payment modal state
         document.getElementById('btnStripePay').disabled = true;
         document.getElementById('btnStripePay').className = "w-full py-2.5 bg-slate-200 text-slate-500 text-xs font-extrabold rounded-xl transition cursor-not-allowed";
         document.getElementById('btnStripePay').textContent = "⏳ Awaiting Admin Bag Approval";
@@ -1273,7 +1260,7 @@
         }, 2200);
 
       } catch (err) {
-        alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-red-50 textBox.className = "mb-4 p-3 rounded-xl text-xs bg-red-50 text-red-700 border border-red-200 block";
+        alertBox.className = "mb-4 p-3 rounded-xl text-xs bg-red-50 text-red-700 border border-red-200 block";
         alertBox.textContent = err.message;
         btn.disabled = false;
         btn.textContent = "Submit Order for Approval >";
