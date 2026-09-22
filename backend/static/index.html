@@ -227,9 +227,8 @@
           onclick="triggerMvccWithBubbles(event)" 
           class="relative w-full mb-3 p-2.5 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-md z-30 overflow-hidden"
         >
-          <div class="absolute -right-2 -top-2 w-10 h-10 rounded-full bg-white/30 bubble-float pointer-events-none"></div>
-          <div class="absolute right-12 -bottom-2 w-6 h-6 rounded-full bg-white/20 bubble-float pointer-events-none" style="animation-delay: 0.8s;"></div>
-
+          <div class="animate-rock hover:scale-105 transition-transform duration-200 flex flex-col items-center">
+              <div class="relative w-28 h-32 sm:w-36 sm:h-40 flex items-center justify-center">
           <!-- University Video (Plays automatically if file is in /static/assets/) -->
           <video 
             id="univVideo"
@@ -241,10 +240,10 @@
             class="hidden absolute inset-0 w-full h-full object-cover pointer-events-none opacity-90"
             onloadeddata="this.classList.remove('hidden')"
           >
-            <source src="/static/assets/UniversityClick here to Book your VIP Laundry Service.mp4" type="video/mp4" />
-            <source src="/static/assets/university.mp4" type="video/mp4" />
-            <source src="/static/assets/college.mp4" type="video/mp4" />
-            <source src="/static/assets/college_button.mp4" type="video/mp4" />
+            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
+            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
+            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
+            <source src="/static/assets/UniversityClickheretoBookyourVIPLaundryService.mp4" type="video/mp4" />
           </video>
 
           <div class="flex items-center gap-2.5 relative z-10">
