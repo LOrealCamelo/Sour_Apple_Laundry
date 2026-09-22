@@ -191,7 +191,7 @@
           </button>
         </div>
 
-        <!-- ANIMATED ROCKING WASHING MACHINE (Seamless Loop with correct space-encoded URL) -->
+        <!-- ANIMATED ROCKING WASHING MACHINE -->
         <div class="absolute left-[30%] top-[33%] w-[44%] z-30 flex flex-col items-center">
           <button 
             id="btnWashingMachineBook"
@@ -222,53 +222,52 @@
 
       </section>
 
-      <!-- ==================== 2. COLLEGE MVCC BUTTON & BAG SIZING ==================== -->
+      <!-- ==================== 2. COLLEGE MVCC ANIMATED BUTTON & SIZING ==================== -->
       <section id="servicesSection" class="px-3 pt-4 pb-2 w-full">
         
-        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff Pricing with University Video & Campus Badge -->
-        <button 
-          id="btnMvccToggle"
-          type="button"
-          onclick="triggerMvccWithBubbles(event)" 
-          class="relative w-full mb-3 p-3 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-md z-30 overflow-hidden"
-        >
-          <!-- Background Video (Plays automatically from static assets with correct space encoding) -->
-          <video 
-            id="univVideo"
-            autoplay 
-            loop 
-            muted 
-            playsinline 
-            webkit-playsinline
-            class="absolute inset-0 w-full h-full object-cover pointer-events-none opacity-30 mix-blend-overlay"
+        <!-- 2nd ANIMATED BUTTON: MVCC Student & Staff VIP Video Booking Button -->
+        <div class="w-full mb-4 flex flex-col items-center">
+          <button 
+            id="btnMvccBook"
+            type="button"
+            onclick="handleMvccVideoClick(event)"
+            class="relative w-full rounded-3xl bg-white border-2 border-[#ff66c4] shadow-md hover:shadow-xl p-3 flex flex-col items-center cursor-pointer group active:scale-95 transition-all overflow-hidden"
+            title="Click here to Book your VIP Laundry Service (MVCC Discount)"
           >
-            <source src="/static/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
-            <source src="/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
-          </video>
-
-          <div class="flex items-center gap-2.5 relative z-10">
-            <!-- College Emblem -->
-            <div class="w-11 h-11 rounded-2xl bg-white border border-pink-200 text-black flex flex-col items-center justify-center shadow-sm flex-shrink-0">
-              <span class="text-lg leading-none">🎓</span>
-              <span class="text-[7px] font-black uppercase tracking-wider text-slate-800 mt-0.5">College</span>
-            </div>
-            <div>
-              <span id="mvccToggleTitle" class="text-xs font-extrabold text-black block leading-tight">
-                MVCC Student, Faculty & Staff Pricing &gt;
+            <!-- Top Badge Header -->
+            <div class="w-full flex items-center justify-between px-2 mb-1.5 z-10">
+              <span class="collegiate text-xs font-black text-[#ff66c4] uppercase flex items-center gap-1.5">
+                <span>🎓</span> MVCC Student &amp; Staff VIP Rates
               </span>
-              <span id="mvccToggleSubtitle" class="text-[10px] text-slate-800 leading-tight">
-                Show your MVCC ID and get exclusive $10 off rates!
+              <span class="bg-[#ff66c4] text-white text-[10px] font-black px-2.5 py-0.5 rounded-full animate-bounce shadow-sm">
+                SAVE $10
               </span>
             </div>
-          </div>
 
-          <div class="text-right flex-shrink-0 relative z-10">
-            <span class="text-[10px] text-black font-extrabold italic block leading-tight">Support</span>
-            <span class="text-[10px] text-slate-800 font-extrabold italic block leading-tight">Local! ♡</span>
-          </div>
-        </button>
+            <!-- Prominent Full Video Element -->
+            <div class="relative w-full aspect-square max-w-[280px] sm:max-w-[320px] flex items-center justify-center rounded-2xl overflow-hidden bg-white">
+              <video 
+                id="univVideo"
+                autoplay 
+                loop 
+                muted 
+                playsinline 
+                webkit-playsinline
+                class="w-full h-full object-contain pointer-events-none drop-shadow-md group-hover:scale-105 transition-transform duration-300"
+              >
+                <source src="/static/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
+                <source src="/assets/UniversityClick%20here%20to%20Book%20your%20VIP%20Laundry%20Service.mp4" type="video/mp4" />
+              </video>
+            </div>
 
-        <!-- Sizing & Bags Container (Using actual bag_small.png, bag_medium.png, bag_large.png) -->
+            <!-- Action Banner -->
+            <div class="w-full mt-2 bg-[#ff66c4] hover:bg-[#ff52b8] text-black font-extrabold text-xs sm:text-sm py-2.5 px-4 rounded-2xl flex items-center justify-center gap-2 shadow transition">
+              <span>✨ Tap Here to Book MVCC Pickup ($10 Off) &gt;</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Sizing & Bags Container (Prices removed from home screen) -->
         <div class="bg-white rounded-3xl p-3.5 shadow-sm border border-emerald-50">
           
           <div class="grid grid-cols-3 gap-2 text-center items-end">
@@ -284,8 +283,8 @@
                 />
               </div>
               <span class="text-xs font-bold text-slate-800">Small Bag</span>
-              <span id="displayPriceSmall" class="text-base font-black text-emerald-600 my-0.5">$20</span>
-              <span class="text-[9px] text-slate-400">(approx. 18" x 27")</span>
+              <span class="text-[10px] text-slate-500 font-semibold mt-0.5">1 Standard Load</span>
+              <span class="text-[9px] text-slate-400">(18" x 27")</span>
             </div>
 
             <!-- Medium Bag -->
@@ -299,8 +298,8 @@
                 />
               </div>
               <span class="text-xs font-bold text-slate-800">Medium Bag</span>
-              <span id="displayPriceMedium" class="text-base font-black text-emerald-600 my-0.5">$30</span>
-              <span class="text-[9px] text-slate-400">(approx. 24" x 32")</span>
+              <span class="text-[10px] text-slate-500 font-semibold mt-0.5">1.5 - 2 Loads</span>
+              <span class="text-[9px] text-slate-400">(24" x 32")</span>
             </div>
 
             <!-- Large Bag -->
@@ -314,8 +313,8 @@
                 />
               </div>
               <span class="text-xs font-bold text-slate-800">Large Bag</span>
-              <span id="displayPriceLarge" class="text-base font-black text-emerald-600 my-0.5">$40</span>
-              <span class="text-[9px] text-slate-400">(approx. 30" x 40")</span>
+              <span class="text-[10px] text-slate-500 font-semibold mt-0.5">2.5 - 3 Loads</span>
+              <span class="text-[9px] text-slate-400">(30" x 40")</span>
             </div>
 
           </div>
@@ -467,7 +466,7 @@
     </div>
   </div>
 
-  <!-- ==================== STEP 3: BOOKING MODAL ==================== -->
+  <!-- ==================== STEP 3: BOOKING MODAL (Prices Shown Here) ==================== -->
   <div id="bookingModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
     <div class="bg-white w-full max-w-lg rounded-3xl p-5 sm:p-7 shadow-2xl my-8 relative max-h-[92vh] overflow-y-auto custom-scrollbar">
       <button onclick="toggleModal('bookingModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-700 text-xl font-bold">✕</button>
@@ -485,7 +484,7 @@
 
       <form id="bookingForm" onsubmit="submitBooking(event)" class="space-y-4">
         
-        <!-- 1. Bag Selection -->
+        <!-- 1. Bag Selection (Shows bag choices and prices in checkout) -->
         <div>
           <label class="text-xs font-semibold text-slate-700 block mb-1.5">1. Select Bag Size</label>
           <div class="grid grid-cols-3 gap-2">
@@ -898,9 +897,18 @@
       }, 350);
     }
 
-    function triggerMvccWithBubbles(e) {
+    // Direct MVCC Video Click Handler: Activates $10 discount and immediately opens the booking flow
+    function handleMvccVideoClick(e) {
       spawnBubbleBurst(e.currentTarget);
-      toggleMvccPricing();
+      selectedStatus = 'College Student';
+      updatePricingDisplay();
+      setTimeout(() => {
+        openBookingStep1();
+      }, 350);
+    }
+
+    function triggerMvccWithBubbles(e) {
+      handleMvccVideoClick(e);
     }
 
     function toggleMvccPricing() {
@@ -925,22 +933,24 @@
       const pMed = isMvcc ? '$20' : '$30';
       const pLarge = isMvcc ? '$30' : '$40';
 
-      document.getElementById('displayPriceSmall').textContent = pSmall;
-      document.getElementById('displayPriceMedium').textContent = pMed;
-      document.getElementById('displayPriceLarge').textContent = pLarge;
+      const elS = document.getElementById('displayPriceSmall');
+      if (elS) elS.textContent = pSmall;
+      const elM = document.getElementById('displayPriceMedium');
+      if (elM) elM.textContent = pMed;
+      const elL = document.getElementById('displayPriceLarge');
+      if (elL) elL.textContent = pLarge;
 
       const title = document.getElementById('mvccToggleTitle');
       const subtitle = document.getElementById('mvccToggleSubtitle');
-      const banner = document.getElementById('btnMvccToggle');
 
-      if (isMvcc) {
-        title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
-        subtitle.innerHTML = 'Showing exclusive student & staff prices!';
-        banner.className = "relative w-full mb-3 p-3 rounded-2xl bg-[#00703C] text-white border-2 border-emerald-400 flex items-center justify-between transition text-left shadow-md cursor-pointer z-30 overflow-hidden";
-      } else {
-        title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
-        subtitle.innerHTML = 'Show your MVCC ID and get exclusive $10 off rates!';
-        banner.className = "relative w-full mb-3 p-3 rounded-2xl bg-[#ff66c4] hover:bg-[#ff52b8] border-2 border-pink-300 flex items-center justify-between transition text-left cursor-pointer active:scale-98 shadow-sm z-30 overflow-hidden";
+      if (title && subtitle) {
+        if (isMvcc) {
+          title.innerHTML = '🎓 MVCC Rates Active ($10 Off Every Bag) &gt;';
+          subtitle.innerHTML = 'Showing exclusive student & staff prices!';
+        } else {
+          title.innerHTML = 'MVCC Student, Faculty & Staff Pricing &gt;';
+          subtitle.innerHTML = 'Show your MVCC ID and get exclusive $10 off rates!';
+        }
       }
     }
 
@@ -1068,7 +1078,6 @@
         });
 
         if (res.status === 404) {
-          // If backend doesn't have /api/auth/register, use local auth session
           const fakeUser = { id: 'user_' + Date.now(), name: payload.name, email: payload.email, phone: payload.phone, building: payload.building };
           localStorage.setItem('sour_token', 'local_token_' + Date.now());
           localStorage.setItem('sour_user', JSON.stringify(fakeUser));
@@ -1116,7 +1125,6 @@
         });
 
         if (res.status === 404) {
-          // Fallback local login
           const fakeUser = { id: 'user_local', name: 'VIP Guest', email: payload.email, phone: '' };
           localStorage.setItem('sour_token', 'local_token_login');
           localStorage.setItem('sour_user', JSON.stringify(fakeUser));
