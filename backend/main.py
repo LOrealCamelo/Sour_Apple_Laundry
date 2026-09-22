@@ -210,3 +210,16 @@ if os.path.exists("backend/static"):
     @app.get("/")
     async def serve_frontend():
         return FileResponse("backend/static/index.html")
+        
+# Place this at the VERY BOTTOM of backend/main.py (after all other API routes)
+if os.path.exists("backend/static"):
+    app.mount("/static", StaticFiles(directory="backend/static"), name="static")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Allow static files to be served directly if they exist
+        file_path = os.path.join("backend/static", full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        # Otherwise fall back to index.html for client-side routing
+        return FileResponse("backend/static/index.html")
