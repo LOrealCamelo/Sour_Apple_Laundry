@@ -2,6 +2,7 @@ import os
 import json
 import smtplib
 import urllib.request
+import urllib.parse
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pathlib import Path
@@ -37,7 +38,7 @@ if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
 
 # ==============================================================================
-# FastAPI & Database Setup
+# FastAPI Initialization
 # ==============================================================================
 app = FastAPI(title="Sour Apple Wash & Fold VIP Laundry Services API")
 
@@ -51,6 +52,35 @@ app.add_middleware(
 
 client = AsyncIOMotorClient(MONGODB_URL, serverSelectionTimeoutMS=5000)
 db = client[DB_NAME]
+
+# ==============================================================================
+# Dynamic Directory Detection & Static/Assets Mounting
+# ==============================================================================
+BASE_DIR = Path(__file__).resolve().parent
+
+STATIC_CANDIDATES = [
+    BASE_DIR / "static",
+    BASE_DIR.parent / "backend" / "static",
+    BASE_DIR.parent / "static",
+    Path("backend/static"),
+    Path("static"),
+]
+STATIC_DIR = next((d for d in STATIC_CANDIDATES if d.exists() and d.is_dir()), None)
+
+ASSETS_DIR = None
+if STATIC_DIR and (STATIC_DIR / "assets").exists():
+    ASSETS_DIR = STATIC_DIR / "assets"
+elif (BASE_DIR.parent / "assets").exists():
+    ASSETS_DIR = BASE_DIR.parent / "assets"
+elif Path("assets").exists():
+    ASSETS_DIR = Path("assets")
+
+# Mount both /assets and /static with Starlette StaticFiles (enables MP4 video streaming)
+if ASSETS_DIR and ASSETS_DIR.is_dir():
+    app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
+
+if STATIC_DIR and STATIC_DIR.is_dir():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # ==============================================================================
 # Schemas
@@ -87,7 +117,7 @@ def send_order_alert(order: dict):
     <p><b>Customer Signature:</b> {order.get('e_signature')}</p>
     <p><b>Bag Size:</b> {order.get('bag_size')}</p>
     <p><b>Total Price:</b> ${order.get('total_price')}</p>
-    <p><b>MVCC Discount Applied:</b> {'Yes' if order.get('is_mvcc') else 'No'}</p>
+    <p><b>MVCC Student/Staff:</b> {'Yes' if order.get('is_mvcc') else 'No'}</p>
     <p><b>Contact Phone:</b> {order.get('phone', 'N/A')}</p>
     <p><b>Dorm / Location:</b> {order.get('dorm', 'South Utica Drop-off')}</p>
     <p><b>Status:</b> {order.get('status', 'Awaiting Pickup')}</p>
@@ -215,6 +245,21 @@ async def create_order(order_data: OrderCreate, background_tasks: BackgroundTask
     background_tasks.add_task(send_order_alert, new_order)
     return new_order
 
+@app.get("/orders/{order_id}")
+async def get_order(order_id: str):
+    try:
+        from bson import ObjectId
+        query = {"$or": [{"id": order_id}, {"_id": ObjectId(order_id)}]}
+    except Exception:
+        query = {"id": order_id}
+
+    order = await db.orders.find_one(query)
+    if order:
+        order["id"] = str(order.get("_id", order.get("id", "")))
+        order.pop("_id", None)
+        return order
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
 @app.post("/orders/{order_id}/status")
 async def update_status(order_id: str, body: StatusUpdate):
     try:
@@ -226,8 +271,52 @@ async def update_status(order_id: str, body: StatusUpdate):
     await db.orders.update_one(query, {"$set": {"status": body.status}})
     return {"status": "success", "new_status": body.status}
 
+@app.post("/orders/{order_id}/report-payment")
+async def report_payment(order_id: str, method: str):
+    try:
+        from bson import ObjectId
+        query = {"$or": [{"id": order_id}, {"_id": ObjectId(order_id)}]}
+    except Exception:
+        query = {"id": order_id}
+
+    await db.orders.update_one(
+        query,
+        {"$set": {"payment_reported": True, "payment_method": method}},
+    )
+    return {"status": "success"}
+
+@app.post("/api/payments/create-checkout-session/{order_id}")
+async def create_checkout_session(order_id: str):
+    try:
+        from bson import ObjectId
+        query = {"$or": [{"id": order_id}, {"_id": ObjectId(order_id)}]}
+    except Exception:
+        query = {"id": order_id}
+
+    order = await db.orders.find_one(query)
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": f"{order.get('bag_size')} Laundry Bag Service"},
+                    "unit_amount": int(order.get("total_price", 0) * 100),
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=f"{FRONTEND_URL}/success",
+            cancel_url=f"{FRONTEND_URL}/cancel",
+        )
+        return {"url": checkout_session.url}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
 # ==============================================================================
-# HTML Templates (Standard string literals to avoid f-string JS syntax conflicts)
+# Admin Dashboard (/admin)
 # ==============================================================================
 ADMIN_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -250,6 +339,7 @@ ADMIN_HTML = """<!DOCTYPE html>
       <button onclick="createSampleOrder()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-xl text-xs shadow transition">
         + Sample Order
       </button>
+      <button onclick="sendTestAlert()" class="bg-yellow-400 hover:bg-yellow
       <button onclick="sendTestAlert()" class="bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-bold px-3 py-2 rounded-xl text-xs shadow transition">
         🔔 Test Email Alert
       </button>
@@ -360,311 +450,40 @@ ADMIN_HTML = """<!DOCTYPE html>
 </html>
 """
 
-STOREFRONT_HTML = """<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Sour Apple Wash &amp; Fold VIP Laundry Services</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @keyframes pulseSlow {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.03); }
-    }
-    .animate-pulse-slow {
-      animation: pulseSlow 2.5s infinite ease-in-out;
-    }
-  </style>
-</head>
-<body class="bg-gray-50 text-gray-900 font-sans min-h-screen pb-20">
-
-  <!-- Header -->
-  <header class="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-    <div class="flex items-center gap-2">
-      <span class="text-3xl">🍏</span>
-      <div>
-        <h1 class="font-black text-lg text-emerald-800 tracking-tight leading-tight">Sour Apple VIP</h1>
-        <p class="text-[10px] text-emerald-600 font-bold tracking-wider uppercase">Wash &amp; Fold Laundry</p>
-      </div>
-    </div>
-    <a href="/admin" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold px-3 py-1.5 rounded-full transition">
-      Admin Portal
-    </a>
-  </header>
-
-  <!-- Hero Banner -->
-  <section class="p-6">
-    <div class="relative bg-gradient-to-br from-emerald-600 via-emerald-700 to-green-800 text-white rounded-3xl p-8 shadow-xl overflow-hidden text-center">
-      <div class="relative z-10 space-y-3">
-        <span class="inline-block bg-white/20 backdrop-blur-md text-emerald-100 text-xs px-3 py-1 rounded-full font-bold">
-          ✨ Freshness Delivered to Your Door
-        </span>
-        <h2 class="text-3xl sm:text-4xl font-black leading-tight">Clean Clothes.<br/>Less Stress. 💚</h2>
-        <p class="text-xs sm:text-sm text-emerald-100 max-w-sm mx-auto">
-          Utica's premier wash, dry, and fold laundry service with campus curbside pickup.
-        </p>
-        <div class="pt-2">
-          <button onclick="openBooking()" class="animate-pulse-slow bg-[#ff66c4] hover:bg-pink-500 text-white font-black text-sm px-8 py-3.5 rounded-full shadow-lg hover:shadow-xl transition transform active:scale-95">
-            VIP LAUNDRY SERVICE &gt;
-          </button>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Animated MVCC Student Pricing Pink Element Box -->
-  <section class="px-6 mb-6">
-    <div onclick="toggleMVCC()" class="w-full bg-gradient-to-r from-pink-50 via-pink-100/70 to-pink-50 border-2 border-[#ff66c4] p-5 rounded-3xl flex items-center justify-between cursor-pointer active:scale-95 transition-all shadow-md hover:shadow-lg">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-2xl bg-[#ff66c4] text-white flex items-center justify-center text-2xl shadow-md">
-          🎓
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-black text-base text-[#ff66c4]">MVCC Student &amp; Staff</span>
-            <span class="bg-[#ff66c4] text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-bounce">
-              SAVE $10
-            </span>
-          </div>
-          <p class="text-xs text-pink-900/80 font-semibold mt-0.5">
-            Tap to toggle special campus pricing on every bag size
-          </p>
-        </div>
-      </div>
-      <div class="relative">
-        <input type="checkbox" id="mvcc-check" class="w-7 h-7 accent-[#ff66c4] cursor-pointer rounded-lg">
-      </div>
-    </div>
-  </section>
-
-  <!-- 3 Bags Sizing & Pricing -->
-  <section class="px-6 space-y-4 max-w-lg mx-auto">
-    <h3 class="text-lg font-black text-gray-800">Choose Your Bag Size</h3>
-
-    <!-- Small Bag -->
-    <div onclick="openBooking('Small')" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition">
-      <img id="img-small" src="/static/sm_pink_Sour%20Apple.jpg" class="w-20 h-20 rounded-2xl object-cover bg-pink-50">
-      <div class="flex-1">
-        <h4 class="font-black text-base">Small VIP Bag</h4>
-        <p class="text-xs text-gray-500">~1 Standard Load. Great for singles.</p>
-        <span class="text-[11px] text-pink-600 font-bold hidden mvcc-tag">🎓 MVCC Campus Discount Applied</span>
-      </div>
-      <div class="text-right">
-        <div class="text-2xl font-black text-emerald-700 bag-price" data-base="20" data-mvcc="10">$20</div>
-        <span class="text-[10px] text-gray-400 font-bold">wash &amp; fold</span>
-      </div>
-    </div>
-
-    <!-- Medium Bag -->
-    <div onclick="openBooking('Medium')" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition">
-      <img id="img-med" src="/static/med_pink_Sour%20Apple.jpg" class="w-20 h-20 rounded-2xl object-cover bg-pink-50">
-      <div class="flex-1">
-        <h4 class="font-black text-base">Medium VIP Bag</h4>
-        <p class="text-xs text-gray-500">~1.5 - 2 Loads. Perfect for weekly loads.</p>
-        <span class="text-[11px] text-pink-600 font-bold hidden mvcc-tag">🎓 MVCC Campus Discount Applied</span>
-      </div>
-      <div class="text-right">
-        <div class="text-2xl font-black text-emerald-700 bag-price" data-base="30" data-mvcc="20">$30</div>
-        <span class="text-[10px] text-gray-400 font-bold">wash &amp; fold</span>
-      </div>
-    </div>
-
-    <!-- Large Bag -->
-    <div onclick="openBooking('Large')" class="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4 cursor-pointer hover:border-emerald-300 transition">
-      <img id="img-large" src="/static/lg_pink_Sour%20Apple.jpg" class="w-20 h-20 rounded-2xl object-cover bg-pink-50">
-      <div class="flex-1">
-        <h4 class="font-black text-base">Large VIP Bag</h4>
-        <p class="text-xs text-gray-500">~2.5 - 3 Loads. Families &amp; heavy linens.</p>
-        <span class="text-[11px] text-pink-600 font-bold hidden mvcc-tag">🎓 MVCC Campus Discount Applied</span>
-      </div>
-      <div class="text-right">
-        <div class="text-2xl font-black text-emerald-700 bag-price" data-base="40" data-mvcc="30">$40</div>
-        <span class="text-[10px] text-gray-400 font-bold">wash &amp; fold</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- Booking Modal with Digital Contract -->
-  <div id="booking-modal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 max-h-[92vh] overflow-y-auto space-y-5">
-      <div class="flex justify-between items-center border-b pb-3">
-        <h3 class="font-black text-lg text-emerald-900">Schedule VIP Pickup</h3>
-        <button onclick="closeBooking()" class="text-gray-400 hover:text-gray-600 text-xl font-bold">&times;</button>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Select Bag Size</label>
-          <select id="modal-bag" onchange="updateModalPrice()" class="w-full p-3 rounded-xl border border-gray-200 text-sm font-semibold">
-            <option value="Small">Small Bag (1 Load)</option>
-            <option value="Medium" selected>Medium Bag (1.5 - 2 Loads)</option>
-            <option value="Large">Large Bag (2.5 - 3 Loads)</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Dorm / Address (South Utica / MVCC)</label>
-          <input type="text" id="modal-dorm" placeholder="e.g. Bellamy Hall #204 or Utica Address" class="w-full p-3 rounded-xl border border-gray-200 text-sm">
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Phone Number for Pickup Text</label>
-          <input type="tel" id="modal-phone" placeholder="315-xxx-xxxx" class="w-full p-3 rounded-xl border border-gray-200 text-sm">
-        </div>
-
-        <!-- Digital Contract Box -->
-        <div class="bg-yellow-50 border border-yellow-200 p-3.5 rounded-2xl text-[11px] text-yellow-900 leading-relaxed max-h-28 overflow-y-auto">
-          <b>VIP Service Agreement:</b> Sour Apple Wash &amp; Fold provides professional wash, dry, and fold care. Items must be closed with drawstring/zipper. Standard laundry liability is limited to $100 per bag. Items unclaimed after 30 days are donated.
-        </div>
-
-        <div>
-          <label class="block text-xs font-bold text-gray-700 mb-1">Type Full Name to Sign Digitally</label>
-          <input type="text" id="modal-signature" placeholder="Your Full Legal Name" class="w-full p-3 rounded-xl border-2 border-emerald-500 text-sm font-bold">
-        </div>
-
-        <div class="flex justify-between items-center bg-gray-50 p-4 rounded-2xl">
-          <span class="text-xs font-bold text-gray-600">Total Price:</span>
-          <span id="modal-price-display" class="text-2xl font-black text-emerald-700">$30</span>
-        </div>
-
-        <button onclick="submitOrder()" id="submit-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-black text-sm shadow-lg transition">
-          Confirm &amp; Book Pickup
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const SVG_SMALL = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' width='160' height='160'><rect width='160' height='160' rx='24' fill='%23fdf2f8'/><path d='M45 55 C45 35 115 35 115 55 L125 130 C125 142 35 142 35 130 Z' fill='%23ec4899' opacity='0.9'/><path d='M45 55 Q80 70 115 55' stroke='%23be185d' stroke-width='4' fill='none'/><circle cx='80' cy='38' r='10' fill='%23be185d'/><text x='80' y='95' fill='white' font-family='Arial' font-><text x='80' y='95' fill='white' font-family='Arial' font-size='16' font-weight='bold' text-anchor='middle'>Small</text><text x='80' y='115' fill='%23fbcfe8' font-family='Arial' font-size='11' font-weight='bold' text-anchor='middle'>1 Load</text></svg>";
-    const SVG_MED = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' width='160' height='160'><rect width='160' height='160' rx='24' fill='%23fdf2f8'/><path d='M45 55 C45 35 115 35 115 55 L125 130 C125 142 35 142 35 130 Z' fill='%23ec4899' opacity='0.9'/><path d='M45 55 Q80 70 115 55' stroke='%23be185d' stroke-width='4' fill='none'/><circle cx='80' cy='38' r='10' fill='%23be185d'/><text x='80' y='95' fill='white' font-family='Arial' font-size='16' font-weight='bold' text-anchor='middle'>Medium</text><text x='80' y='115' fill='%23fbcfe8' font-family='Arial' font-size='11' font-weight='bold' text-anchor='middle'>1.5 Loads</text></svg>";
-    const SVG_LARGE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' width='160' height='160'><rect width='160' height='160' rx='24' fill='%23fdf2f8'/><path d='M45 55 C45 35 115 35 115 55 L125 130 C125 142 35 142 35 130 Z' fill='%23ec4899' opacity='0.9'/><path d='M45 55 Q80 70 115 55' stroke='%23be185d' stroke-width='4' fill='none'/><circle cx='80' cy='38' r='10' fill='%23be185d'/><text x='80' y='95' fill='white' font-family='Arial' font-size='16' font-weight='bold' text-anchor='middle'>Large</text><text x='80' y='115' fill='%23fbcfe8' font-family='Arial' font-size='11' font-weight='bold' text-anchor='middle'>2.5 Loads</text></svg>";
-
-    document.getElementById('img-small').onerror = function() { this.src = SVG_SMALL; };
-    document.getElementById('img-med').onerror = function() { this.src = SVG_MED; };
-    document.getElementById('img-large').onerror = function() { this.src = SVG_LARGE; };
-
-    let isMVCC = false;
-
-    function toggleMVCC() {
-      const chk = document.getElementById('mvcc-check');
-      chk.checked = !chk.checked;
-      isMVCC = chk.checked;
-      updatePricing();
-    }
-
-    document.getElementById('mvcc-check').addEventListener('click', function(e) {
-      e.stopPropagation();
-      isMVCC = this.checked;
-      updatePricing();
-    });
-
-    function updatePricing() {
-      document.querySelectorAll('.bag-price').forEach(function(el) {
-        const price = isMVCC ? el.dataset.mvcc : el.dataset.base;
-        el.innerText = '$' + price;
-      });
-      document.querySelectorAll('.mvcc-tag').forEach(function(el) {
-        if (isMVCC) el.classList.remove('hidden');
-        else el.classList.add('hidden');
-      });
-      updateModalPrice();
-    }
-
-    function openBooking(bag) {
-      if (bag) document.getElementById('modal-bag').value = bag;
-      document.getElementById('booking-modal').classList.remove('hidden');
-      updateModalPrice();
-    }
-
-    function closeBooking() {
-      document.getElementById('booking-modal').classList.add('hidden');
-    }
-
-    function updateModalPrice() {
-      const bag = document.getElementById('modal-bag').value;
-      const prices = {
-        'Small': isMVCC ? 10 : 20,
-        'Medium': isMVCC ? 20 : 30,
-        'Large': isMVCC ? 30 : 40
-      };
-      document.getElementById('modal-price-display').innerText = '$' + (prices[bag] || 30);
-    }
-
-    async function submitOrder() {
-      const signature = document.getElementById('modal-signature').value.trim();
-      if (!signature) {
-        alert('Please type your full name in the signature box to agree to the digital contract.');
-        return;
-      }
-
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.innerText = 'Submitting Order...';
-
-      const payload = {
-        bag_size: document.getElementById('modal-bag').value,
-        is_mvcc: isMVCC,
-        e_signature: signature,
-        phone: document.getElementById('modal-phone').value,
-        dorm: document.getElementById('modal-dorm').value,
-        digital_contract_accepted: true
-      };
-
-      try {
-        const res = await fetch('/orders', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        alert('🎉 Order Received! We will contact you for pickup.\\n\\nSend payment via Cash App ($SourAppleLaundry) or Venmo (@SourAppleLaundry).');
-        closeBooking();
-      } catch(err) {
-        alert('Error booking order. Please try again.');
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Confirm & Book Pickup';
-      }
-    }
-  </script>
-</body>
-</html>
-"""
-
 # ==============================================================================
-# Robust Static Files & Routing
+# Serving Your Custom index.html and Assets
 # ==============================================================================
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_CANDIDATES = [
-    BASE_DIR / "static",
-    BASE_DIR.parent / "static",
-    BASE_DIR.parent / "backend" / "static",
-    Path("backend/static"),
-    Path("static"),
-]
-
-STATIC_DIR = next((d for d in STATIC_CANDIDATES if d.exists() and d.is_dir()), None)
-
-if STATIC_DIR:
-    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
 @app.get("/admin", response_class=HTMLResponse)
-async def serve_admin():
+async def serve_admin_route():
     return HTMLResponse(ADMIN_HTML)
 
 @app.get("/{full_path:path}")
 async def serve_spa_or_index(full_path: str = ""):
-    clean_path = full_path.strip("/")
-    if clean_path == "admin":
+    # URL-decode to properly handle spaces and special characters
+    decoded_path = urllib.parse.unquote(full_path).strip("/")
+
+    if decoded_path == "admin":
         return HTMLResponse(ADMIN_HTML)
 
     if STATIC_DIR:
-        requested_file = STATIC_DIR / full_path
-        if full_path and requested_file.is_file():
-            return FileResponse(str(requested_file))
-        index_file = STATIC_DIR / "index.html"
-        if index_file.is_file():
-            return FileResponse(str(index_file))
+        # Check direct static path
+        target_file = STATIC_DIR / decoded_path
+        if decoded_path and target_file.is_file():
+            return FileResponse(str(target_file))
 
-    return HTMLResponse(STOREFRONT_HTML)
+        # Check in assets subdirectory
+        if ASSETS_DIR:
+            if decoded_path.startswith("assets/"):
+                sub_target = ASSETS_DIR / decoded_path[len("assets/"):]
+                if sub_target.is_file():
+                    return FileResponse(str(sub_target))
+            asset_direct = ASSETS_DIR / decoded_path
+            if asset_direct.is_file():
+                return FileResponse(str(asset_direct))
+
+        # Serve your actual 1,324-line custom index.html
+        custom_index = STATIC_DIR / "index.html"
+        if custom_index.is_file():
+            return FileResponse(str(custom_index))
+
+    return HTMLResponse("<h1>Storefront is loading...</h1>")
